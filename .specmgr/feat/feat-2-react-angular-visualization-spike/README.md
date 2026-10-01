@@ -4,7 +4,7 @@ created: '2026-10-01T08:56:56.842+02:00'
 id: feat-2-react-angular-visualization-spike
 status: planning
 type: feat
-updated: '2026-10-01T09:49:07.130+02:00'
+updated: '2026-10-01T09:57:38.105+02:00'
 version: 1.0.0
 ---
 
@@ -28,11 +28,11 @@ Build minimal prototypes in React and Angular to visualize a representative CI/C
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: Both prototypes render a comparable pipeline graph with pan/zoom and node-status styling.
+- [x] ACC-001: Both prototypes render a comparable pipeline graph with pan/zoom and node-status styling.
 
-- [ ] ACC-002: A short written comparison documents effort, ecosystem maturity/library fit, and friction encountered per framework.
+- [x] ACC-002: A short written comparison documents effort, ecosystem maturity/library fit, and friction encountered per framework.
 
-- [ ] ACC-003: Each prototype includes a documented single-command build/run procedure (e.g., a README) that an agent can execute without additional manual framework setup, verifying REQ-003.
+- [x] ACC-003: Each prototype includes a documented single-command build/run procedure (e.g., a README) that an agent can execute without additional manual framework setup, verifying REQ-003.
 
 ### Scope
 
@@ -90,15 +90,15 @@ Candidate libraries — React: react-flow/xyflow, D3, AG Grid, Recharts. Angular
 
 #### Phase 300: Evaluation
 
-- [ ] Task 300.100: Write comparison summary
+- [x] Task 300.100: Write comparison summary
 
-- [ ] Task 300.110: Feed results back into feat-1 Design Notes / Related Decisions
+- [x] Task 300.110: Feed results back into feat-1 Design Notes / Related Decisions
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-10-01**: Phase 200 (Implementation) complete. Both prototypes render the full shared mock pipeline DAG (12 nodes, 14 edges, 5 distinct status stylings, a legend, and pan/zoom) and build cleanly; both READMEs document a single-command run procedure. Phase 300 (Evaluation) is next.
+**As of 2026-10-01**: All three phases complete. Phase 100 (Setup) scaffolded both prototypes and the shared mock dataset; Phase 200 (Implementation) rendered the full shared mock pipeline DAG (12 nodes, 14 edges, 5 distinct status stylings, a legend, and pan/zoom) in both, verified headlessly; Phase 300 (Evaluation) produced `prototypes/COMPARISON.md`, recommending React + `@xyflow/react`, and fed the finding back into feat-1's Design Notes, Blockers, and Updates. All acceptance criteria (ACC-001..003) are satisfied. The spike is complete.
 
 ### Blockers
 
@@ -107,6 +107,10 @@ None yet.
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-10-01T00:00:00.000Z - Phase 300 (Evaluation) complete
+
+Wrote the comparison summary at `prototypes/COMPARISON.md` (Task 300.100), covering effort, ecosystem maturity/library fit, friction, and a recommendation, and fed the results back into feat-1-frontend-technology-decision (Task 300.110): appended a summary paragraph to feat-1's Design Notes, ticked feat-1's Task 200.120, resolved feat-1's Blockers entry, and prepended a feat-1 Updates entry. One-line conclusion: both prototypes are visually and functionally comparable, but the spike recommends React + `@xyflow/react` over Angular + `@swimlane/ngx-graph`, primarily on type-safety/agent-authoring-reliability and dependency/security-footprint grounds (31 `npm audit` findings in ngx-graph's transitive tree vs. none for xyflow). All three acceptance criteria (ACC-001..003) are now satisfied; this FEAT is complete.
 
 #### 2026-10-01T00:00:00.000Z - Phase 200 (Implementation) complete
 
@@ -135,6 +139,8 @@ No decisions have been made for this spike yet.
 ### Related PRs / Commits
 
 - [Issue #2](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/2): tracking issue for this spike.
+
+- `prototypes/COMPARISON.md`: the written comparison summary produced by Task 300.100.
 
 ### More Information
 
