@@ -1,0 +1,65 @@
+<div class="pipeline-dag">
+  <div class="pipeline-dag__legend">
+    @for (item of statusLegend; track item.status) {
+      <span class="legend-chip legend-chip--{{ item.status }}">{{ item.text }}</span>
+    }
+  </div>
+  <div class="pipeline-dag__canvas">
+    <ngx-graph
+      class="chart-container"
+      [nodes]="nodes"
+      [links]="links"
+      [layout]="'dagre'"
+      [layoutSettings]="{ orientation: 'LR' }"
+      [nodeWidth]="170"
+      [nodeHeight]="56"
+      [enablePan]="true"
+      [enableZoom]="true"
+      [autoZoom]="true"
+      [autoCenter]="true"
+      [panOnZoom]="true"
+    >
+      <ng-template #defsTemplate>
+        <svg:marker
+          id="pipeline-dag-arrow"
+          viewBox="0 -5 10 10"
+          refX="8"
+          refY="0"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+        >
+          <svg:path d="M0,-5L10,0L0,5" class="pipeline-dag__arrow-head" />
+        </svg:marker>
+      </ng-template>
+
+      <ng-template #nodeTemplate let-node>
+        <svg:g class="status-node status-node--{{ node.data.status }}">
+          <svg:rect
+            rx="6"
+            ry="6"
+            class="status-node__rect"
+            [attr.width]="node.dimension.width"
+            [attr.height]="node.dimension.height"
+          />
+          <svg:text class="status-node__label" x="10" [attr.y]="node.dimension.height / 2 - 4">
+            {{ node.label }}
+          </svg:text>
+          <svg:text class="status-node__stage" x="10" [attr.y]="node.dimension.height / 2 + 14">
+            {{ node.data.stage }}
+          </svg:text>
+        </svg:g>
+      </ng-template>
+
+      <ng-template #linkTemplate let-link>
+        <svg:g class="pipeline-dag__edge">
+          <svg:path
+            class="pipeline-dag__edge-line"
+            stroke-width="2"
+            marker-end="url(#pipeline-dag-arrow)"
+          ></svg:path>
+        </svg:g>
+      </ng-template>
+    </ngx-graph>
+  </div>
+</div>
