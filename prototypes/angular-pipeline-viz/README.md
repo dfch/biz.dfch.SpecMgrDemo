@@ -75,11 +75,16 @@ CDK drag-drop) was necessary.
   and `webcola` are flagged as non-ESM (CommonJS) dependencies, which can
   disable some build optimizations. Neither blocks the build or the
   rendered output.
-- **`npm audit` reports 31 vulnerabilities** (mostly moderate/high) in
-  ngx-graph's transitive dependency tree (old `d3-*`/`webcola`/`dagre`
-  releases). Not investigated further for this throwaway spike, but a
-  real adoption decision should weigh this against react-flow/xyflow's
-  dependency footprint.
+- **`npm audit` reports 31 vulnerabilities** (8 with `--omit=dev`) for
+  this app overall — but these all trace to the Angular 19 framework/
+  CLI/build-tooling baseline itself (`@angular/core`, `@angular/cli`,
+  `@angular/build`, `@babel/core`, `vite`, `webpack-dev-server`, etc.),
+  **not** to ngx-graph or its `dagre`/`webcola`/`d3-*` dependencies —
+  any Angular 19 CLI scaffold would carry this baseline regardless of
+  whether ngx-graph is used. Isolating ngx-graph's own contribution would
+  require re-running `npm audit` with ngx-graph removed, which this
+  throwaway spike did not do; see `prototypes/COMPARISON.md` for the
+  full write-up.
 - Everything else (custom node/edge SVG templates, per-status CSS, the
   legend, and pan/zoom config) was straightforward declarative
   `@Input`/content-template wiring, no further surprises.

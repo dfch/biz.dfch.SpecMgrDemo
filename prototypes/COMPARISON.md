@@ -34,15 +34,19 @@ session to reach a fully working, verified prototype.
 | Auto-layout | None built in (by design) — must hand-layout or bring your own (e.g. dagre) | Built in (`dagre` layout mode ships with the package) |
 | Documentation | Good quick-start, but the custom-node/`Handle` requirement is under-documented (see Friction) | Adequate but sparser; typings gap (below) isn't documented at all |
 | Type-safety | Full `Node<T>`/`Edge`/`NodeProps<T>` generics, all importable | `Node`/`Edge`/`Graph` interfaces used in public `@Input`s but **not re-exported** from the bundled `.d.ts` — must fall back to structural typing |
-| Bundle/dependency footprint | No npm audit findings reported in Phase 200; purpose-built package | `ng build` exceeds the 500 KB budget by ~43 KB (transitively via `dagre`/`webcola`/`d3-*`), two CJS/non-ESM warnings, **31 `npm audit` findings** (mostly moderate/high) in that same transitive tree |
+| Bundle/dependency footprint | `npm audit`: 0 findings; purpose-built package | `ng build` exceeds the 500 KB budget by ~43 KB (transitively via `dagre`/`webcola`/`d3-*`), two CJS/non-ESM warnings; `npm audit`: **31 findings** (8 with `--omit=dev`) — but all 31 trace to the Angular 19 framework/CLI/build-tooling baseline itself (`@angular/core`, `@angular/cli`, `@angular/build`, `@babel/core`, `vite`, `webpack-dev-server`, etc.), **not** to `ngx-graph` or its `dagre`/`webcola`/`d3-*` dependencies — any Angular 19 CLI scaffold would carry this baseline regardless of whether ngx-graph is used |
 
 For *this specific use case* — CI/CD DAG visualization — `@xyflow/react`
 is the better-fitted, better-maintained, better-typed library. `ngx-graph`
-works and ships the convenience of free auto-layout, but it is a thinner
-wrapper around an older, heavier, CVE-bearing dependency chain (`dagre` +
-`webcola` + multiple `d3-*` packages), and its own public API isn't fully
-type-exported, which undercuts a key reason (type-safety/agent-authoring
-reliability) feat-1 cares about.
+works and ships the convenience of free auto-layout, but its own public
+API isn't fully type-exported, which undercuts a key reason
+(type-safety/agent-authoring reliability) feat-1 cares about. Note that
+the 31 `npm audit` findings above are Angular's own tooling-baseline
+noise, not an ngx-graph-specific signal (confirmed: none of the 31
+flagged packages are `dagre`, `webcola`, `d3-*`, or `@swimlane/ngx-graph`
+itself) — isolating ngx-graph's actual contribution would require
+re-running `npm audit` with ngx-graph removed, which this spike did not
+do.
 
 ## Friction encountered
 
@@ -52,7 +56,7 @@ reliability) feat-1 cares about.
 | Silent failure mode | **Yes, severe**: a custom node type that omits its own `<Handle>` elements renders nodes but silently drops *all* edges — no console warning, easy to miss from the quick-start docs | None observed |
 | Type-safety | Full generics, all public types importable | `Node`/`Edge`/`Graph` not re-exported despite being used in public `@Input` signatures; worked around with structural typing |
 | Build warnings | None | Bundle-budget overage (~543 KB vs. 500 KB) + two CJS/non-ESM warnings (non-fatal) |
-| Security signal | None reported | 31 `npm audit` findings in the transitive tree (not investigated further, flagged for a real adoption decision) |
+| Security signal | `npm audit`: 0 findings | `npm audit`: 31 findings (8 with `--omit=dev`), all in the Angular 19 framework/CLI/build-tooling baseline (`@angular/*`, `@angular/cli`, `@babel/core`, `vite`, `webpack-dev-server`, etc.) — **not** ngx-graph-specific; none trace to `dagre`/`webcola`/`d3-*`/`ngx-graph` itself. Still real adoption-noise for the Angular tooling baseline, just not a library-fit signal for the two graph libraries being compared here |
 | Extra runtime wiring | None | `provideAnimations()` added defensively for the animations peer dep (no observed runtime failure either way) |
 
 **Code shape/verbosity** (`PipelineDag.tsx`, 125 lines, one file vs.
@@ -79,24 +83,51 @@ of the production app. The deciding factors, in order:
 1. **Type-safety and agent-authoring reliability** (feat-1's own REQ-004
    criterion): xyflow's fully-exported generic types are more reliable to
    author against with a coding agent than a library whose own public
-   `@Input` types aren't importable.
-2. **Dependency/security footprint**: 31 audit findings and a
-   budget-exceeding, partly-CJS transitive tree are real adoption-risk
-   signal for `ngx-graph`, not just spike noise — a production app would
-   inherit that risk on every `npm audit`/`npm update`.
+   `@Input` types aren't importable. This is the sharpest, most durable
+   discriminator between the two libraries: ngx-graph's `Node`/`Edge`/
+   `Graph` types are structurally unavailable to import on *every* future
+   change, not just a one-time cost.
+2. **Friction profile, honestly compared**: React's one real defect —
+   a custom node type that omits `<Handle>` elements silently drops all
+   edges with no warning — is severe but one-time and now documented (in
+   this file and the prototype's own history); once known, it is a fixed,
+   avoidable gotcha. Angular's friction is more structural: an `ERESOLVE`
+   peer-dependency conflict on first install (required manually pinning
+   `@angular/cdk`/`@angular/animations`), permanently non-exported public
+   types (worked around, never fixed), and a bundle-budget overage. Taken
+   together these tip slightly toward React, though this axis alone is
+   closer to a wash than reason 1.
 3. **Fit for the specific use case**: both render a correct, interactive,
-   styled DAG equally well visually, so this isn't a capability gap — it's
-   a "which dependency tree do we want to own" call, and xyflow's is
-   lighter and purpose-built.
+   styled DAG equally well visually, so this isn't a capability gap.
+
+**Correction note**: an earlier version of this document also cited "31
+`npm audit` findings in ngx-graph's transitive dagre/webcola/d3-* tree" as
+a deciding factor. That attribution was wrong and has been removed as a
+standalone reason: re-running `npm audit` confirms all 31 findings (8 with
+`--omit=dev`) trace to the Angular 19 framework/CLI/build-tooling baseline
+itself (`@angular/core`, `@angular/cli`, `@angular/build`, `@babel/core`,
+`vite`, `webpack-dev-server`, etc.) — none are `dagre`, `webcola`, `d3-*`,
+or `@swimlane/ngx-graph`. Any Angular 19 CLI scaffold carries this
+baseline regardless of ngx-graph, so it is not evidence about the two
+graph libraries being compared here and does not belong in this
+recommendation's reasoning (see Ecosystem-maturity and Friction tables
+above for the corrected, accurately-attributed framing of that data
+point).
 
 This is not a blowout: Angular's auto-layout (free `dagre` layout vs.
 hand-computed positions) is a genuine convenience that matters more as the
 DAG grows past a dataset this small, and `ngx-graph`'s peer-dependency
-pinning and CSS/audit warnings are all known, fixable, one-time costs, not
-fundamental blockers. If feat-1's decision were already leaning Angular
-for other organisational reasons, this spike would not be strong enough
-evidence to override that — but absent such a reason, xyflow is the
-better-evidenced choice.
+pinning and non-exported-types workaround are known, fixable (or at least
+work-aroundable) costs, not fundamental blockers. With the audit-footprint
+reason removed, the case for React is narrower than originally stated —
+resting now on type-safety/agent-authoring reliability (still a strong,
+REQ-004-aligned reason) plus a modestly-favorable friction comparison,
+rather than three independent reasons. It is close enough on the
+friction axis that a reasonable reviewer could call it a wash; it is not
+close on reason 1. If feat-1's decision were already leaning Angular for
+other organisational reasons, this spike would not be strong enough
+evidence to override that — but absent such a reason, xyflow remains the
+better-evidenced choice, now on honestly narrower grounds.
 
 **What this spike did not test** (important caveats for the DEC): no
 large/real-time dataset (hundreds of nodes, live status updates via
