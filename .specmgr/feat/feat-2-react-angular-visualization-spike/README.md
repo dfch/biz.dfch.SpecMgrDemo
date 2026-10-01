@@ -2,9 +2,9 @@
 classification: null
 created: '2026-10-01T08:56:56.842+02:00'
 id: feat-2-react-angular-visualization-spike
-status: planning
+status: review
 type: feat
-updated: '2026-10-01T09:57:38.105+02:00'
+updated: '2026-10-01T09:58:53.454+02:00'
 version: 1.0.0
 ---
 
