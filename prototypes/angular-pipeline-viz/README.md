@@ -76,7 +76,8 @@ CDK drag-drop) was necessary.
   disable some build optimizations. Neither blocks the build or the
   rendered output.
 - **`npm audit` reports 31 vulnerabilities** (8 with `--omit=dev`) for
-  this app overall — but these all trace to the Angular 19 framework/
+  this app overall at the time of the spike (a point-in-time snapshot: a
+  re-run on 2026-11-02 reported 56, as advisories change over time) — but these all trace to the Angular 19 framework/
   CLI/build-tooling baseline itself (`@angular/core`, `@angular/cli`,
   `@angular/build`, `@babel/core`, `vite`, `webpack-dev-server`, etc.),
   **not** to ngx-graph or its `dagre`/`webcola`/`d3-*` dependencies —

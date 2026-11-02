@@ -2,9 +2,9 @@
 classification: null
 created: '2026-10-01T08:56:56.842+02:00'
 id: feat-2-react-angular-visualization-spike
-status: review
+status: done
 type: feat
-updated: '2026-10-01T10:11:38.154+02:00'
+updated: '2026-11-02T11:35:02.485+01:00'
 version: 1.0.0
 ---
 
@@ -107,6 +107,10 @@ None yet.
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-02T10:35:00.000Z - Pre-merge review fixes; status set to done
+
+Pre-merge review of PR #3 found two issues. First, the PR description still gave "0 vs. 31 `npm audit` findings" as a deciding factor, which the earlier correction had already removed from `prototypes/COMPARISON.md`; the PR body was rewritten to match the two-reason recommendation (type-safety/agent-authoring reliability, friction profile). Second, a re-run of `npm audit` on 2026-11-02 reported 56 findings for the Angular app instead of 31, so `prototypes/COMPARISON.md` and the Angular prototype README now describe the 31 figure as a point-in-time snapshot. The conclusion is unchanged. Status set to `done` as part of the merge.
 
 #### 2026-10-01T00:00:00.000Z - Phase 300 (Evaluation) complete
 

@@ -56,7 +56,7 @@ do.
 | Silent failure mode | **Yes, severe**: a custom node type that omits its own `<Handle>` elements renders nodes but silently drops *all* edges — no console warning, easy to miss from the quick-start docs | None observed |
 | Type-safety | Full generics, all public types importable | `Node`/`Edge`/`Graph` not re-exported despite being used in public `@Input` signatures; worked around with structural typing |
 | Build warnings | None | Bundle-budget overage (~543 KB vs. 500 KB) + two CJS/non-ESM warnings (non-fatal) |
-| Security signal | `npm audit`: 0 findings | `npm audit`: 31 findings (8 with `--omit=dev`), all in the Angular 19 framework/CLI/build-tooling baseline (`@angular/*`, `@angular/cli`, `@babel/core`, `vite`, `webpack-dev-server`, etc.) — **not** ngx-graph-specific; none trace to `dagre`/`webcola`/`d3-*`/`ngx-graph` itself. Still real adoption-noise for the Angular tooling baseline, just not a library-fit signal for the two graph libraries being compared here |
+| Security signal | `npm audit`: 0 findings | `npm audit`: 31 findings (8 with `--omit=dev`) at the time of the spike (the count is a point-in-time snapshot: a re-run on 2026-11-02 reported 56), all in the Angular 19 framework/CLI/build-tooling baseline (`@angular/*`, `@angular/cli`, `@babel/core`, `vite`, `webpack-dev-server`, etc.) — **not** ngx-graph-specific; none trace to `dagre`/`webcola`/`d3-*`/`ngx-graph` itself. Still real adoption-noise for the Angular tooling baseline, just not a library-fit signal for the two graph libraries being compared here |
 | Extra runtime wiring | None | `provideAnimations()` added defensively for the animations peer dep (no observed runtime failure either way) |
 
 **Code shape/verbosity** (`PipelineDag.tsx`, 125 lines, one file vs.
