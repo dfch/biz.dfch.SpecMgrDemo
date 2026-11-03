@@ -1,0 +1,114 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
+
+.pipeline-dag {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.pipeline-dag__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  font: 14px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif;
+  border-bottom: 1px solid #e5e4e7;
+}
+
+.pipeline-dag__canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pipeline-dag__canvas > .chart-container {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  font-weight: 500;
+}
+
+.status-node__rect {
+  stroke-width: 2;
+  fill: #f5f5f5;
+  stroke: #999;
+}
+
+.status-node__label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #08060d;
+}
+
+.status-node__stage {
+  font-size: 11px;
+  fill: #6b6375;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pipeline-dag__edge-line {
+  fill: none;
+  stroke: #9aa0a6;
+}
+
+.pipeline-dag__arrow-head {
+  fill: #9aa0a6;
+}
+
+/* --- Status color coding: must be mutually visually distinct (REQ-004). --- */
+
+.status-node--success .status-node__rect,
+.legend-chip--success {
+  border-color: #2e9e44;
+  stroke: #2e9e44;
+  background: #e5f7e8;
+  fill: #e5f7e8;
+}
+
+.status-node--failed .status-node__rect,
+.legend-chip--failed {
+  border-color: #d93025;
+  stroke: #d93025;
+  background: #fbe7e5;
+  fill: #fbe7e5;
+}
+
+.status-node--running .status-node__rect,
+.legend-chip--running {
+  border-color: #1a73e8;
+  stroke: #1a73e8;
+  background: #e3edfc;
+  fill: #e3edfc;
+}
+
+.status-node--pending .status-node__rect,
+.legend-chip--pending {
+  border-color: #e8a800;
+  stroke: #e8a800;
+  background: #fff6e0;
+  fill: #fff6e0;
+}
+
+.status-node--skipped .status-node__rect,
+.legend-chip--skipped {
+  border-color: #9aa0a6;
+  stroke: #9aa0a6;
+  background: #eceef0;
+  fill: #eceef0;
+  stroke-dasharray: 4 2;
+}
