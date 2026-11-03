@@ -4,7 +4,7 @@ created: '2026-11-03T07:33:24.405+01:00'
 id: 2e96237c-0bee-45ac-b44a-c7ffee105ab7
 status: draft
 type: txt
-updated: '2026-11-03T10:36:21.568+01:00'
+updated: '2026-11-03T10:46:59.085+01:00'
 version: 1.0.0
 ---
 
@@ -28,7 +28,7 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 - DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342: Use Specmgr Identifiers for Traceability. Only the specmgr identifier is a reference. The chain is GOL, REQ, SYSRS, REQ of the SRS level, Structurizr element, OpenAPI operation, test.
 - DEC 50ade92a-5647-45ab-83e8-074009f10ef5: Set Rules for Data Classification. The values of `classification` are INTERN, VERTRAULICH and GEHEIM. An agent must not send VERTRAULICH or GEHEIM text to an external AI service.
 - DEC eb6e66ca-4ceb-46b5-9865-47e20a44674a: Write Documents in ASD-STE100 English. All documents are in STE and in EN. A word that is not approved must be in the register.
-- DEC 9eade4ab-2f03-439b-b798-770e43154f8b: Keep a Terminology Register for Technical Nouns and Verbs. The register is in `terminology/en/` and the project writes the meanings. The owner has not accepted the records of the agent.
+- DEC 9eade4ab-2f03-439b-b798-770e43154f8b: Keep a Terminology Register for Technical Nouns and Verbs. The register is in `terminology/en/` and the project writes the meanings. The owner accepted the records of the agent on 2026-11-03.
 - DEC a56f231b-d063-4bef-bbc8-3deb4daff76e: Use Conventional Commits, Feature Branches and a Definition of Done. One branch for each feature, a pull request for each change, and no merge if a blocking gate stops it.
 - DEC cc4449cd-78fb-452a-904f-7efda89cf004: Set Limits for Coding Agents. An agent must not accept a DEC, decrease a threshold, disable a gate or add a dependency with no inspection of the license.
 
@@ -50,7 +50,7 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 2. AGPL clause about networks. The owner must make a decision on how the AGPL-3.0 clause about use through a network applies to this project.
 3. Licenses of the planned tools. No person has examined the licenses of CodeQL, PIT, Stryker and the other tools.
 4. ArchUniTS. The maturity of the tool is not known. The skeleton FEAT must write the same rules and test them.
-5. Terminology register. The register has more than 300 records that an agent wrote. The owner must examine them and accept them (task 500.140).
+5. Terminology register. The register has more than 300 records that an agent wrote. The owner accepted them on 2026-11-03 (task 500.140).
 6. GitHub issue #4. The issue is about specmgr and not about this repository. The owner can move it.
 7. Gate for the STE check and script for the register. On hold (decision of the owner on 2026-11-03).
 
