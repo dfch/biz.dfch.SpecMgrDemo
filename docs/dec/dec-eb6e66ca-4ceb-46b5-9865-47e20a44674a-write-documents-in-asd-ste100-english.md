@@ -4,7 +4,7 @@ created: '2026-11-02T14:43:28.229+01:00'
 id: eb6e66ca-4ceb-46b5-9865-47e20a44674a
 status: accepted
 type: dec
-updated: '2026-11-03T07:32:54.415+01:00'
+updated: '2026-11-03T07:50:58.761+01:00'
 version: 1.0.0
 ---
 
@@ -77,6 +77,10 @@ Rules 1.5 and 1.12 of ASD-STE100 let an author use technical nouns and technical
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 00:00:00.000Z - Gate for the STE check is on hold
+
+The owner decided that CI has no gate for the STE check for now, and the project has no script for it. Authors and reviewers do the STE check with the asdste100 MCP. The owner makes a new decision later. The text of the decision is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 

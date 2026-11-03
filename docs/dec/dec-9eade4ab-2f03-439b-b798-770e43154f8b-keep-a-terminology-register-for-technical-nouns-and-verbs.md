@@ -4,7 +4,7 @@ created: '2026-11-02T14:43:35.061+01:00'
 id: 9eade4ab-2f03-439b-b798-770e43154f8b
 status: accepted
 type: dec
-updated: '2026-11-02T15:17:51.702+01:00'
+updated: '2026-11-03T07:51:00.490+01:00'
 version: 1.0.0
 ---
 
@@ -82,6 +82,10 @@ Sources of terms: the TN19 and TV2 lists of ASD-STE100, the CPRE glossary, the I
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 00:00:00.000Z - Script for the register is on hold
+
+The owner decided that the project has no script that validates the register for now. CI runs without it. The owner makes a new decision later. The records that an agent wrote stay not accepted (task 500.140 of feat-3-process-policy-baseline). The text of the decision is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 
