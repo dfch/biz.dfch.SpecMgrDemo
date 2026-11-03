@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-03T07:34:53.937+01:00'
+updated: '2026-11-03T10:57:05.134+01:00'
 version: 1.0.0
 ---
 
@@ -72,12 +72,16 @@ This handbook is the index of the development policies and standards of this rep
 - The DEC about React has the status accepted. Task 300.100 of feature feat-1 is done.
 - All other DEC documents have the status accepted. The STE gate and the script for the register are on hold (decision of the owner on 2026-11-03).
 - The user configuration of the asdste100 MCP must load the register files in `terminology/en/`.
-- The skeleton FEAT must set the versions, examine the licenses of the tools and set the thresholds from a measured baseline.
+- The foundation FEAT (feat-5-foundation-monorepo-ci) must set the versions and examine the licenses of the tools. The walking skeleton must set the thresholds from a measured baseline.
 - GitHub issue #4 is about the French heading table in specmgr.
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 09:57:30.000Z - Owner of the open item about the versions and licenses
+
+The open item about the "skeleton FEAT" now names the foundation FEAT for the versions and the licenses, and the walking skeleton for the thresholds. See the update of DEC 870244cf-9bea-46bf-8ff2-fe030325743d.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 

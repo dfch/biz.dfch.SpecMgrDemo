@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:12.788+01:00'
 id: 870244cf-9bea-46bf-8ff2-fe030325743d
 status: accepted
 type: dec
-updated: '2026-11-02T15:17:51.779+01:00'
+updated: '2026-11-03T10:56:59.215+01:00'
 version: 1.0.0
 ---
 
@@ -33,7 +33,7 @@ The project uses one monorepo. The backend uses Maven and the frontend uses pnpm
 ### Consequences
 
 - A new author uses `just` commands and does not have to know the build tools.
-- The skeleton FEAT must set the versions of the JDK and of Node to LTS versions.
+- The foundation FEAT (feat-5-foundation-monorepo-ci) must set the versions of the JDK and of Node to LTS versions.
 - If one part changes, the gates of all parts that use it must operate.
 
 ### Confirmation
@@ -68,11 +68,15 @@ Planning session of 2026-11-02.
 
 ## More Information
 
-Planned layout: `backend/`, `frontend/`, `contracts/`, `model/`, `terminology/`, `tools/`, `docs/` and `.specmgr/`. The skeleton FEAT must make sure that the layout is correct.
+Planned layout: `backend/`, `frontend/`, `contracts/`, `model/`, `terminology/`, `tools/`, `docs/` and `.specmgr/`. The foundation FEAT (feat-5-foundation-monorepo-ci) must make sure that the layout is correct.
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 09:56:46.000Z - Owner of each task
+
+The owner told the coding agent to fix the term "skeleton FEAT" in this DEC. The term is now split by task. The foundation FEAT (feat-5-foundation-monorepo-ci) sets the versions, makes the layout and examines the licenses of the tools. The contracts FEAT (feat-6-contracts-openapi-pipeline) and the verification FEAT (feat-7-verification-architecture-tools) have the OpenAPI pipeline and the test tools. The walking skeleton sets the thresholds from a measured baseline. The agent changed the term in Consequences and in More Information. The rest of the text is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 
