@@ -4,7 +4,7 @@ created: '2026-11-03T07:33:24.405+01:00'
 id: 2e96237c-0bee-45ac-b44a-c7ffee105ab7
 status: draft
 type: txt
-updated: '2026-11-03T07:52:44.841+01:00'
+updated: '2026-11-03T10:36:21.568+01:00'
 version: 1.0.0
 ---
 
@@ -61,7 +61,7 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 
 ## Other Items
 
-- The DEC about React has open risks: large data sets, data that changes with time, integration with the backend, accessibility and the work of developers each day. The DEC about verification and the DEC about quality must include them.
+- The DEC about React has open risks. They are large data sets, data that changes with time, integration with the backend, accessibility and the work of developers each day. The DEC about verification and the DEC about quality must include them.
 - A reviewer must examine the STE rules that a search for a word does not show. See the document about the STE review.
 - A DEC must have no error in the STE check before the owner accepts it (see the DEC about the STE language).
 

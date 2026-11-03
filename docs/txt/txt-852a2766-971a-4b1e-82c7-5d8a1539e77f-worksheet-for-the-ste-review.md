@@ -4,13 +4,13 @@ created: '2026-11-03T07:33:36.702+01:00'
 id: 852a2766-971a-4b1e-82c7-5d8a1539e77f
 status: draft
 type: txt
-updated: '2026-11-03T07:51:04.218+01:00'
+updated: '2026-11-03T10:36:32.580+01:00'
 version: 1.0.0
 ---
 
 # Worksheet for the STE Review
 
-This worksheet is for the reviewer of task 500.130 and of ACC-007 of feat-3-process-policy-baseline. The reviewer examines the STE rules that a word check does not examine. The worksheet has the results of a check with temporary tools. The project does not keep these tools.
+This worksheet is for the reviewer of task 500.130 and of ACC-007 of feat-3-process-policy-baseline. The reviewer examines the STE rules that a word check does not examine. The worksheet has the results of a check with three scripts. They are in `.specmgr/feat/feat-3-process-policy-baseline/bin/` (names start with `500.120-`). They are for reference only and are not a gate.
 
 ## Method
 
@@ -28,7 +28,7 @@ This worksheet is for the reviewer of task 500.130 and of ACC-007 of feat-3-proc
 
 ### Part of Speech
 
-About 80 words are approved as one part of speech and rejected as a different part of speech. The reviewer examines the words below in their sentences. A search with the pattern "to word", "must word" and "can word" found no other fault.
+About 90 words are approved as one part of speech and rejected as a different part of speech. The reviewer examines the words below in their sentences. A search with the pattern "to word", "must word" and "can word" found no other fault.
 
 | Word | Approved as | Rejected as |
 |---|---|---|
@@ -51,10 +51,11 @@ About 80 words are approved as one part of speech and rejected as a different pa
 ### Tenses and Passive Voice
 
 - Rule 3.6: use the active voice. In descriptive writing, the passive voice is permitted only when the agent is unknown.
-- Rule 3.2: use only the verb forms and tenses that rule 3.2 gives (infinitive, imperative, simple present, simple past, simple future, past participle as adjective).
+- Rule 3.2: use only the verb forms and tenses that this rule gives. These are the infinitive, the imperative, the simple present, the simple past, the simple future and the past participle as an adjective.
 - Rule 3.5: use the -ing form only as a technical noun or as a modifier in a technical noun. The reviewer looks for other -ing forms.
-- The text has 26 sentences with a passive verb.
-- 20 of them are the sentences in the Updates log (for example, "The first version of this decision is written."). The agent is known in these sentences (the author). The reviewer examines if they are correct for a log.
+- A pattern search found 38 sentences with a passive verb. The pattern search is not a grammar check.
+- 21 of them are the sentences in the Updates log (for example, "The first version of this decision is written."). The agent is known in these sentences (the author). The reviewer examines if they are correct for a log.
+- 11 of them are in this worksheet. They are examples that the worksheet quotes, and the reviewer can ignore them.
 - The reviewer examines these sentences:
   - "A quality target that has no measure cannot be examined." (DEC about quality)
   - "Three lists are loaded at this time: EARS, the CPRE glossary and RFC 2119." (DEC about the register)
