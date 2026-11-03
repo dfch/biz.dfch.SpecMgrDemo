@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T07:53:33.591+01:00'
+updated: '2026-11-03T10:32:07.099+01:00'
 version: 1.0.0
 ---
 
@@ -98,7 +98,7 @@ Facts from the machine at 2026-11-03: JDK 11 is installed. Maven, pnpm and just 
 
 The prototypes are in the folder of feat-2-react-angular-visualization-spike. They are not part of the layout.
 
-Open item for the owner: the JDK has the license GPL-2.0 with the Classpath exception. The DEC about licenses does not let a library have GPL-2.0-only. A JDK is a tool and not a library, and the exception covers programs that run on it. The owner must make a decision in task 100.110 before the project selects the JDK vendor.
+The JDK has the license GPL-2.0 with the Classpath exception. On 2026-11-03 the owner amended the DEC about licenses: the class Permitted has the row `GPL-2.0-only WITH Classpath-exception-2.0`. Task 100.110 must read the license file of the selected JDK build and must confirm that it has this license. The suggestion is an OpenJDK build from Eclipse Temurin with an LTS version. The owner selects the vendor.
 
 License table (the agent fills it in task 100.100 to 100.120, from the license file of each tool and not from memory):
 
@@ -130,7 +130,7 @@ License table (the agent fills it in task 100.100 to 100.120, from the license f
 
 - [ ] Task 100.100: Read the license file of Maven, Node, pnpm and just, and write the result in the license table
 
-- [ ] Task 100.110: Get a decision of the owner about the JDK license and the JDK vendor, and write the result in the license table
+- [ ] Task 100.110: Get the JDK vendor from the owner, read the license file of the JDK build, confirm the license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
 
 - [ ] Task 100.120: Select the tools for the commit message check, the license check and the SBOM, read their license files, and write the results in the license table
 
@@ -184,11 +184,15 @@ License table (the agent fills it in task 100.100 to 100.120, from the license f
 
 ### Blockers
 
-- The JDK license and vendor need a decision of the owner (task 100.110).
+- The owner must select the JDK vendor (task 100.110). The license class is permitted since 2026-11-03.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - License class for the JDK added to the DEC
+
+The owner told the agent to amend the DEC about licenses, for one time. The class Permitted has the new row `GPL-2.0-only WITH Classpath-exception-2.0`. Task 100.110 changed: it now confirms the license in the file of the selected JDK build.
 
 #### 2026-11-03 00:00:00.000Z - Plan written
 
