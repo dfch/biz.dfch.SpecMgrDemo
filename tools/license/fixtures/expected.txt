@@ -41,6 +41,12 @@
 31-nested-component.cdx.json | NOT PERMITTED | a nested component with a license that is not permitted
 32-empty-components.cdx.json | PASS | an SBOM with no component (the SBOM of the repository now)
 33-two-components-one-not-known.cdx.json | NOT KNOWN | the gate stops if one component of many is not known
+34-gpl3-only.cdx.json | PASS | GPL-3.0-only is in the list (decision of the owner on 2026-11-03)
+35-gpl3-or-later.cdx.json | PASS | GPL-3.0-or-later is in the list (decision of the owner on 2026-11-03)
+36-gpl3-plus-form.cdx.json | PASS | the plus form GPL-3.0+ is read as GPL-3.0-or-later
+37-gpl3-deprecated-id.cdx.json | PASS | the deprecated identifier GPL-3.0 is read as GPL-3.0-only
+38-lgpl3-or-later-not-permitted.cdx.json | NOT PERMITTED | LGPL-3.0-or-later is not in the list (the decision for LGPL is open for the owner)
+39-gpl2-or-later-not-permitted.cdx.json | NOT PERMITTED | GPL-2.0-or-later is not in the list (the decision for GPL-2.0-or-later is open for the owner)
 40-error-not-json.cdx.json | ERROR | a file that is not JSON
 41-error-not-cyclonedx.cdx.json | ERROR | a JSON file that is not a CycloneDX SBOM
 42-error-no-components.cdx.json | ERROR | a CycloneDX SBOM with no `components` list

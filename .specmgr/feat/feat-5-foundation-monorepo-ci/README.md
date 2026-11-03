@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: review
 type: feat
-updated: '2026-11-03T15:57:09.094+01:00'
+updated: '2026-11-03T18:22:53.492+01:00'
 version: 1.0.0
 ---
 
@@ -292,6 +292,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
 - Open item for the owner (not a blocker): a person who has competence in the law must examine the entries that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03: `CC0-1.0`, `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0`. The review of the Classpath row is done (dfch, 2026-11-03).
+- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `GPL-3.0-only` and `GPL-3.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:21 (after a permission of the owner for this change only). The decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later` is open for the owner. Both are not in the list, and the gate stops on them.
 - Resolved on 2026-11-03 14:28 (Task 130.130): the GitHub page of `cdxgen` shows v13.6.0, and npm has 12.9.0 as the latest release of `@cyclonedx/cdxgen`. From v13 the project publishes under a new npm name, `@cdxgen/cdxgen` (13.6.0, Apache-2.0 in the npm data). The old name stays on npm with 12.9.0 as its last release. The pin stays `@cyclonedx/cdxgen` 12.9.0, and no license of another package was read. A change to `@cdxgen/cdxgen` 13.x is a decision of the owner for a later feature (it needs a license check of the new package and its dependencies).
 - Open item for the owner (not a blocker): the plan has no check yet that the pinned SHA belongs to the tag of its comment. `just check-pins` compares both with `tools/license/allowed-actions.txt`, and the agent resolved the SHAs with `git ls-remote` on 2026-11-03 (Task 130.100). A change of a SHA needs a new check by a person.
 - No deviation DEC is necessary at this time. Under rule A, the EPL-2.0 in Maven and the MPL-2.0 in the JDK are not checked. If a deviation is necessary later, the owner wants one DEC for all deviations (see the update of 2026-11-03 11:22).
@@ -303,6 +304,17 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 17:22:33.000Z - GPL-3.0-only and GPL-3.0-or-later permitted (decision of the owner)
+
+The owner decided in the chat on 2026-11-03: "we want to allow GPL v3 only AND -later". The owner also gave a permission for one time to change DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 for this and no other change. The reason is that the license gate stopped on `GPL-3.0-or-later` (see the review of this feature, finding D2), and dependencies of the frontend and the backend can have it. `GPL-3.0-or-later` gives the user the choice of version 3, so it is not more restrictive than `GPL-3.0-only`. The agent made these changes. The work is not committed and not pushed.
+
+1. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9: in the class Permitted of More Information, the short form `GPL-3.0` is now `GPL-3.0-only`, and `GPL-3.0-or-later` is added. The DEC has a dated entry in Updates. The status (`accepted`) and the text of the Decision Outcome are not changed. `LGPL-3.0` stays in the short form.
+2. `tools/license/permitted-licenses.txt`: the line `GPL-3.0` is `GPL-3.0-only`, and the line `GPL-3.0-or-later` is added. The list has 18 entries (17 before) and has the same entries as the DEC. The header comment is corrected.
+3. Fixtures: six new files, 34 to 39, with the expected results in `expected.txt`. `GPL-3.0-only`, `GPL-3.0-or-later`, the plus form `GPL-3.0+` and the deprecated `GPL-3.0` pass. `LGPL-3.0-or-later` and `GPL-2.0-or-later` are not permitted. The case `GPL-2.0-only` alone (fixture 04) is not changed and still stops. The agent checked with a list of one entry that the library reads `GPL-3.0+` as `GPL-3.0-or-later` and `GPL-3.0` as `GPL-3.0-only`. `just test-license-gate` now has 42 fixtures (36 before). The counts "36 fixtures" and "17 entries" in the older entries and in Current Status are the counts of that time.
+4. `tools/license/README.md`: the note about deprecated identifiers and the GPL entries is updated. `tools/gates/selftest.sh` has no count of entries and needed no change.
+
+Open for the owner: the decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later`. They are not part of this decision, they are not in the list, and the gate stops on them. A person who has competence in the law must examine the new entries (see Blockers).
 
 #### 2026-11-03 14:56:01.000Z - Real pull requests of the gates (phase 150, part 2)
 

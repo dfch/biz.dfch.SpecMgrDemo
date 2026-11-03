@@ -27,6 +27,8 @@ The gate fails closed. It stops for these reasons:
 | NOT KNOWN | The library cannot parse the expression, or a license or an exception is not on the SPDX list, or the identifier is a `LicenseRef-` or `DocumentRef-`, or a license name is not in the table of names, or the component has no license |
 | Exit code 2 | A file is wrong (not JSON, not CycloneDX, no `components` list, a wrong line in the list or in the table), so the gate cannot decide |
 
-Note: `OR` with one unknown license is "not known" (for example `MIT OR FooBar-1.0`), also if the other alternative is permitted. The reason is that the gate fails closed. A deprecated identifier (for example `LGPL-3.0`) is read in its current form (`LGPL-3.0-only`) in the list and in the SBOM.
+Note: `OR` with one unknown license is "not known" (for example `MIT OR FooBar-1.0`), also if the other alternative is permitted. The reason is that the gate fails closed. A deprecated identifier is read in its current form in the list and in the SBOM: `LGPL-3.0` is `LGPL-3.0-only`, `GPL-3.0` is `GPL-3.0-only`, and the plus form `GPL-3.0+` is `GPL-3.0-or-later`.
+
+The GPL entries (decision of the owner on 2026-11-03): `GPL-3.0-only` and `GPL-3.0-or-later` are permitted. `LGPL-3.0` stays in the short form. `LGPL-3.0-or-later` and `GPL-2.0-or-later` are not in the list, and the decision for them is open for the owner. `GPL-2.0-only` alone stays not permitted.
 
 A change in this folder needs the review of a code owner. A change of `permitted-licenses.txt` needs a change of the DEC first.
