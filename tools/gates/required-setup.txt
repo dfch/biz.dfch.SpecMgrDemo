@@ -1,0 +1,22 @@
+# The jobs of the workflows, and the actions that each job must have (feat-5-foundation-monorepo-ci,
+# finding E2 of the review, REQ-009).
+#
+# tools/gates/check-workflows.sh reads this file. The gate stops if:
+#   - a workflow file or a job of a workflow is not in this file, or a job of this file is missing
+#     (the jobs are the required status checks of the rulesets on `dev` and `main`, see branch-protection.md);
+#   - the `name:` of a job is not its identifier, or the identifier is not the `just` recipe that the job starts;
+#   - the `uses:` steps of a job are not exactly the actions of its line (a job with a missing setup
+#     action, or with an extra action, stops the gate). The actions are listed by name. The pins (SHA, tag
+#     and versions) are the work of check-pins.sh.
+#
+# A new job, a new workflow file or a new action in a job needs a change of this file first. CODEOWNERS
+# covers this folder (/tools/), so the owner reviews each change.
+#
+# Format: <workflow file> <job> <action>...   (one line for each job; the actions are in any order)
+ci.yml validate actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml commit-check actions/checkout extractions/setup-just
+ci.yml license-check actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup actions/upload-artifact
+ci.yml check-workflows actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml check-pins actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml check-sudo actions/checkout extractions/setup-just
+ci.yml test-gates actions/checkout extractions/setup-just astral-sh/setup-uv

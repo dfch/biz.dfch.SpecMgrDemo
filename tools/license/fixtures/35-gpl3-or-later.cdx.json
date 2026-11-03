@@ -1,0 +1,26 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000000",
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "fixture"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "a",
+      "version": "1.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  ]
+}

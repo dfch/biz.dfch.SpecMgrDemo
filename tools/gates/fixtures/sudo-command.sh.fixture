@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Fixture for the test of check-sudo.sh: a command with the word.
+set -euo pipefail
+sudo apt-get install -y foo

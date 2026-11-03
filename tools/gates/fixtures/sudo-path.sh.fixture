@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fixture: the word with a path.
+/usr/bin/sudo ls

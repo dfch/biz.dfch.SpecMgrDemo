@@ -1,0 +1,3 @@
+build:
+    @just check-sudo
+# no sudo here

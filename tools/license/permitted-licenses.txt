@@ -1,0 +1,36 @@
+# The permitted licenses (feat-5-foundation-monorepo-ci, Task 130.130, REQ-006).
+#
+# Source: the class "Permitted" in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. This file has
+# the same entries as the DEC. A change here needs a change of the DEC first. CODEOWNERS
+# covers this file.
+#
+# Format: one SPDX license, or one `license WITH exception`, on each line. A line that starts
+# with # and an empty line are not entries. The gate matches the complete expression:
+# `GPL-2.0-only WITH Classpath-exception-2.0` is one entry, and `GPL-2.0-only` alone is
+# not permitted. The gate (the library license-expression) writes a deprecated identifier in
+# its current form, so `LGPL-3.0` is the same as `LGPL-3.0-only`, and `GPL-3.0` is the same
+# as `GPL-3.0-only`. The plus form is the same as the `-or-later` form (for example
+# `LGPL-3.0+` is `LGPL-3.0-or-later`, and `GPL-2.0+` is `GPL-2.0-or-later`). The list has
+# the current form. The decision of the owner for LGPL-3.0 and GPL-2.0-or-later is done
+# (2026-11-03). An expression with OR, AND or parentheses is not an entry. The gate
+# evaluates it with the entries of this list.
+MIT
+BSD-2-Clause
+BSD-3-Clause
+ISC
+0BSD
+Apache-2.0
+CC0-1.0
+Zlib
+Unicode-3.0
+Unicode-DFS-2016
+BlueOak-1.0.0
+Artistic-2.0
+LGPL-3.0-only
+LGPL-3.0-or-later
+GPL-2.0-or-later
+GPL-3.0-only
+GPL-3.0-or-later
+AGPL-3.0-only
+AGPL-3.0-or-later
+GPL-2.0-only WITH Classpath-exception-2.0
