@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T07:51:12.054+01:00'
+updated: '2026-11-03T08:22:47.807+01:00'
 version: 1.0.0
 ---
 
@@ -78,9 +78,11 @@ This feature gives the policies and standards for development in this repository
 
 #### Blocks
 
-- The FEAT for the structure of the monorepo.
+- feat-5-foundation-monorepo-ci (issue #5): the structure of the monorepo, the justfile and CI.
 
-- The FEATs for contracts, architecture, verification and the walking skeleton.
+- feat-6-contracts-openapi-pipeline (issue #6) and feat-7-verification-architecture-tools (issue #7).
+
+- The FEATs for the architecture model and the walking skeleton (not created).
 
 ### Design Notes
 
