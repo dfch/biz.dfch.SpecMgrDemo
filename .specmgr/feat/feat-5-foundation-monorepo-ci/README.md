@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T11:58:31.769+01:00'
+updated: '2026-11-03T12:07:42.542+01:00'
 version: 1.0.0
 ---
 
@@ -144,13 +144,13 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 
 | Tool | Use | License | Result |
 |---|---|---|---|
-| JDK: Eclipse Temurin 21 (selected by the owner) | build and run | expected GPL-2.0-only WITH Classpath-exception-2.0 (source: the page of Adoptium, not the license file of the download) | open until task 100.110 reads each license file |
-| Maven | build | not checked | open |
-| Node | build and run | not checked | open |
-| pnpm | build | not checked | open |
-| corepack | build | not checked | open |
-| just | task runner | not checked (can be CC0-1.0, no class in the DEC) | open |
-| specmgr | gate | not checked | open |
+| JDK: Eclipse Temurin 21.0.13+9 (selected by the owner) | build and run | GPL-2.0-only WITH Classpath-exception-2.0. Source: `legal/java.base/LICENSE` of the download. It has GPL version 2 and the text of the "Classpath" exception. The sha256 of the download is the same as the value of Adoptium | Main license: permitted. Stop: the folder `legal/` has 36 notices of third-party parts (keyword scan, not a full read: for example Unicode, zlib, FreeType, IJG, libpng, W3C, CC0) and an Assembly exception in each of 69 modules. The DEC has no class for them. The owner decides (question 1) |
+| Maven 3.10.0 (candidate) | build | Apache-2.0. Source: `LICENSE` of the download. `lib/*.license` has Apache-2.0, BSD-style (asm, jansi, jline), MIT-style (slf4j), public domain (aopalliance), EPL-2.0 (sisu), and CDDL-1.1 (javax.annotation-api) | Main license: permitted. Stop: EPL-2.0 is in the class Review, and CDDL-1.1 has no class. The owner decides (question 1) |
+| Node 26.13.0 (candidate, LTS "Lithium"; 24.22.2 "Krypton" is also LTS) | build and run | MIT. Source: `LICENSE` of the download (read for 26.13.0 only). It lists 43 bundled components, with licenses that include Apache-2.0, BSD, ISC, Unicode, zlib, CC0 (HdrHistogram) and Artistic-2.0 (npm). It has GPLv3 text with the Autoconf exception in the ICU part | Main license: permitted. Stop: Artistic-2.0, Unicode and the other bundled licenses have no class. The owner decides (question 1). The choice between Node 24 and Node 26 is also open (question 2) |
+| pnpm 12.16.1 (candidate) | build | MIT. Source: `LICENSE` of the repository at the tag v12.16.1. The npm package has no `LICENSE` file, only the field `license` in `package.json` and `THIRD-PARTY-NOTICES.md` (BSD-2-Clause, ISC) | Permitted |
+| corepack (part of Node) | build | MIT. Source: the corepack part of the `LICENSE` of Node 26.13.0 | Permitted |
+| just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Stop: CC0-1.0 has no class in the DEC. The owner decides (question 3) |
+| specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | The DEC has the class entry `AGPL-3.0`. The gate must match the complete expression, so `AGPL-3.0-or-later` can be "not known". It is a tool in CI and not a dependency. Open item (question 4) |
 | GitHub Actions in the workflow (checkout and the setup actions, not selected) | CI | not checked | open |
 | Commit message checker (not selected) | gate | not checked | open |
 | SBOM tool (not selected) | gate | not checked | open |
@@ -171,11 +171,11 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 
 #### Phase 100: License Checks and Decisions
 
-- [ ] Task 100.100: Select the releases of Maven, Node (an LTS release, confirmed from the release schedule), pnpm and just. Read the license file of each, and write the result in the license table
+- [x] Task 100.100: Select the releases of Maven, Node (an LTS release, confirmed from the release schedule), pnpm and just. Read the license file of each, and write the result in the license table
 
-- [ ] Task 100.105: Read the license file of corepack and of specmgr, and write the result in the license table
+- [x] Task 100.105: Read the license file of corepack and of specmgr, and write the result in the license table
 
-- [ ] Task 100.110: Read each license file of the Eclipse Temurin 21 download (the owner selected it), including the `legal/` folder. Confirm the main license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
+- [x] Task 100.110: Read each license file of the Eclipse Temurin 21 download (the owner selected it), including the `legal/` folder. Confirm the main license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
 
 - [ ] Task 100.115: Select the GitHub Actions for the checkout and for the setup of the tools, read their license files, and write the results in the license table
 
@@ -235,12 +235,18 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Work has not started. The JDK vendor is selected: Eclipse Temurin 21. The next step is phase 100 (license checks). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 has started: the licenses of the JDK, Maven, Node, pnpm, corepack, just and specmgr are read (Tasks 100.100, 100.105 and 100.110 are done). The work stops at Task 100.130 for the decisions of the owner (see Blockers). Tasks 100.115 and 100.120 can continue, because they select other tools. The first change to files that are not documents has not been made. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
-- Stop-and-ask case for phase 100: `just` can have the license CC0-1.0, which has no class in the DEC about licenses. If the license file shows this, the owner must decide (an amendment of the DEC or a DEC about the deviation). Task 100.130 is for this.
+- Stop (REQ-010): Tasks 100.100, 100.105 and 100.110 show licenses that have no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. No tool of the license table is in use until the owner decides. The details are in the license table:
+  - `just` has the license CC0-1.0.
+  - Maven has EPL-2.0 (class Review) and CDDL-1.1 in `lib/`.
+  - Node has Artistic-2.0 (npm), Unicode and other licenses in the bundled parts.
+  - The JDK has third-party notices in `legal/` (Unicode, zlib, FreeType, IJG, libpng, W3C and CC0) and an Assembly exception.
+  - specmgr has AGPL-3.0-or-later, and the DEC has `AGPL-3.0`.
+  - Task 100.130 is for these questions. The open questions are in the update of 2026-11-03 11:07.
 - Open item for the owner (not a blocker): the work of this plan and the earlier plans is in commits on `dev`, and DEC a56f231b-d063-4bef-bbc8-3deb4daff76e says that each change goes through a pull request. Documents on `dev` before the branch protection exists are a start exception that the DEC does not give. The owner must confirm it or make a rule.
 - Open item for the owner (not a blocker): the traceability gate and the security checks have no feature at this time. [Issue #8](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8) is for them. The owner makes a FEAT for it later.
 - Open item for the owner (not a blocker): the CODEOWNERS entry for the thresholds is added when the walking skeleton makes them.
