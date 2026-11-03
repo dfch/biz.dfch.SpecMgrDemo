@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-03T21:02:30.390+01:00'
 id: feat-16-cdxgen-lockfile
-status: planning
+status: review
 type: feat
-updated: '2026-11-03T21:35:00.923+01:00'
+updated: '2026-11-03T21:37:33.086+01:00'
 version: 1.0.0
 ---
 
