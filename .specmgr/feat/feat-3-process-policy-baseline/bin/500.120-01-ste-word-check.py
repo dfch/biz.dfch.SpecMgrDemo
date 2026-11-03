@@ -12,18 +12,46 @@
 # It does not examine grammar (tenses, passive voice, sentence length).
 #
 # Limits:
-#   - The paths below are fixed for the machine of the author. The path of
-#     the base dictionary is in the cache of uv and changes with the package.
+#   - The paths are relative to the repository root. Two inputs are outside
+#     of this repository: the base dictionary (package
+#     biz-dfch-asdste100mcp, or the variable STE_VOCAB_DIR) and the
+#     technical words (sibling repository biz.dfch.AsdSte100TechnicalWords,
+#     or the variable STE_TECH_WORDS_DIR).
 #   - It finds known words by simple suffix rules, so it can show a
 #     false result.
 #   - By default it does not read the feature plans in .specmgr/. The flag
 #     --plans reads .specmgr/feat/*/README.md and not docs/.
 #
-# Use:  python3 500.120-01-ste-word-check.py [--plans]
+# Use:  uv run --with biz-dfch-asdste100mcp python3 500.120-01-ste-word-check.py [--plans]
 import json,re,glob,collections,sys
-B="/home/user/.cache/uv/archive-v0/hGlHdr7uTYq3wLtr/lib/python3.13/site-packages/biz/dfch/asdste100vocab/data/"
-T="/home/user/src/biz.dfch.AsdSte100TechnicalWords/src/biz/dfch/asdste100technicalwords/data/"
-R="/home/user/src/biz.dfch.SpecMgrDemo/terminology/en/"
+import os
+from pathlib import Path
+# The repository root is 4 levels above this file:
+# <root>/.specmgr/feat/<feat>/bin/<script>
+ROOT=Path(__file__).resolve().parents[4]
+
+def _vocab_dir():
+    # 1. Environment variable. 2. The installed package (see Use below).
+    env=os.environ.get("STE_VOCAB_DIR")
+    if env: return Path(env)
+    try:
+        import importlib.resources as r
+        return Path(str(r.files("biz.dfch.asdste100vocab")/"data"))
+    except ModuleNotFoundError:
+        sys.exit("Base dictionary not found. Set STE_VOCAB_DIR, or start the script with: "
+                 "uv run --with biz-dfch-asdste100mcp python3 "+Path(__file__).name)
+
+def _tech_dir():
+    # 1. Environment variable. 2. The sibling repository of the repository root.
+    env=os.environ.get("STE_TECH_WORDS_DIR")
+    d=Path(env) if env else ROOT.parent/"biz.dfch.AsdSte100TechnicalWords/src/biz/dfch/asdste100technicalwords/data"
+    if not d.is_dir():
+        sys.exit("Technical words not found: "+str(d)+". Set STE_TECH_WORDS_DIR.")
+    return d
+
+B=str(_vocab_dir())+"/"
+T=str(_tech_dir())+"/"
+R=str(ROOT/"terminology/en")+"/"
 files=[B+"asdste100_issue9_base.jsonl",B+"asdste100_issue9_technical_words.jsonl",T+"vocab-ears.jsonl",T+"cpre-glossary-en.jsonl",T+"vocab-rfc2119.jsonl",R+"technical-nouns.jsonl",R+"technical-verbs.jsonl"]
 appr=collections.defaultdict(set); rej=collections.defaultdict(set)
 def add(d,n,t):
@@ -45,9 +73,9 @@ def known(w):
         if len(x)>3 and x[-1]==x[-2]: c.append(x[:-1])
     return c
 if "--plans" in sys.argv:
-    docs=sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/.specmgr/feat/*/README.md"))
+    docs=sorted(glob.glob(str(ROOT/".specmgr/feat/*/README.md")))
 else:
-    docs=sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/docs/*/*.md")) ; docs=[d for d in docs if "/docs/qa/" not in d]
+    docs=sorted(glob.glob(str(ROOT/"docs/*/*.md"))) ; docs=[d for d in docs if "/docs/qa/" not in d]
 unk=collections.defaultdict(set); rj=collections.defaultdict(set)
 for p in docs:
     t=open(p).read()

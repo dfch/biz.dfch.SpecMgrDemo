@@ -5,12 +5,14 @@
 # (a pattern search, not a grammar check). The reviewer examines the results
 # (rules 3.6, 5.1 and 6.3). Reads docs/ and skips docs/qa.
 #
-# Status: reference only, not a gate. The paths are fixed for the machine
-# of the author. See 500.120-01-ste-word-check.py for the limits.
+# Status: reference only, not a gate. The paths are relative to the
+# repository root. See 500.120-01-ste-word-check.py for the limits.
 #
-# Use:  python3 500.120-02-ste-passive-and-long-sentences.py
+# Use:  uv run --with biz-dfch-asdste100mcp python3 500.120-02-ste-passive-and-long-sentences.py
 import re,glob,collections
-docs=[d for d in sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/docs/*/*.md")) if "/docs/qa/" not in d]
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[4]
+docs=[d for d in sorted(glob.glob(str(ROOT/"docs/*/*.md"))) if "/docs/qa/" not in d]
 PASS=re.compile(r"\b(is|are|was|were|be|been|being)\s+(\w+ed|made|written|done|given|shown|set|run|built|known|seen|taken|kept|found|used)\b",re.I)
 long=[];passv=[];cnt=collections.Counter()
 for p in docs:

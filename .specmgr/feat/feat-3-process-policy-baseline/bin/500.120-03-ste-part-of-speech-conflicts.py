@@ -6,15 +6,15 @@
 # The reviewer examines them in their sentences (rule 1.7 and 1.13).
 # It loads the word lists from 500.120-01-ste-word-check.py.
 #
-# Status: reference only, not a gate. The paths are fixed for the machine
-# of the author. See 500.120-01-ste-word-check.py for the limits.
+# Status: reference only, not a gate. The paths are relative to the
+# repository root. See 500.120-01-ste-word-check.py for the limits.
 #
-# Use:  python3 500.120-03-ste-part-of-speech-conflicts.py
+# Use:  uv run --with biz-dfch-asdste100mcp python3 500.120-03-ste-part-of-speech-conflicts.py
 import os
 _here=os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(_here,"500.120-01-ste-word-check.py")).read().split("if \"--plans\"")[0])
 import glob,re,collections
-docs=[d for d in sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/docs/*/*.md")) if "/docs/qa/" not in d]
+docs=[d for d in sorted(glob.glob(str(ROOT/"docs/*/*.md"))) if "/docs/qa/" not in d]
 cnt=collections.Counter(); where=collections.defaultdict(set)
 for p in docs:
     t=open(p).read(); t=re.sub(r"^---.*?---","",t,flags=re.S); t=re.sub(r"`[^`]*`","",t)
