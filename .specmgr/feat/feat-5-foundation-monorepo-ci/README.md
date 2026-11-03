@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T12:52:50.591+01:00'
+updated: '2026-11-03T13:00:50.478+01:00'
 version: 1.0.0
 ---
 
@@ -136,9 +136,11 @@ Tools for the gates (decision of the owner on 2026-11-03). The commit message ga
 
 The version file has the version of each tool and the checksum of each download. The checksums come from the files that the vendor publishes with the release. The install script compares them with the checksum of the downloaded file. The file `tools/versions.env` is at repository level, because CI, feat-6 and feat-7 also read it.
 
-The JDK comes first in the `PATH`. A script writes the file `~/.config/biz.dfch.SpecMgrDemo/env.sh` that sets `JAVA_HOME` and the `PATH` before the entries of the system, and adds one line that reads this file to the shell profile of the user, only if the line is not there. The script can be operated again with no change. The corepack shims go in a directory of the home directory (`corepack enable --install-directory`), so that no sudo is necessary. Node has its own install script, and the scripts do not use the Node 24 of the machine without a check of its version.
+The JDK comes first in the `PATH`. A script writes the file `~/.config/biz.dfch.SpecMgrDemo/env.sh` that sets `JAVA_HOME` and the `PATH` before the entries of the system, and adds one line that reads this file to the shell profile of the user, only if the line is not there. The script can be operated again with no change. Node 26.13.0 has no corepack (its `bin/` has `node`, `npm` and `npx` only), although its `LICENSE` file still lists corepack. So pnpm comes from the standalone release on GitHub (`pnpm-linux-x64.tar.gz`), and the checksum is the digest of the GitHub release. Node has its own install script, and the scripts do not use the Node 24 of the machine.
 
 Facts from the machine at 2026-11-03: JDK 11 is installed. Maven, pnpm and just are not installed. Node 24, Docker, gh, uv and corepack are installed. The agent has no sudo. Node 24 is not confirmed as an LTS release. Task 100.100 confirms the LTS release from the release schedule of Node and pins it.
+
+Installed on the machine of the author on 2026-11-03 (Task 110.120), in `~/.local/opt/biz.dfch.SpecMgrDemo/`: Eclipse Temurin 21.0.13+9 (`jdk-21.0.13_9`), Apache Maven 3.10.0, Node v26.13.0, pnpm 12.16.1 and just 1.59.0. `110.110-06-verify-tools.sh` shows that each tool in the PATH is the pinned version and comes from this folder. A new interactive shell (`bash -ic`) shows the JDK 21 (the system JDK 11 is not changed), and `java`, `mvn`, `node`, `pnpm` and `just` are the pinned versions (ACC-004 for the local machine). The scripts added two lines to `~/.bashrc`. The machine has its own uv 0.12.5, and the pin 0.13.7 in `tools/versions.env` is for CI.
 
 The prototypes are in the folder of feat-2-react-angular-visualization-spike. They are not part of the layout.
 
@@ -161,8 +163,8 @@ License table (the agent filled it in tasks 100.100 to 100.120, from the license
 | JDK: Eclipse Temurin 21.0.13+9 (selected by the owner) | build and run | GPL-2.0-only WITH Classpath-exception-2.0. Source: `legal/java.base/LICENSE` of the download. It has GPL version 2 and the text of the "Classpath" exception. The sha256 of the download is the same as the value of Adoptium | Permitted (main license, rule A of the owner). The folder `legal/` has 36 notices of third-party parts and an Assembly exception text in each of 69 modules. Under rule A the gate does not check them, because the JDK does not go to users |
 | Maven 3.10.0 (candidate) | build | Apache-2.0. Source: `LICENSE` of the download. `lib/*.license`: Apache-2.0, BSD-3-Clause (asm, jansi, jline), MIT (slf4j), public domain (aopalliance), EPL-2.0 (sisu), CDDL-1.1 (javax.annotation-api) | Permitted (main license, rule A of the owner). The bundled EPL-2.0 (class Review) and CDDL-1.1 are not checked under rule A, because Maven does not go to users |
 | Node 26.13.0 (selected by the owner on 2026-11-03: LTS "Lithium") | build and run | MIT. Source: `LICENSE` of the download. It lists 43 bundled components (see the inventory in Design Notes) | Permitted (main license, rule A of the owner). The bundled Unicode-3.0, Zlib, Artistic-2.0 and BlueOak-1.0.0 are also in the class Permitted since 2026-11-03 11:22. The other bundled licenses are not checked under rule A |
-| pnpm 12.16.1 (candidate) | build | MIT. Source: `LICENSE` of the repository at the tag v12.16.1. The npm package has no `LICENSE` file, only the field `license` in `package.json` and `THIRD-PARTY-NOTICES.md` (BSD-2-Clause, ISC) | Permitted |
-| corepack (part of Node) | build | MIT. Source: the corepack part of the `LICENSE` of Node 26.13.0 | Permitted |
+| pnpm 12.16.1 (standalone release `pnpm-linux-x64.tar.gz`, sha256 `565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825`, the same as the digest on GitHub) | build | MIT. Source: `LICENSE` of the repository at the tag v12.16.1. The npm package has no `LICENSE` file, only the field `license` in `package.json` and `THIRD-PARTY-NOTICES.md` (BSD-2-Clause, ISC) | Permitted |
+| corepack | not in use | MIT (the corepack part of the `LICENSE` of Node 26.13.0). Node 26.13.0 does not ship corepack, and no script installs it | Not in use. The row is for information |
 | just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Permitted since 2026-11-03 11:17 (the DEC has `CC0-1.0`). The legal review of this entry is open |
 | specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | Permitted (the DEC has `AGPL-3.0-or-later` since 2026-11-03 11:17) |
 | Action `actions/checkout` v7.0.1, SHA `3d3c42e5aac5ba805825da76410c181273ba90b1` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
@@ -176,7 +178,8 @@ License table (the agent filled it in tasks 100.100 to 100.120, from the license
 | uv (latest release on GitHub: 0.13.7; version for Task 110.100) | CI (for specmgr) | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the `README.md` at the release tag | Permitted |
 | Commit message gate (script of this project) | gate | AGPL-3.0-only (project code). No tool of another vendor | Permitted (no check necessary) |
 | License gate (script of this project) | gate | AGPL-3.0-only (project code) | Permitted (no check necessary) |
-| Library `license-expression` 30.4.4 (used by the license gate) | gate | Apache-2.0. Source: the metadata of the release on PyPI (the `LICENSE` file inside the release is not read yet, Task 110.100 reads it when it pins the checksum). It depends on `boolean.py`, which is not checked yet | Permitted by the metadata. The check of the file is open (Task 110.100) |
+| Library `license-expression` 30.4.4 (used by the license gate) | gate | Apache-2.0. Source: `licenses/apache-2.0.LICENSE` and `licenses/NOTICE` in the wheel (sha256 `421788fdcadb41f049d2dc934ce666626265aeccefddd25e162a26f23bcbf8a4`, the same as on PyPI). The wheel has a data file (`scancode-licensedb-index.json`) under CC-BY-4.0 (`data/cc-by-4.0.LICENSE`). Under rule A, the CC-BY-4.0 data file is not checked | Permitted |
+| Library `boolean.py` 5.0 (a dependency of `license-expression`) | gate | BSD-2-Clause. Source: `licenses/LICENSE.txt` in the wheel (sha256 `ef28a70bd43115208441b53a045d1549e2f0ec6e3d08a9d142cbc41c1938e8d9`, the same as on PyPI) | Permitted |
 | SBOM for Maven: `cyclonedx-maven-plugin` 2.9.3 | gate | Apache-2.0. Source: `LICENSE` in the repository at the tag commit `93e97e1c7e50b08cbba62549c2ed88c95202ed62`, and `<licenses>` in the POM. The jar has no license file. sha256 of the jar: `c452d5eebe28bc86bef2e7c72d129f04f60877bef843eac8120f01fb655be293` (the same as the value on Maven Central) | Permitted |
 | SBOM for pnpm: `@cyclonedx/cdxgen` 12.9.0 | gate | Apache-2.0. Source: `package/LICENSE` in the npm package. The integrity value of the package is `sha512-+LWBiyTgdSWdprdsA7xpNEhD9NV/Wo3TvqaVYQHjP3kEeNEZTV+08U8CYh+P2+2CHycwKFWHhtSREN+p/r6Sgw==`. The package has 29 dependencies, and under rule A they are not checked | Permitted |
 
@@ -230,15 +233,15 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 110: Install Scripts
 
-- [ ] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors, for the JDK, Maven, Node, pnpm, just, uv, `cyclonedx-maven-plugin`, `@cyclonedx/cdxgen` and `license-expression`; read the license file of `license-expression` and of `boolean.py` in the release) and the `_common.sh` file in the `bin` folder of this feature
+- [x] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors, for the JDK, Maven, Node, pnpm, just, uv, `cyclonedx-maven-plugin`, `@cyclonedx/cdxgen` and `license-expression`; read the license file of `license-expression` and of `boolean.py` in the release) and the `_common.sh` file in the `bin` folder of this feature
 
-- [ ] Task 110.105: Write the install script for Node. It checks the version, and does not use the Node of the machine without this check
+- [x] Task 110.105: Write the install script for Node. It checks the version, and does not use the Node of the machine without this check
 
-- [ ] Task 110.110: Write the install scripts `TTT.MMM-NN-name.sh` for the JDK, Maven, pnpm (with corepack in a directory of the home directory) and just. They use the home directory, check the checksums and can be operated again. One script writes `~/.config/biz.dfch.SpecMgrDemo/env.sh` (`JAVA_HOME` and `PATH`) and adds one line to the shell profile only if the line is not there
+- [x] Task 110.110: Write the install scripts `TTT.MMM-NN-name.sh` for the JDK, Maven, pnpm (the standalone release, because Node 26 has no corepack) and just. They use the home directory, check the checksums and can be operated again. One script writes `~/.config/biz.dfch.SpecMgrDemo/env.sh` (`JAVA_HOME` and `PATH`) and adds one line to the shell profile only if the line is not there
 
-- [ ] Task 110.120: Operate the scripts on the machine of the author, check the versions in a new shell, and write the installed versions in this plan
+- [x] Task 110.120: Operate the scripts on the machine of the author, check the versions in a new shell, and write the installed versions in this plan
 
-- [ ] Task 110.130: Write the README of the `bin` folder with the sequence of the scripts
+- [x] Task 110.130: Write the README of the `bin` folder with the sequence of the scripts
 
 #### Phase 120: Layout and Justfile
 
@@ -282,7 +285,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 100 has only documents. The next step is phase 110 (install scripts), and it changes files that are not documents. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. The next step is phase 120 (layout and `justfile`). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
@@ -297,6 +300,19 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 12:00:37.000Z - Install scripts written and run (phase 110), license expressions
+
+The owner asked how the license gate must handle complex license expressions, and agreed to continue on a feature branch. The agent did this:
+
+1. License expressions: an own parser for `OR`, `AND`, `WITH` and parentheses is error prone. The plan now uses the library `license-expression` 30.4.4 (Apache-2.0, with `boolean.py` 5.0, BSD-2-Clause). The gate has one small function that evaluates the parsed tree against the permitted list, and fails closed. ACC-009, Task 130.130 and Task 130.135 have this. The agent read the license files in both wheels.
+2. Branch: the agent made the branch `feat-5-foundation-monorepo-ci` from `dev`. The work of phase 110 is on this branch, and the commits go through a pull request.
+3. `tools/versions.env` has the pins and the checksums. Each checksum is the value that the vendor publishes, and the agent compared it with the download.
+4. Discrepancy: Node 26.13.0 has no corepack, so the plan to install pnpm with corepack did not work. The agent used the standalone pnpm release from GitHub (the sha256 is the same as the digest on GitHub). The corepack row in the license table is "not in use".
+5. The scripts `110.105-01` and `110.110-01` to `110.110-06` install Node, the JDK, Maven, pnpm and just, write `~/.config/biz.dfch.SpecMgrDemo/env.sh`, add two lines to `~/.bashrc`, and verify the versions. The agent tested the failure paths in a copy with a wrong checksum and with a missing variable: each stops with an error and leaves no temporary files. The agent found and fixed one error in `_common.sh` (the cleanup function made the verify script exit with code 1 after a correct result).
+6. The scripts run again with no change (the second run of each script made no change to the files). A new interactive shell shows the JDK 21, and the system JDK 11 is not changed.
+
+Open: the `just` recipes and the check for `sudo` (Task 130.145) are not written yet. The scripts do not have the word `sudo`.
 
 #### 2026-11-03 11:48:13.000Z - Actions and gate tools selected, DEC changed for rule A (Tasks 100.115, 100.120)
 
