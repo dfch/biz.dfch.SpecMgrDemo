@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
-status: planning
+status: review
 type: feat
-updated: '2026-11-03T15:48:51.799+01:00'
+updated: '2026-11-03T15:49:44.998+01:00'
 version: 1.0.0
 ---
 
