@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T15:30:57.569+01:00'
+updated: '2026-11-03T15:39:55.553+01:00'
 version: 1.0.0
 ---
 
@@ -72,7 +72,7 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - [x] ACC-011: No script of this feature has the word `sudo` in a command, and the scripts operate for a user that has no sudo (REQ-008). A check in the `justfile` shows this.
 
-- [ ] ACC-012: The instructions for the branch protection and the suggestion for the skill are documents in the folder of this feature (REQ-013, REQ-014).
+- [x] ACC-012: The instructions for the branch protection and the suggestion for the skill are documents in the folder of this feature (REQ-013, REQ-014).
 
 - [x] ACC-013: In each workflow, each `uses:` step has a full commit SHA (40 hexadecimal characters) and not a tag or a branch. A comment on the same line gives the name of the action and the tag of the release, for example `uses: actions/checkout@<sha> # actions/checkout v7.0.1`. A `just` recipe checks this form, and checks that the versions of the tools in the workflow are the same as in `tools/versions.env` (REQ-003, REQ-015).
 
@@ -274,7 +274,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 140: Skill Suggestion
 
-- [ ] Task 140.100: Write a suggestion for a skill about the names of scripts in the format `TTT.MMM-NN-name.sh`. The suggestion is a document in the folder of this feature. The owner decides where the skill goes
+- [x] Task 140.100: Write a suggestion for a skill about the names of scripts in the format `TTT.MMM-NN-name.sh`. The suggestion is a document in the folder of this feature. The owner decides where the skill goes
 
 #### Phase 150: Review
 
@@ -286,7 +286,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-012 is open (the suggestion for the skill is Task 140.100). ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Nothing is committed or pushed. The next step is phase 140 (the suggestion for the skill).
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Phase 140 is done (Task 140.100, see the update of 2026-11-03 14:39): the suggestion for the skill about the names of scripts is `skill-suggestion-script-names.md` in the folder of this feature, and ACC-012 is ticked. The owner decides where the skill goes. Nothing is committed or pushed. The next step is phase 150 (the review).
 
 ### Blockers
 
@@ -303,6 +303,18 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 14:39:37.000Z - Suggestion for a skill about the names of scripts (phase 140)
+
+The agent did Task 140.100. Nothing is committed or pushed. The agent wrote `skill-suggestion-script-names.md` in the folder of this feature. It is a plain Markdown document and not a specmgr artifact. It has an introduction (what, why, and that the owner decides where the skill goes) and a draft of a complete `SKILL.md` that the owner can copy. The agent did not install the skill in any other folder.
+
+The draft of the skill has: the frontmatter (`name: script-names` and a `description` in the "Use when ..." style of the existing skills); the name format `TTT.MMM-NN-name.sh` (the number of the task, the number of the step with two digits from `01`, and a short kebab-case name that starts with a verb); the folder (`bin` in the folder of the feature, with `_common.sh` and a `README.md` that has the sequence); ten rules for a script (shebang, header with feature and task on line 2, `set -euo pipefail`, can be run again, no sudo, functions from `_common.sh`, versions from `tools/versions.env`, checksums, executable); a table of the difference between these scripts and the gate scripts in `tools/gates/` (the gates have names for their function with no number, are started from a recipe in the `justfile`, and have the task in the header only); the seven real scripts of this feature as examples; a check list; a table of common mistakes; and one optional `grep` command that lists names that do not match the format. The agent did not add a gate, and did not change the `justfile` or CI.
+
+Facts that the agent checked in the repository: the seven scripts in `bin` match the regex of the draft, line 2 of each has the feature and the task, each has `set -euo pipefail`, and `feat-3-process-policy-baseline/bin/` has scripts with the same format and the extension `.py` (so the draft allows `.py`). The regex does not match the four wrong names that the agent tried.
+
+Open points for the owner (also in the document): where the skill goes (for all projects or for this project only), and whether the line that refers to the skill `feat-numbering` stays.
+
+Checks that the agent ran (with the tools of `~/.config/biz.dfch.SpecMgrDemo/env.sh`): `just test-gates` (94 ok, 0 failed), `just validate` (5 linted, 0 failed), `just check-sudo` (20 files, PASS), `just check-workflows` (7 run steps, PASS) and `just check-pins` (20 `uses:` steps, PASS). All exit code 0. `check-sudo` does not read `.md` files, and the document has no command to get more rights in any case. ACC-012 is ticked: `branch-protection.md` (phase 130) and the suggestion for the skill are both in the folder of this feature.
 
 #### 2026-11-03 14:30:21.000Z - CI workflow and gates written and tested (phase 130)
 
