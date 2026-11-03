@@ -1,0 +1,21 @@
+# Code owners (feat-5-foundation-monorepo-ci, REQ-007, DEC cc4449cd-78fb-452a-904f-7efda89cf004).
+#
+# A change to these paths needs the review of the owner. A coding agent must
+# not be able to switch off a gate, so the list has the files that start,
+# configure or check the gates.
+#
+# The entry for the thresholds is added when the walking skeleton makes them.
+# Branch protection must have "Require review from Code Owners" (Task 130.150).
+
+# The decisions
+/docs/dec/            @dfch
+
+# The CI configuration, and this file
+/.github/workflows/   @dfch
+/.github/CODEOWNERS   @dfch
+
+# The entry point of all gates
+/justfile             @dfch
+
+# The version pins, the gate scripts and the list of licenses
+/tools/               @dfch

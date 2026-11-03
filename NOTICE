@@ -1,0 +1,14 @@
+biz.dfch.SpecMgrDemo
+
+This project is licensed under the GNU Affero General Public License,
+version 3 only (AGPL-3.0-only). The text is in the file LICENSE.
+
+Licenses of other software:
+
+- The project uses only open source libraries that are compatible with
+  AGPL-3.0-only (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9).
+- The list of permitted licenses is in tools/license/permitted-licenses.txt.
+- The command `just license-check` compares the licenses of all dependencies
+  with this list.
+- The command `just sbom` makes the SBOM (CycloneDX format) in build/sbom/.
+  CI keeps the SBOM files of each run as an artifact.
