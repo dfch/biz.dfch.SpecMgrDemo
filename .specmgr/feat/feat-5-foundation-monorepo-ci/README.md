@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T10:32:07.099+01:00'
+updated: '2026-11-03T10:33:25.450+01:00'
 version: 1.0.0
 ---
 
@@ -98,13 +98,13 @@ Facts from the machine at 2026-11-03: JDK 11 is installed. Maven, pnpm and just 
 
 The prototypes are in the folder of feat-2-react-angular-visualization-spike. They are not part of the layout.
 
-The JDK has the license GPL-2.0 with the Classpath exception. On 2026-11-03 the owner amended the DEC about licenses: the class Permitted has the row `GPL-2.0-only WITH Classpath-exception-2.0`. Task 100.110 must read the license file of the selected JDK build and must confirm that it has this license. The suggestion is an OpenJDK build from Eclipse Temurin with an LTS version. The owner selects the vendor.
+The JDK has the license GPL-2.0 with the Classpath exception. On 2026-11-03 the owner amended the DEC about licenses: the class Permitted has the row `GPL-2.0-only WITH Classpath-exception-2.0`. Task 100.110 must read the license file of the selected JDK build and must confirm that it has this license. The owner selected Eclipse Temurin 21 (an OpenJDK build from Eclipse Adoptium, LTS) on 2026-11-03. The version 21 is the LTS version that the owner selected. A later LTS version needs a new decision of the owner.
 
 License table (the agent fills it in task 100.100 to 100.120, from the license file of each tool and not from memory):
 
 | Tool | Use | License | Result |
 |---|---|---|---|
-| JDK (vendor not selected) | build and run | not checked | open |
+| JDK: Eclipse Temurin 21 (selected by the owner) | build and run | expected GPL-2.0-only WITH Classpath-exception-2.0 (source: the page of Adoptium, not the license file of the download) | open until task 100.110 reads the license file |
 | Maven | build | not checked | open |
 | Node | build and run | not checked | open |
 | pnpm | build | not checked | open |
@@ -130,7 +130,7 @@ License table (the agent fills it in task 100.100 to 100.120, from the license f
 
 - [ ] Task 100.100: Read the license file of Maven, Node, pnpm and just, and write the result in the license table
 
-- [ ] Task 100.110: Get the JDK vendor from the owner, read the license file of the JDK build, confirm the license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
+- [ ] Task 100.110: Read the license file of the Eclipse Temurin 21 download (the owner selected it), confirm the license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
 
 - [ ] Task 100.120: Select the tools for the commit message check, the license check and the SBOM, read their license files, and write the results in the license table
 
@@ -180,15 +180,32 @@ License table (the agent fills it in task 100.100 to 100.120, from the license f
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written. Work has not started. The next step is phase 100.
+**As of 2026-11-03**: The plan is written. Work has not started. The JDK vendor is selected: Eclipse Temurin 21. The next step is phase 100 (license checks). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
-- The owner must select the JDK vendor (task 100.110). The license class is permitted since 2026-11-03.
+- None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. A person with competence in the law has not examined the new license class at this time.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - Handoff at the end of the session
+
+The owner selected Eclipse Temurin 21 as the JDK. Work has not started. Nothing is pushed. The work of the session is in commits on the branch `dev`.
+
+For the next agent:
+
+1. Start with phase 100. Read the license file of each tool and not a web page or memory. Stop and tell the owner if a license is not clear.
+2. The agent has no sudo. The install scripts must use the home directory only. Names: `TTT.MMM-NN-name.sh` in the `bin` folder of this feature (example: `110.110-01-install-jdk.sh`). Look at `/home/user/src/biz.dfch.LlmOps/.specmgr/feat/feat-0-screen-record/bin/` for the style (header comment, `set -euo pipefail`, `_common.sh`, can be operated again).
+3. The machine has JDK 11 (Ubuntu build) and Node 24. Maven, pnpm and just are not installed. See Design Notes.
+4. Use `specmgr_edit` for changes to a document. Do not change a status. An agent must not accept a DEC. The owner can give a permission for one time and for one change (for example, the permission for the license DEC on 2026-11-03).
+5. Use the issue numbers for the FEAT names. Issues #5, #6 and #7 are the numbers of feat-5, feat-6 and feat-7. Get the number from `gh issue create`, and do not assume it.
+6. Write documents in ASD-STE100 English. Use the asdste100 MCP. For a word check of many documents, give the work to a subagent. A temporary script `/tmp/opencode/stecheck.py` can be lost. Write it again if necessary and do not keep it in the project. The check does not cover the plans of the FEAT documents.
+7. The STE check as a gate and the script for the register are on hold (decision of the owner on 2026-11-03). CI has no gate for them.
+8. Make separate commits and use Conventional Commits with the feature as scope.
+
+Open items that are not for the agent: the review of ACC-007 by dfch (feat-3), the register records of feat-3 that are not accepted, the review of the new license class by a person with competence in the law, and GitHub issue #4 (the French heading table belongs to specmgr).
 
 #### 2026-11-03 00:00:00.000Z - License class for the JDK added to the DEC
 
