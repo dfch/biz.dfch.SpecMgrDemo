@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T07:23:59.412+01:00'
+updated: '2026-11-03T07:35:15.398+01:00'
 version: 1.0.0
 ---
 
@@ -42,7 +42,7 @@ This feature gives the policies and standards for development in this repository
 
 - [x] ACC-004: Each document has no error in the specmgr validation.
 
-- [ ] ACC-005: The owner accepts the DEC about the frontend technology. Then task 300.100 of feat-1 is done.
+- [x] ACC-005: The owner accepts the DEC about the frontend technology. Then task 300.100 of feat-1 is done. (The owner accepted it on 2026-11-03.)
 
 - [x] ACC-006: A word check of the documents of this feature found no rejected word and no unknown word. A temporary script did the check with the word data of the asdste100 MCP. The project does not keep the script.
 
@@ -97,6 +97,8 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 ### Related Decisions
 
 - TXT eff55a59-137b-40b0-8f7b-44c349aa923a: Engineering Handbook
+- TXT 2e96237c-0bee-45ac-b44a-c7ffee105ab7: List of the DEC Documents for the Acceptance by the Owner
+- TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f: Worksheet for the STE Review
 - DEC 2468257f-cb4e-4f30-a8df-6fc1d86759ce: Keep One Source of Truth for Each Type of Fact
 - DEC 00a85fb8-19a2-4850-bf5f-4a18e47d46e9: Use One Mapping of ISO 29148 Levels to Specmgr Artifacts
 - DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342: Use Specmgr Identifiers for Traceability
@@ -145,7 +147,7 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 #### Phase 300: Technology Policies
 
-- [x] Task 300.100: DEC about the frontend technology (React). The owner must accept it. Then task 300.100 of feat-1 is done.
+- [x] Task 300.100: DEC about the frontend technology (React). The owner accepted it on 2026-11-03. Task 300.100 of feat-1 is done.
 
 - [x] Task 300.110: DEC about the monorepo, the build and CI
 
@@ -189,15 +191,29 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 ### Current Status
 
-**As of 2026-11-02**: All planned documents have the status draft: 4 GOL, 1 PRB, 17 DEC, 2 SOP, 6 RSK and the handbook. All documents have no error in the specmgr validation. A word check found no rejected word and no unknown word in these documents. The terminology register has more than 300 records. A person has not examined the records and the other STE rules at this time.
+**As of 2026-11-03**: 4 GOL, 1 PRB, 2 SOP, 6 RSK, 3 TXT (the handbook and 2 review aids) have the status draft. Of the 17 DEC, 1 has the status accepted (React, accepted by the owner on 2026-11-03) and 16 have the status draft. All documents have no error in the specmgr validation. A word check found no rejected word and no unknown word in the text, except the fixed headings of specmgr and the grammar terms of the STE worksheet (they are in the gap log). The terminology register has 330 noun records and 2 verb records. A person has not examined the records and the other STE rules at this time.
 
 ### Blockers
 
-- None for the review by the owner.
+- None for the review by the owner. The open items in the list for the owner (TXT 2e96237c-0bee-45ac-b44a-c7ffee105ab7) need decisions of the owner. The largest item is the conflict between the STE gate and the rule that the project has no script for the STE check.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - React DEC accepted, review aids written
+
+The owner told the coding agent, one time and for one DEC only, to set the status of the DEC about React (1a29c825-6862-4fe9-8069-6566262d5c97) to accepted. The agent did so and recorded it in the Updates log of the DEC. Task 300.100 of feat-1 is done, and ACC-005 is done. The other 16 DEC documents keep the status draft.
+
+Other work in this session (separate commits, on branch `dev`, nothing pushed):
+
+- The records `MAY` and `SHOULD` are removed from `technical-verbs.jsonl` (they are in the RFC 2119 list). Open item 3 of the handoff is closed.
+- A temporary program (not kept in the project) compared the words of the 31 documents with the dictionary of the asdste100 MCP data. It found the words `extra` (2 times), `separate` (1 time) and the verb `work` (1 time). They are written again. The grammar terms of the new worksheet are in `terminology/en/gap-log.md`.
+- New TXT 2e96237c-0bee-45ac-b44a-c7ffee105ab7: a list of the 17 DEC documents with the open items for the owner.
+- New TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f: a worksheet for the reviewer of task 500.130.
+- The handbook has links to the two new documents.
+
+Open items for the owner: accept the 16 DEC documents (task 500.110), accept the register records (task 500.140), and decide the items in the list for the owner. Open item for a reviewer: task 500.130 (ACC-007). The owner must decide about the conflict between the STE gate (DEC about verification) and the rule that the project has no script for the STE check (DEC about the STE language).
 
 #### 2026-11-03 00:00:00.000Z - Handoff at the end of the session
 

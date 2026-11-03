@@ -4,7 +4,7 @@ created: '2026-10-01T08:56:50.337+02:00'
 id: feat-1-frontend-technology-decision
 status: planning
 type: feat
-updated: '2026-11-02T14:46:34.200+01:00'
+updated: '2026-11-03T07:34:50.484+01:00'
 version: 1.0.0
 ---
 
@@ -64,7 +64,7 @@ The empirical validation (feat-2-react-angular-visualization-spike) is now compl
 
 ### Related Decisions
 
-- DEC 1a29c825-6862-4fe9-8069-6566262d5c97: Use React for the Frontend (status draft; Task 300.100 closes when the owner accepts it).
+- DEC 1a29c825-6862-4fe9-8069-6566262d5c97: Use React for the Frontend (status accepted on 2026-11-03; Task 300.100 is closed).
 
 ### Task List
 
@@ -84,7 +84,7 @@ The empirical validation (feat-2-react-angular-visualization-spike) is now compl
 
 #### Phase 300: Decision
 
-- [ ] Task 300.100: Draft DEC with final framework choice (blocked by feat-2)
+- [x] Task 300.100: Draft DEC with final framework choice (DEC accepted by the owner on 2026-11-03)
 
 ## Progress
 
@@ -99,6 +99,10 @@ None. The spike (feat-2) is complete and its results have been reviewed (Task 20
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - DEC about React accepted; Task 300.100 done
+
+The DEC "Use React for the Frontend" (1a29c825-6862-4fe9-8069-6566262d5c97) was written in feat-3-process-policy-baseline. On 2026-11-03 the owner explicitly told the coding agent (one time, for this DEC only) to set its status to accepted, and the agent did so. Task 300.100 is ticked. All tasks of this FEAT are done; the FEAT status is left unchanged for the owner to decide.
 
 #### 2026-10-01 00:00:00.000Z - Spike (feat-2) complete; React + xyflow recommended
 
