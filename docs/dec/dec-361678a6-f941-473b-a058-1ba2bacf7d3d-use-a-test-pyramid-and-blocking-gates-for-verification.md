@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:37.133+01:00'
 id: 361678a6-f941-473b-a058-1ba2bacf7d3d
 status: accepted
 type: dec
-updated: '2026-11-03T07:50:56.943+01:00'
+updated: '2026-11-03T07:52:41.474+01:00'
 version: 1.0.0
 ---
 
@@ -88,7 +88,7 @@ Blocking gates for each pull request:
 
 ### 2026-11-03 00:00:00.000Z - STE check is on hold
 
-The owner decided that the STE check of changed documents is not a blocking gate for now. CI runs without it. Gate 1 in More Information is only the specmgr validation of the changed documents until the owner makes a new decision. The text of the decision is not changed.
+The owner made a decision that the STE check of changed documents is not a blocking gate at this time. CI operates without it. Gate 1 in More Information is only the specmgr validation of the changed documents until the owner makes a new decision. The text of the decision is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 

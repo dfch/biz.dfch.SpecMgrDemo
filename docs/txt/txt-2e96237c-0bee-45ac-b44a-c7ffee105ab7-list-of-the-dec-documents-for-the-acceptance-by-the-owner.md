@@ -4,7 +4,7 @@ created: '2026-11-03T07:33:24.405+01:00'
 id: 2e96237c-0bee-45ac-b44a-c7ffee105ab7
 status: draft
 type: txt
-updated: '2026-11-03T07:33:24.405+01:00'
+updated: '2026-11-03T07:52:44.841+01:00'
 version: 1.0.0
 ---
 
@@ -56,8 +56,8 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 
 ## Items on Hold
 
-- The DEC about verification lists the STE check of changed documents as blocking gate 1. The DEC about the STE language tells authors not to use a different script for the STE check. The owner put this on hold. CI runs without the STE check, and authors do it with the asdste100 MCP.
-- The DEC about the register has the same item on hold. The project has no script that validates the register for now.
+- The DEC about verification lists the STE check of changed documents as blocking gate 1. The DEC about the STE language tells authors not to use a different script for the STE check. The owner put this on hold. CI operates without the STE check, and authors do it with the asdste100 MCP.
+- The DEC about the register has the same item on hold. The project has no script that validates the register at this time.
 
 ## Other Items
 
