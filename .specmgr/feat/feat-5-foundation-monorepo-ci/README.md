@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T10:33:25.450+01:00'
+updated: '2026-11-03T10:34:59.913+01:00'
 version: 1.0.0
 ---
 
@@ -201,7 +201,7 @@ For the next agent:
 3. The machine has JDK 11 (Ubuntu build) and Node 24. Maven, pnpm and just are not installed. See Design Notes.
 4. Use `specmgr_edit` for changes to a document. Do not change a status. An agent must not accept a DEC. The owner can give a permission for one time and for one change (for example, the permission for the license DEC on 2026-11-03).
 5. Use the issue numbers for the FEAT names. Issues #5, #6 and #7 are the numbers of feat-5, feat-6 and feat-7. Get the number from `gh issue create`, and do not assume it.
-6. Write documents in ASD-STE100 English. Use the asdste100 MCP. For a word check of many documents, give the work to a subagent. A temporary script `/tmp/opencode/stecheck.py` can be lost. Write it again if necessary and do not keep it in the project. The check does not cover the plans of the FEAT documents.
+6. Write documents in ASD-STE100 English. Use the asdste100 MCP. For a word check of many documents, give the work to a subagent. The script for the word check is in `.specmgr/feat/feat-3-process-policy-baseline/bin/500.120-01-ste-word-check.py` (a reference only, not a gate). Its paths are fixed for the machine of the author. It does not cover the plans of the FEAT documents. Change the glob in the script to include them.
 7. The STE check as a gate and the script for the register are on hold (decision of the owner on 2026-11-03). CI has no gate for them.
 8. Make separate commits and use Conventional Commits with the feature as scope.
 
