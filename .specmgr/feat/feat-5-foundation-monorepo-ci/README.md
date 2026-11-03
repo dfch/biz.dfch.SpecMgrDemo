@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T15:46:14.116+01:00'
+updated: '2026-11-03T15:48:51.799+01:00'
 version: 1.0.0
 ---
 
@@ -303,6 +303,17 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 14:48:37.000Z - Java, Node and pnpm added to the license-check job (correction of phase 130)
+
+The local simulation of the test pull requests (phase 150) showed a fault in `.github/workflows/ci.yml`. The job `license-check` had no `pnpm`, no `node` and no JDK. `tools/gates/sbom.sh` needs `pnpm` if `frontend/package.json` or `frontend/pnpm-lock.yaml` exists, and `mvn` if `pom.xml` exists. So the job would stop with "Required command 'pnpm' not found" as soon as feat-6 adds manifests, and not because of a license. The agent changed this:
+
+1. The job `license-check` now has three more steps, before `run: just license-check` and the upload step: `actions/setup-java` (`distribution: temurin`, `java-version: "21.0.13+9"`), `actions/setup-node` (`node-version: "26.13.0"`) and `pnpm/action-setup` (`version: "12.16.1"`). The SHAs and the comments are the ones of `tools/license/allowed-actions.txt`. The other six jobs are not changed. Each `run:` is still exactly `just <recipe>`.
+2. The agent read `action.yml` and `dist/index.js` of `pnpm/action-setup` at the SHA `ea17c68df8912ef543352723c149a84f56e3d413`. The input `version` is optional, and the action installs exactly this version. A `package.json` is not necessary: the action reads `package.json` at the repository root, and it accepts a missing file. It stops only if a root `package.json` has a `packageManager` field with another pnpm version. feat-6 must keep this field the same as `PNPM_VERSION`, or leave it out. The action installs the `pnpm` package from npm for this version, and the local machine uses the standalone release of the same version.
+3. `check_pins.py` already maps `java-version` (with `distribution: temurin`), `node-version` and `version` of `pnpm/action-setup` to `JDK_VERSION`, `NODE_VERSION` and `PNPM_VERSION`, so it needed no change. `just check-pins` now checks 23 `uses:` steps (20 before). `selftest.sh` has seven new cases that change the real workflow: a missing and a wrong Java version, a Java distribution that is not temurin, a missing and a wrong Node version, and a missing and a wrong pnpm version. `just test-gates` gives 101 ok, 0 failed (94 before).
+4. Maven is not in the job. The pinned Maven version is `MAVEN_VERSION` in `tools/versions.env`, and the runner image has its own Maven. feat-6-contracts-openapi-pipeline must decide about the Maven Wrapper (`mvnw`, see Design Notes): `sbom.sh` uses `mvnw` if it exists, and so the wrapper pins Maven for the SBOM run too. If feat-6 does not use the wrapper, it must add a Maven setup to the job and a check for its version.
+
+Checks (real runs): `just --fmt --unstable --check` has no change. `just validate`, `just commit-check` (18 commits), `just check-workflows` (7 run steps), `just check-pins` (23 `uses:` steps), `just check-sudo` (20 files), `just license-check` and `just test-gates`: all exit code 0. No criterion is ticked or changed. The workflow did not run on GitHub yet.
 
 #### 2026-11-03 14:46:00.000Z - Local simulation of the test pull requests (phase 150, part 1)
 

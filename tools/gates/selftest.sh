@@ -216,6 +216,14 @@ pin_case latest 1 "\`version\` is latest" "version: latest" "s#version: \"0.13.7
 pin_case float 1 "must be a text in quotes" "version: a number and not a text" "s#version: \"0.13.7\"#version: 0.13#"
 pin_case noinput 1 "has no input \`just-version\`" "version: the input is missing" "/just-version:/d"
 pin_case extraver 1 "has a version that the gate cannot check" "version: an input with a version that has no mapping" "s#persist-credentials: false#persist-credentials: false\n          tool-version: \"1\"#"
+# The setup actions of the license-check job of the real workflow (Java, Node and pnpm for the SBOM tools)
+pin_case javamiss 1 "has no input \`java-version\`" "license-check job: the Java version is missing" "/java-version:/d"
+pin_case javaver 1 "\`java-version\` is 21," "license-check job: the Java version is not the one of versions.env" "s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
+pin_case javadist 1 "must be temurin" "license-check job: the Java distribution is not temurin" "s#distribution: temurin#distribution: zulu#"
+pin_case nodemiss 1 "has no input \`node-version\`" "license-check job: the Node version is missing" "/node-version:/d"
+pin_case nodever 1 "\`node-version\` is 24.0.0" "license-check job: the Node version is not the one of versions.env" "s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case pnpmmiss 1 "pnpm/action-setup has no input \`version\`" "license-check job: the pnpm version is missing" "/version: \"$(version_of PNPM_VERSION)\"/d"
+pin_case pnpmver 1 "PNPM_VERSION in tools/versions.env" "license-check job: the pnpm version is not the one of versions.env" "s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
 
 # A workflow with each setup action, with the versions of versions.env, and with changes
 all_setup="${work}/pin-all"
