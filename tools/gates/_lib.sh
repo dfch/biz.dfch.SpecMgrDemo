@@ -83,12 +83,19 @@ make_python_env() {
 # build and target (at each level), and, from the root only, .specmgr (the folders of the features keep
 # prototypes and documents that are not part of the layout) and the fixtures of the gates
 # (tools/license/fixtures and tools/gates/fixtures). check_pins.py has the same list (EXCLUDED_*).
+#
+# Two files are not listed, by path and not by folder (feat-16-cdxgen-lockfile): tools/sbom/package.json
+# and tools/sbom/pnpm-lock.yaml. They are the lock file of the SBOM tool cdxgen. They are not part of the
+# project that the SBOM describes (rule A: cdxgen does not go to users). Each other manifest in tools/sbom/
+# (pnpm-workspace.yaml, a package.json in a sub-folder) and in the other folders of tools/ is listed.
+# check_pins.py needs no change for them: it searches for pom.xml and for the Maven Wrapper only.
 manifest_files() {
     (
         cd "$1" || exit 1
         find . \
             -type d \( -name .git -o -name node_modules -o -name build -o -name target \) -prune -o \
             -type d \( -path ./.specmgr -o -path ./tools/license/fixtures -o -path ./tools/gates/fixtures \) -prune -o \
+            -type f \( -path ./tools/sbom/package.json -o -path ./tools/sbom/pnpm-lock.yaml \) -prune -o \
             -type f \( -name pom.xml -o -name package.json -o -name pnpm-lock.yaml -o -name pnpm-workspace.yaml \) \
             -print | LC_ALL=C sort
     )

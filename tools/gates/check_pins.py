@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Gate: the pins in the workflows (ACC-013).
+"""Gate: the pins in the workflows (ACC-013) and the lock file of cdxgen (feat-16-cdxgen-lockfile).
 
 feat-5-foundation-monorepo-ci, Task 130.142 (REQ-003, REQ-015).
+feat-16-cdxgen-lockfile, Task 110.100 (REQ-003, REQ-005).
 
-Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root>
+Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>
 
 The script stops for each of these:
 
@@ -35,10 +36,40 @@ _lib.sh) and stops for each of these:
 A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". Until
 feat-6-contracts-openapi-pipeline adds the wrapper, a `pom.xml` stops this gate on purpose.
 
+The lock file of the SBOM tool cdxgen (the finding G2 of the review, feat-16-cdxgen-lockfile; REQ-003, REQ-005).
+tools/versions.env is the one source of truth for CDXGEN_VERSION and CDXGEN_INTEGRITY. <sbom-tool-dir> is the
+pnpm project tools/sbom/. The check is always on (also if frontend/ does not exist), and it fails closed. The
+script stops for each of these:
+
+  * <sbom-tool-dir>, its package.json or its pnpm-lock.yaml is missing, or the folder has a file that pnpm
+    could read as a setting (for example `.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`): only package.json,
+    pnpm-lock.yaml, README.md and node_modules are allowed (SBOM_TOOL_FILES below);
+  * CDXGEN_VERSION is not an exact version (a range, a tag), or CDXGEN_INTEGRITY is not a sha512 value;
+  * package.json: it has a key that is not in PACKAGE_JSON_KEYS (this stops devDependencies,
+    optionalDependencies, peerDependencies, overrides, `pnpm`, `packageManager` and every other key), its
+    `dependencies` is not exactly {"@cyclonedx/cdxgen": CDXGEN_VERSION} (another version, a range, a tag, one
+    more dependency), or the file is not JSON, has a key two times, or is not an object;
+  * the lock file: it is not exactly one YAML document with no key twice (a `packageManager` in package.json
+    adds a second document), `lockfileVersion` is not a text that starts with `9.`, it has a top-level key
+    that is not in LOCK_KEYS (for example `overrides`), it has not exactly one importer `.` with exactly one
+    direct dependency `@cyclonedx/cdxgen` whose `specifier` and `version` are CDXGEN_VERSION, the entry of
+    cdxgen in `packages` is missing or has another integrity value than CDXGEN_INTEGRITY;
+  * a package in the lock file with no integrity value, with an integrity value that is not sha256, sha384 or
+    sha512, with a `resolution` that has another key than `integrity` (`tarball`, `repo`, `commit`,
+    `directory`, `type`: a package from another place than the registry), or with a key that is not
+    `<name>@<exact version>`; a `snapshots` entry for a package that is not in `packages`.
+
+The check reads the lock file as text with PyYAML (it does not need Node or pnpm), so the job `check-pins` of CI
+runs it. The frozen install in sbom.sh does the real check of each tarball against the lock file; this check
+ties the lock file to tools/versions.env and stops a lock file that the install would accept but that has a
+source that is not the registry. A change of only one of the three places (versions.env, package.json, the
+lock file) stops the check.
+
 The comment is not in the YAML data, so the script reads the lines of the file for the comment,
-and the YAML data for the inputs. Exit codes: 0 pass; 1 a pin is not correct; 2 an error in a file.
+and the YAML data for the inputs. Exit codes: 0 pass; 1 a pin is not correct; 2 an error in a file (versions.env or a workflow).
 """
 
+import json
 import os
 import re
 import sys
@@ -46,6 +77,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import yaml
 from _workflow import GateError, iter_jobs, iter_steps, load_workflows
 
 # The setup actions: the input with the version of the tool, and the key in tools/versions.env.
@@ -68,9 +100,26 @@ VERSION_KEY = re.compile(r"(^|[-_])version([-_]|$)", re.IGNORECASE)
 
 # The folders that the search for pom.xml and for the wrapper does not enter (see the header). The names
 # are at each level; the paths are relative to the project root. manifest_files in _lib.sh has the same list.
+# manifest_files also does not list tools/sbom/package.json and tools/sbom/pnpm-lock.yaml (the lock file of
+# cdxgen, feat-16-cdxgen-lockfile). This script needs no entry for them: it searches for pom.xml and for the
+# Maven Wrapper only.
 EXCLUDED_NAMES = {".git", "node_modules", "build", "target"}
 EXCLUDED_PATHS = {".specmgr", "tools/license/fixtures", "tools/gates/fixtures"}
 WRAPPER_FILE = Path(".mvn") / "wrapper" / "maven-wrapper.properties"
+
+# The lock file of cdxgen (feat-16-cdxgen-lockfile). See the header.
+CDXGEN_PACKAGE = "@cyclonedx/cdxgen"
+# The files that tools/sbom/ may have. A settings file (.npmrc, pnpm-workspace.yaml, .pnpmfile.cjs, ...) could
+# change where pnpm gets the packages, so each other file stops the check (node_modules is the install).
+SBOM_TOOL_FILES = {"package.json", "pnpm-lock.yaml", "README.md", "node_modules"}
+# The keys that package.json may have. All of them are text that does not change the install.
+PACKAGE_JSON_KEYS = {"name", "private", "description", "dependencies"}
+# The top-level keys of pnpm-lock.yaml (lockfileVersion 9) that the check knows. `overrides`,
+# `patchedDependencies`, `catalogs` and the other keys change the install, so they stop the check.
+LOCK_KEYS = {"lockfileVersion", "settings", "importers", "packages", "snapshots"}
+EXACT_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
+INTEGRITY = re.compile(r"sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}")
+CDXGEN_INTEGRITY_FORM = re.compile(r"sha512-[A-Za-z0-9+/]{86}==")
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -257,9 +306,225 @@ def check_maven(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
     return note, problems
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """A YAML loader that stops for a key that is there two times (the standard loader keeps the last one)."""
+
+
+def _construct_unique_mapping(loader: _UniqueKeyLoader, node: yaml.MappingNode, deep: bool = False) -> dict[Any, Any]:
+    seen: set[Any] = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in seen:
+            raise yaml.constructor.ConstructorError(
+                None, None, f"the key {key!r} is there two times", key_node.start_mark
+            )
+        seen.add(key)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping)
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """The `object_pairs_hook` of the JSON reader: stop for a key that is there two times."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"the key {key!r} is there two times")
+        result[key] = value
+    return result
+
+
+def check_package_json(path: Path, version: str) -> list[str]:
+    """Check tools/sbom/package.json: the one dependency in the exact version, and no other key that matters."""
+    where = f"SBOM tool: {path}"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+    except (OSError, ValueError) as error:
+        return [f"{where} cannot be read as JSON: {error}"]
+    if not isinstance(data, dict):
+        return [f"{where} is not a JSON object"]
+    problems: list[str] = []
+    for key in sorted(set(data) - PACKAGE_JSON_KEYS):
+        problems.append(
+            f"{where} has the key `{key}`. The project has only {sorted(PACKAGE_JSON_KEYS)}: no other dependency "
+            "key (devDependencies, optionalDependencies, peerDependencies), no overrides, no `pnpm` settings and "
+            "no `packageManager` (it changes the lock file)"
+        )
+    dependencies = data.get("dependencies")
+    if not isinstance(dependencies, dict):
+        problems.append(f"{where} has no `dependencies` object with {CDXGEN_PACKAGE}")
+    else:
+        for name in sorted(set(dependencies) - {CDXGEN_PACKAGE}):
+            problems.append(f"{where} has the dependency {name}. The only dependency is {CDXGEN_PACKAGE}")
+        if CDXGEN_PACKAGE not in dependencies:
+            problems.append(f"{where} has no dependency {CDXGEN_PACKAGE}")
+        elif dependencies[CDXGEN_PACKAGE] != version:
+            problems.append(
+                f"{where}: {CDXGEN_PACKAGE} is {dependencies[CDXGEN_PACKAGE]!r}, but CDXGEN_VERSION in "
+                f"tools/versions.env is {version} (an exact version, no range and no tag)"
+            )
+    return problems
+
+
+def _split_package_key(key: str) -> tuple[str, str] | None:
+    """Split `name@version` or `@scope/name@version`. Return None if the key has another form."""
+    index = key.rfind("@")
+    if index <= 0:
+        return None
+    return key[:index], key[index + 1 :]
+
+
+def check_lock(path: Path, version: str, integrity: str) -> list[str]:
+    """Check tools/sbom/pnpm-lock.yaml (see the header). Return the problems."""
+    where = f"SBOM tool: {path}"
+    try:
+        documents = list(yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+    except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
+        return [f"{where} cannot be read as YAML: {error}"]
+    if len(documents) != 1:
+        return [
+            f"{where} has {len(documents)} YAML documents, but it must have exactly one"
+            + " (a `packageManager` field in package.json makes a second document)"
+        ]
+    lock = documents[0]
+    if not isinstance(lock, dict):
+        return [f"{where} is not a YAML mapping"]
+    problems: list[str] = []
+    lock_version = lock.get("lockfileVersion")
+    if not isinstance(lock_version, str) or not lock_version.startswith("9."):
+        problems.append(f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`")
+    for key in sorted(set(lock) - LOCK_KEYS, key=str):
+        problems.append(
+            f"{where} has the top-level key `{key}`, which the check does not know (known: {sorted(LOCK_KEYS)})"
+        )
+
+    problems += _check_importers(where, lock.get("importers"), version)
+    packages = lock.get("packages")
+    if not isinstance(packages, dict) or not packages:
+        problems.append(f"{where} has no `packages`")
+        return problems
+    problems += _check_packages(where, packages, version, integrity)
+    snapshots = lock.get("snapshots")
+    if snapshots is not None:
+        if not isinstance(snapshots, dict):
+            problems.append(f"{where}: `snapshots` is not a mapping")
+        else:
+            for key in snapshots:
+                if str(key).split("(", 1)[0] not in packages:
+                    problems.append(f"{where}: `snapshots` has {key!r}, which is not in `packages`")
+    return problems
+
+
+def _check_importers(where: str, importers: Any, version: str) -> list[str]:
+    """Exactly one importer `.` with exactly one direct dependency: cdxgen, in the version of versions.env."""
+    if not isinstance(importers, dict) or set(importers) != {"."}:
+        found = sorted(importers, key=str) if isinstance(importers, dict) else importers
+        return [f"{where}: `importers` must have exactly one importer `.` (it has {found!r})"]
+    importer = importers["."]
+    if not isinstance(importer, dict) or set(importer) != {"dependencies"}:
+        found = sorted(importer, key=str) if isinstance(importer, dict) else importer
+        return [f"{where}: the importer `.` must have `dependencies` and nothing else (it has {found!r})"]
+    dependencies = importer["dependencies"]
+    if not isinstance(dependencies, dict) or set(dependencies) != {CDXGEN_PACKAGE}:
+        found = sorted(dependencies, key=str) if isinstance(dependencies, dict) else dependencies
+        return [f"{where}: the importer `.` must have exactly one dependency, {CDXGEN_PACKAGE} (it has {found!r})"]
+    entry = dependencies[CDXGEN_PACKAGE]
+    if not isinstance(entry, dict) or set(entry) != {"specifier", "version"}:
+        return [f"{where}: the dependency {CDXGEN_PACKAGE} of the importer must have `specifier` and `version`"]
+    return [
+        f"{where}: the importer has {CDXGEN_PACKAGE} `{field}` {entry[field]!r}, but CDXGEN_VERSION in "
+        f"tools/versions.env is {version}"
+        for field in ("specifier", "version")
+        if entry[field] != version
+    ]
+
+
+def _check_packages(where: str, packages: dict[Any, Any], version: str, integrity: str) -> list[str]:
+    """Each package has a registry source and an integrity value. cdxgen has the version and the value of versions.env."""
+    problems: list[str] = []
+    cdxgen_keys = []
+    for key, entry in packages.items():
+        parts = _split_package_key(str(key)) if isinstance(key, str) else None
+        if parts is None or not EXACT_VERSION.fullmatch(parts[1]):
+            problems.append(
+                f"{where}: the package {key!r} is not `<name>@<exact version>` (a link, a URL or a git source?)"
+            )
+            continue
+        if parts[0] == CDXGEN_PACKAGE:
+            cdxgen_keys.append(key)
+        resolution = entry.get("resolution") if isinstance(entry, dict) else None
+        if not isinstance(resolution, dict):
+            problems.append(f"{where}: the package {key} has no `resolution`")
+        elif "integrity" not in resolution:
+            problems.append(f"{where}: the package {key} has no integrity value")
+        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(resolution["integrity"]):
+            problems.append(f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512")
+        elif set(resolution) != {"integrity"}:
+            others = sorted(set(resolution) - {"integrity"}, key=str)
+            problems.append(
+                f"{where}: the package {key} has the `resolution` keys {others}. The check allows `integrity` only"
+            )
+    expected_key = f"{CDXGEN_PACKAGE}@{version}"
+    if cdxgen_keys != [expected_key]:
+        problems.append(
+            f"{where}: `packages` must have exactly one {CDXGEN_PACKAGE}, and it must be {expected_key} "
+            f"(CDXGEN_VERSION in tools/versions.env). It has {cdxgen_keys}"
+        )
+    else:
+        resolution = packages[expected_key].get("resolution") if isinstance(packages[expected_key], dict) else None
+        found = resolution.get("integrity") if isinstance(resolution, dict) else None
+        if found != integrity:
+            problems.append(
+                f"{where}: the integrity value of {expected_key} is {found}, but CDXGEN_INTEGRITY in "
+                f"tools/versions.env is {integrity}"
+            )
+    return problems
+
+
+def check_sbom_tool(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pnpm project of cdxgen (feat-16-cdxgen-lockfile). Return a message for the log and the problems."""
+    problems: list[str] = []
+    version, integrity = versions.get("CDXGEN_VERSION", ""), versions.get("CDXGEN_INTEGRITY", "")
+    for key in ("CDXGEN_VERSION", "CDXGEN_INTEGRITY"):
+        if key not in versions:
+            problems.append(f"{key} is not in tools/versions.env")
+    if version and not EXACT_VERSION.fullmatch(version):
+        problems.append(
+            f"CDXGEN_VERSION in tools/versions.env is {version!r}, but it must be an exact version (no range, no tag)"
+        )
+    if integrity and not CDXGEN_INTEGRITY_FORM.fullmatch(integrity):
+        problems.append(
+            f"CDXGEN_INTEGRITY in tools/versions.env is {integrity!r}, but it must be a sha512 integrity value of npm"
+        )
+    if not tool_dir.is_dir():
+        problems.append(f"SBOM tool: the folder {tool_dir} (the lock file of cdxgen) does not exist")
+        return "", problems
+    for name in sorted(path.name for path in tool_dir.iterdir()):
+        if name not in SBOM_TOOL_FILES:
+            problems.append(
+                f"SBOM tool: {tool_dir / name} is not allowed. The folder has only {sorted(SBOM_TOOL_FILES)} "
+                "(a settings file could change where pnpm gets the packages)"
+            )
+    package_json, lock = tool_dir / "package.json", tool_dir / "pnpm-lock.yaml"
+    for path in (package_json, lock):
+        if not path.is_file():
+            problems.append(f"SBOM tool: {path} does not exist")
+    if problems:
+        return "", problems
+    # CDXGEN_VERSION and CDXGEN_INTEGRITY are in the right form here, or the problems above stopped.
+    problems += check_package_json(package_json, version)
+    problems += check_lock(lock, version, integrity)
+    note = f"SBOM tool: {tool_dir}: @cyclonedx/cdxgen {version}, package.json and lock file as in tools/versions.env"
+    return ("" if problems else note), problems
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 5:
-        print("Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root>", file=sys.stderr)
+    if len(argv) != 6:
+        print(
+            "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>",
+            file=sys.stderr,
+        )
         return 2
     try:
         versions = read_versions(Path(argv[1]))
@@ -274,6 +539,9 @@ def main(argv: list[str]) -> int:
         note, maven_problems = check_maven(Path(argv[4]), versions)
         print(f"Maven pin: {note or str(len(maven_problems)) + ' problem(s)'}")
         problems += maven_problems
+        note, sbom_problems = check_sbom_tool(Path(argv[5]), versions)
+        print(f"SBOM tool pin: {note or str(len(sbom_problems)) + ' problem(s)'}")
+        problems += sbom_problems
     except GateError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
@@ -282,7 +550,10 @@ def main(argv: list[str]) -> int:
             print(f"STOP {problem}")
         print(f"RESULT: STOP. {len(problems)} problem(s).")
         return 1
-    print(f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env.")
+    print(
+        f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
+        "The lock file of cdxgen is the one of tools/versions.env."
+    )
     return 0
 
 

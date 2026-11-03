@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # feat-5-foundation-monorepo-ci, Task 130.130 (REQ-006, ACC-010) and the findings E1, G1 and G2 of the review
+# feat-16-cdxgen-lockfile, Tasks 100.110 and 100.120 (REQ-002, REQ-004): cdxgen runs from a lock file
 #
 # Makes the SBOM files (CycloneDX, JSON) of the project.
 #
@@ -13,7 +14,7 @@
 #             BOM covers. The file is <dir>/backend.cdx.json. The script does not read the <modules>
 #             list: it assumes that a pom.xml below backend/ is a module of the scanned pom.xml.
 #   Node      frontend/package.json or frontend/pnpm-lock.yaml (and frontend/pnpm-workspace.yaml).
-#             `pnpm dlx @cyclonedx/cdxgen` makes <dir>/frontend.cdx.json. A package.json below frontend/
+#             cdxgen (see rule G2) makes <dir>/frontend.cdx.json. A package.json below frontend/
 #             is covered only if frontend/pnpm-workspace.yaml and frontend/pnpm-lock.yaml both exist
 #             (cdxgen reads the workspace from the lock file; a nested package.json with no
 #             workspace is not read).
@@ -27,6 +28,11 @@
 #        script does not enter .git, node_modules, build and target (at each level), and, from the
 #        root only, .specmgr (the folders of the features keep prototypes that are not part of the
 #        layout), tools/license/fixtures and tools/gates/fixtures.
+#        Exclusion (feat-16-cdxgen-lockfile): the two files tools/sbom/package.json and
+#        tools/sbom/pnpm-lock.yaml are NOT manifests of the project. They are the lock file of the tool
+#        cdxgen (rule A: cdxgen does not go to users), and the script does not scan them. The exclusion is
+#        for these two paths and not for the folder: tools/sbom/pnpm-workspace.yaml, a package.json in a
+#        sub-folder of tools/sbom/, and each manifest in another folder of tools/ still stop the script.
 #   E1b  If a scanned package.json has an entry in dependencies, devDependencies, optionalDependencies or
 #        peerDependencies (or a scanned pom.xml has a <dependency> in <dependencies>) and the SBOM that the
 #        tool made has no component, the script stops. sbom_check.py does this check (it reads
@@ -36,14 +42,27 @@
 #        the wrapper pins (check-pins.sh checks that this version is MAVEN_VERSION). No mvnw stops the script.
 #   G2   Before the real run, the script starts the plugin with -Dcyclonedx.skip=true (it loads the plugin
 #        and does nothing), and compares the sha256 of the plugin jar in the local Maven repository with
-#        CYCLONEDX_MAVEN_PLUGIN_SHA256. For cdxgen, the script compares `pnpm view
-#        @cyclonedx/cdxgen@<version> dist.integrity` with CDXGEN_INTEGRITY before `pnpm dlx`. A value
-#        that is not the same stops the script. The dependencies of the plugin and of cdxgen are NOT checked.
+#        CYCLONEDX_MAVEN_PLUGIN_SHA256. The dependencies of the plugin are NOT checked.
+#        For cdxgen (feat-16-cdxgen-lockfile), the script installs the tool from the lock file in
+#        tools/sbom/ with `pnpm install --frozen-lockfile --ignore-scripts`, and starts
+#        tools/sbom/node_modules/.bin/cdxgen (with absolute paths). pnpm compares the integrity value of
+#        each package (cdxgen and all its dependencies) with the lock file. The script stops (exit code 1,
+#        no SBOM file) if the install fails (for example if the lock file and package.json differ, or a
+#        package has another integrity value), if the lock file or package.json is missing, or if the
+#        installed cdxgen has another version than CDXGEN_VERSION. The script does not use the commands
+#        dlx and view of pnpm. `just check-pins` ties package.json and the lock file to CDXGEN_VERSION and
+#        CDXGEN_INTEGRITY of tools/versions.env (check_pins.py, check_sbom_tool). Limit: a wrong integrity
+#        value of an OPTIONAL dependency of cdxgen does not stop the install: pnpm logs the error, does not
+#        install that package (it does not run), and returns exit code 0. A required package stops it.
+#        If no Node manifest is scanned, the script does not install (no network is necessary).
 #
 # The versions and the checksums are in tools/versions.env (VERSIONS_FILE sets another file, for the
-# tests). The script does not change the system. The test with real dependencies is open until feat-6
-# gives the manifests. These environment variables are for the tests:
+# tests). The script does not change the system, except for the folder tools/sbom/node_modules (it is
+# in .gitignore). The test with real dependencies is open until feat-6 gives the manifests. These
+# environment variables are for the tests:
 #   SBOM_PROJECT_ROOT       another root of the project
+#   SBOM_TOOL_DIR           another folder for the cdxgen project (the default is tools/sbom of this
+#                           repository, and not of SBOM_PROJECT_ROOT: the tool belongs to the gates)
 #   SBOM_MAVEN_REPO_LOCAL   the local Maven repository (the default is ~/.m2/repository). The script gives it
 #                           to Maven with -Dmaven.repo.local, so it knows where the plugin jar is.
 
@@ -96,7 +115,7 @@ while IFS= read -r path; do
 done < <(manifest_files .)
 if [[ ${#unscanned[@]} -gt 0 ]]; then
     printf '[sbom.sh] STOP: %s is not scanned by sbom.sh\n' "${unscanned[@]}" >&2
-    die "${#unscanned[@]} manifest(s) are outside the set that this script scans, so their licenses would not be checked. Scanned: pom.xml or backend/pom.xml (and the poms below backend/), frontend/package.json, frontend/pnpm-lock.yaml and frontend/pnpm-workspace.yaml (and, with a workspace and a lock file, the package.json files below frontend/). Move the manifest, or change this script (and its tests) first. Not entered: .git, node_modules, build, target, .specmgr, tools/license/fixtures, tools/gates/fixtures."
+    die "${#unscanned[@]} manifest(s) are outside the set that this script scans, so their licenses would not be checked. Scanned: pom.xml or backend/pom.xml (and the poms below backend/), frontend/package.json, frontend/pnpm-lock.yaml and frontend/pnpm-workspace.yaml (and, with a workspace and a lock file, the package.json files below frontend/). Move the manifest, or change this script (and its tests) first. Not scanned: tools/sbom/package.json and tools/sbom/pnpm-lock.yaml (the lock file of cdxgen). Not entered: .git, node_modules, build, target, .specmgr, tools/license/fixtures, tools/gates/fixtures."
 fi
 
 mkdir -p "${out_dir}"
@@ -153,18 +172,34 @@ fi
 # Frontend (pnpm)
 if [[ ${node_scanned} -eq 1 ]]; then
     cdxgen_version="$(version_of CDXGEN_VERSION)"
-    cdxgen_integrity="$(version_of CDXGEN_INTEGRITY)"
     require_cmd pnpm
+    require_cmd uv
+    tool_dir="${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}"
+    [[ -d "${tool_dir}" ]] || die "The folder of the cdxgen project does not exist: ${tool_dir}"
+    tool_dir="$(cd "${tool_dir}" && pwd)"
+    for tool_file in package.json pnpm-lock.yaml; do
+        [[ -f "${tool_dir}/${tool_file}" ]] || die "${tool_dir}/${tool_file} does not exist. cdxgen must run from a lock file. cdxgen did not start."
+    done
     log "Frontend: frontend/, @cyclonedx/cdxgen ${cdxgen_version}"
-    # G2: the integrity value of the npm package must be the pinned one before pnpm dlx starts it.
-    registry_integrity="$(pnpm view "@cyclonedx/cdxgen@${cdxgen_version}" dist.integrity | tail -n 1 | tr -d '[:space:]')" \
-        || die "pnpm view could not read the integrity value of @cyclonedx/cdxgen@${cdxgen_version}"
-    [[ "${registry_integrity}" == "${cdxgen_integrity}" ]] \
-        || die "The integrity value of @cyclonedx/cdxgen@${cdxgen_version} is '${registry_integrity}', but CDXGEN_INTEGRITY in ${VERSIONS_FILE} is '${cdxgen_integrity}'. cdxgen did not start."
-    log "integrity of @cyclonedx/cdxgen@${cdxgen_version} is the value of CDXGEN_INTEGRITY"
-    pnpm dlx "@cyclonedx/cdxgen@${cdxgen_version}" \
+    # G2: install cdxgen from the lock file. pnpm checks the integrity value of each package against it,
+    # and stops if the lock file and package.json are not the same. No script of a package runs.
+    log "Install: pnpm install --frozen-lockfile --ignore-scripts in ${tool_dir}"
+    (cd "${tool_dir}" && pnpm install --frozen-lockfile --ignore-scripts) \
+        || die "pnpm install --frozen-lockfile --ignore-scripts failed in ${tool_dir} (see above). cdxgen did not start."
+    cdxgen_bin="${tool_dir}/node_modules/.bin/cdxgen"
+    [[ -x "${cdxgen_bin}" ]] || die "${cdxgen_bin} does not exist after the install. cdxgen did not start."
+    # The lock file can have another version than the pin (just check-pins also finds this).
+    cdxgen_installed="$(uv run --no-project --quiet python -c \
+        'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' \
+        "${tool_dir}/node_modules/@cyclonedx/cdxgen/package.json")" \
+        || die "Cannot read the version of the installed cdxgen in ${tool_dir}/node_modules/@cyclonedx/cdxgen/package.json"
+    [[ "${cdxgen_installed}" == "${cdxgen_version}" ]] \
+        || die "The installed @cyclonedx/cdxgen has the version '${cdxgen_installed}', but CDXGEN_VERSION in ${VERSIONS_FILE} is '${cdxgen_version}'. cdxgen did not start."
+    log "The installed @cyclonedx/cdxgen has the version ${cdxgen_installed} (CDXGEN_VERSION)"
+    # Absolute paths: the folder of the script is the root of the project, and cdxgen must not depend on it.
+    "${cdxgen_bin}" \
         --type js --spec-version 1.6 --profile license-compliance --fail-on-error \
-        --output "${out_dir}/frontend.cdx.json" frontend
+        --output "${out_dir}/frontend.cdx.json" "$(cd frontend && pwd)"
     [[ -f "${out_dir}/frontend.cdx.json" ]] || die "cdxgen did not make ${out_dir}/frontend.cdx.json"
     log "Wrote ${out_dir}/frontend.cdx.json"
     if [[ ${#node_manifests[@]} -gt 0 ]]; then # a lock file with no package.json declares nothing
