@@ -34,7 +34,7 @@ Developers, reviewers, coding agents and the owners of the software.
 
 At this time no automatic gate examines the links between requirements and tests, the interface files, the architecture or the licenses. The target is a blocking gate for each of these.
 
-## Impact
+## Impactt
 
 More defects occur and more work is necessary to correct them. A license violation can stop the project from giving the software to users.
 
