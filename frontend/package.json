@@ -1,0 +1,8 @@
+{
+  "name": "feat-5-test-license-not-permitted",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "left-pad": "1.3.0"
+  }
+}
