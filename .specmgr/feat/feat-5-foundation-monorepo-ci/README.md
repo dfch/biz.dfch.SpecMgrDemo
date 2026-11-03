@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: review
 type: feat
-updated: '2026-11-03T15:49:44.998+01:00'
+updated: '2026-11-03T15:57:09.094+01:00'
 version: 1.0.0
 ---
 
@@ -56,11 +56,11 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - [x] ACC-003: In each workflow, each `run:` step is exactly `just <recipe>`, and the recipe is in the `justfile`. There is no exception: the action `extractions/setup-just` installs `just`, so no bootstrap `run:` step is necessary. The gate stops the pull request if a `run:` step does not obey this rule. The `uses:` steps must be the actions that are in the license table.
 
-- [ ] ACC-004: The file `tools/versions.env` has the pins. The install scripts read the versions from it. The versions in the CI workflow are the same as in the file, and the `just` recipe for the pin check shows this (ACC-013). In a new shell, after the scripts operate, `java -version` shows Eclipse Temurin 21 (not the JDK 11 of the system), and Maven, Node, pnpm and just show the pinned versions.
+- [x] ACC-004: The file `tools/versions.env` has the pins. The install scripts read the versions from it. The versions in the CI workflow are the same as in the file, and the `just` recipe for the pin check shows this (ACC-013). In a new shell, after the scripts operate, `java -version` shows Eclipse Temurin 21 (not the JDK 11 of the system), and Maven, Node, pnpm and just show the pinned versions.
 
 - [x] ACC-005: Each tool and each GitHub Action in the license table of this plan has the result of the check. A tool with a license that is not clear, or with no class in the DEC, is not in use.
 
-- [ ] ACC-006: A pull request with a document that is not valid according to specmgr, or a commit message that is not correct, causes a failure in CI.
+- [x] ACC-006: A pull request with a document that is not valid according to specmgr, or a commit message that is not correct, causes a failure in CI.
 
 - [x] ACC-007: CODEOWNERS and NOTICE are in the repository. CODEOWNERS has an entry for each path of REQ-007 that exists.
 
@@ -278,7 +278,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 150: Review
 
-- [ ] Task 150.100: Run all gates on test pull requests and write the result in this plan. Make one pull request that passes. Make one pull request for each failure that a gate must stop: a document that is not valid, a commit message that is not correct, a license that is not permitted, a license that is not known, and a `run:` step that is not `just <recipe>`. Write the expected result and the actual result of each
+- [x] Task 150.100: Run all gates on test pull requests and write the result in this plan. Make one pull request that passes. Make one pull request for each failure that a gate must stop: a document that is not valid, a commit message that is not correct, a license that is not permitted, a license that is not known, and a `run:` step that is not `just <recipe>`. Write the expected result and the actual result of each
 
 - [ ] Task 150.110: The owner examines the license table and the open items
 
@@ -286,7 +286,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Phase 140 is done (Task 140.100, see the update of 2026-11-03 14:39): the suggestion for the skill about the names of scripts is `skill-suggestion-script-names.md` in the folder of this feature, and ACC-012 is ticked. The owner decides where the skill goes. Phase 150 is started (see the update of 2026-11-03 14:46): the local simulation of the six test pull requests is done and all results are as expected (one finding: the job `license-check` has no `pnpm`, so a real pull request with a bad dependency stops for the wrong reason). Nothing is pushed. The next steps are the push, the main pull request and the real test pull requests (Task 150.100 stays open). Open for the owner: Task 150.110 and ACC-008.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Phase 140 is done (Task 140.100, see the update of 2026-11-03 14:39): the suggestion for the skill about the names of scripts is `skill-suggestion-script-names.md` in the folder of this feature, and ACC-012 is ticked. The owner decides where the skill goes. Phase 150 is started (see the update of 2026-11-03 14:46): the local simulation of the six test pull requests is done and all results are as expected (one finding: the job `license-check` has no `pnpm`, so a real pull request with a bad dependency stops for the wrong reason). The finding was fixed (see the update of 2026-11-03 14:48). The branch is pushed and the main pull request is #9 (7 checks pass). The real test pull requests #10 to #14 gave the expected result in real CI and are closed and not merged (see the update of 2026-11-03 14:56): Task 150.100 is done, and ACC-004 and ACC-006 are ticked. Open for the owner: Task 150.110 and ACC-008.
 
 ### Blockers
 
@@ -303,6 +303,33 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 14:56:01.000Z - Real pull requests of the gates (phase 150, part 2)
+
+The agent did the real part of Task 150.100 on GitHub. Each test pull request has one change and starts from the head `9861f48` of the branch `feat-5-foundation-monorepo-ci`. The base is `dev`. The workflow ran from the merge ref. The test pull requests are **closed and not merged**: the agent closed each one with `gh pr close --delete-branch` and the comment "Test pull request done. Closed, not merged." The remote test branches, the local test branches and the worktrees are deleted. Only the main pull request #9 is open. Nothing was pushed to `dev`, `main` or the feature branch.
+
+Result (a check is `pass` or `fail`; the other checks of the case all pass if the table does not say otherwise):
+
+| Case | Pull request, run | Expected | Actual | Key line of the log |
+|---|---|---|---|---|
+| Pass (main pull request) | [#9](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/9), [run 41657603169](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657603169) | All 7 checks pass | As expected. All 7 pass: check-pins, check-sudo, check-workflows, commit-check, license-check, test-gates, validate | - |
+| `invalid-document` (the heading `## Impact` of the problem statement is `## Impactt`; commit `docs(feat-5): ...`) | [#10](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/10), [run 41657943669](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657943669) | Only `validate` fails | As expected. Only `validate` fails | `✗ docs/prb/prb-85f4d435-...-development-work.md (prb): Prb > FutureState: expected FutureState (heading 'Future State'), found no match` and `summary: linted=6 failed=1 skipped=5 excluded=0` |
+| `bad-commit-message` (a commit `fixed stuff`) | [#11](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/11), [run 41657956937](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657956937) | Only `commit-check` fails | As expected. Only `commit-check` fails | `FAIL 6b1eb93 fixed stuff` and `1 of 21 commit message(s) not correct.` |
+| `license-not-permitted` (`frontend/package.json` and `pnpm-lock.yaml` with `left-pad` 1.3.0, WTFPL; commit `build(feat-5): ...`) | [#12](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/12), [run 41657972282](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657972282) | Only `license-check` fails with NOT PERMITTED | As expected. Only `license-check` fails. The SBOM tool (`pnpm dlx @cyclonedx/cdxgen@12.9.0`) ran in the runner, so the fix of the 14:48 update works in real CI | `STOP left-pad@1.3.0: NOT PERMITTED (WTFPL)` and `RESULT: STOP. NOT PERMITTED: 1. NOT KNOWN: 0.` |
+| `license-not-known` (the same with `jsonify` 0.0.1, license `Public Domain`) | [#13](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/13), [run 41657986698](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657986698) | Only `license-check` fails with NOT KNOWN | As expected. Only `license-check` fails | `STOP jsonify@0.0.1: NOT KNOWN (the license name 'Public Domain' is not in the table of names)` and `RESULT: STOP. NOT PERMITTED: 0. NOT KNOWN: 1.` |
+| `bad-run-step` (in `ci.yml`, one `run: just commit-check` is `run: echo hello`; commit `ci(feat-5): ...`) | [#14](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/14), [run 41657996598](https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41657996598) | `check-workflows` and `test-gates` fail, the other five pass | As expected. `check-workflows` and `test-gates` fail, and the other five pass | `STOP .github/workflows/ci.yml: job 'commit-check', step 3: run: is not exactly just <recipe>: 'echo hello'` (check-workflows). `FAIL the real workflow: expected exit code 0 and 'RESULT: PASS', got exit code 1` and `gates self-test: 100 ok, 1 failed` (test-gates) |
+
+All six cases gave the expected result, so Task 150.100 is ticked. ACC-006 is ticked: the pull request with the document that is not valid (#10) and the pull request with the commit message that is not correct (#11) failed in real CI, each in the right check. ACC-004 is ticked: `check-pins` passed in real CI on #9 (the versions in the workflow, 23 `uses:` steps, are the same as in `tools/versions.env`), and a new interactive shell on the machine of the author (`bash -ic`, today) shows Eclipse Temurin 21.0.13+9, Apache Maven 3.10.0, Node v26.13.0, pnpm 12.16.1 and just 1.59.0.
+
+Findings:
+
+1. No fault in a gate or in the workflow was found. The seven jobs, the names of the checks, the merge ref, `uv` 0.13.7 and the runner image work as designed. The finding of the local simulation (no `pnpm` in the job `license-check`) is closed: with the fix (`setup-java`, `setup-node`, `pnpm/action-setup`) the real runs stop for the right reason (NOT PERMITTED and NOT KNOWN, and not "Required command 'pnpm' not found").
+2. A check takes 5 to 32 seconds. The longest is `test-gates` (about 30 s). The checks that start `uvx` (`validate`) and `pnpm dlx` (`license-check`) need the network.
+3. In the jobs `license-check` of #12 and #13, `cdxgen` writes a warning (`NODE_PATH is set and may cause unexpected modules`). It does not stop the gate, as in the local test.
+4. The test pull request #14 shows that the self-test `test-gates` stops together with `check-workflows` when the real workflow is changed. This is the expected side effect (see the local simulation), and it is not a separate fault.
+5. `gh pr close --delete-branch` did not delete the remote test branches here, because the local branches were still checked out in worktrees. The agent deleted them with `git push origin --delete` after it removed the worktrees. Cleanup is complete: `gh pr list --state open` shows only #9, `git ls-remote --heads origin` shows no `test/feat-5-pr-*` branch, and `git worktree list` shows only the main working tree.
+
+Open and not done: Task 150.110 and ACC-008 (items of the owner).
 
 #### 2026-11-03 14:48:37.000Z - Java, Node and pnpm added to the license-check job (correction of phase 130)
 
