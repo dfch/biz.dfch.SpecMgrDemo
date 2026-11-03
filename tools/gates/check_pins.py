@@ -3,7 +3,7 @@
 
 feat-5-foundation-monorepo-ci, Task 130.142 (REQ-003, REQ-015).
 
-Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions>
+Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root>
 
 The script stops for each of these:
 
@@ -20,10 +20,26 @@ The script stops for each of these:
   * a `uses:` in the YAML that the text check did not find, or the other way round (this stops
     a form of the YAML that the text check does not read, for example a `uses:` in two lines).
 
+The Maven pin (the finding G1 of the review; REQ-003 wants the same Maven version in CI as in
+tools/versions.env, and the repository has no Maven setup action). The Maven Wrapper pins Maven in the
+repository, so the script looks in <project-root> (not in .git, node_modules, build, target, and from the
+root only .specmgr and the fixtures of the gates; EXCLUDED_* below, the same list as manifest_files in
+_lib.sh) and stops for each of these:
+
+  * a `.mvn/wrapper/maven-wrapper.properties` whose `distributionUrl` has no file
+    `apache-maven-<MAVEN_VERSION>-bin.zip` (or `.tar.gz`), with MAVEN_VERSION of tools/versions.env;
+  * a wrapper with no `distributionSha256Sum` (64 hexadecimal characters). The script cannot compare the
+    value with versions.env (the file has the sha512 of the tar.gz), so it checks that the value is there;
+  * a project with a `pom.xml` and no wrapper (fail closed: sbom.sh does not use the Maven of the runner).
+
+A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". Until
+feat-6-contracts-openapi-pipeline adds the wrapper, a `pom.xml` stops this gate on purpose.
+
 The comment is not in the YAML data, so the script reads the lines of the file for the comment,
 and the YAML data for the inputs. Exit codes: 0 pass; 1 a pin is not correct; 2 an error in a file.
 """
 
+import os
 import re
 import sys
 from collections import Counter
@@ -49,6 +65,12 @@ USES_VALUE = re.compile(
 )
 COMMENT = re.compile(r"\s*(?P<name>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+) (?P<tag>v[0-9]+(?:\.[0-9]+){0,2})\s*")
 VERSION_KEY = re.compile(r"(^|[-_])version([-_]|$)", re.IGNORECASE)
+
+# The folders that the search for pom.xml and for the wrapper does not enter (see the header). The names
+# are at each level; the paths are relative to the project root. manifest_files in _lib.sh has the same list.
+EXCLUDED_NAMES = {".git", "node_modules", "build", "target"}
+EXCLUDED_PATHS = {".specmgr", "tools/license/fixtures", "tools/gates/fixtures"}
+WRAPPER_FILE = Path(".mvn") / "wrapper" / "maven-wrapper.properties"
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -173,9 +195,71 @@ def check_file(
     return len(from_yaml), problems
 
 
+def find_files(root: Path, name: str) -> list[Path]:
+    """Return the paths (relative to the root) of the files with this name, without the excluded folders."""
+    found: list[Path] = []
+    for folder, dirs, files in os.walk(root):
+        relative = Path(folder).relative_to(root)
+        dirs[:] = sorted(d for d in dirs if d not in EXCLUDED_NAMES and (relative / d).as_posix() not in EXCLUDED_PATHS)
+        if name in files:
+            found.append(relative / name)
+    return sorted(found)
+
+
+def read_properties(path: Path) -> dict[str, str]:
+    """Read a Java properties file (lines `key=value`; `#` and `!` start a comment; `\\:` is a colon)."""
+    properties: dict[str, str] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise GateError(f"cannot read {path}: {error}") from error
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped[0] in "#!" or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        properties[key.strip()] = value.strip().replace("\\:", ":")
+    return properties
+
+
+def check_maven(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the Maven pin (finding G1). Return a message for the log and the problems."""
+    if "MAVEN_VERSION" not in versions:
+        return "", ["MAVEN_VERSION is not in tools/versions.env"]
+    version = versions["MAVEN_VERSION"]
+    poms = find_files(root, "pom.xml")
+    wrappers = [path for path in find_files(root, "maven-wrapper.properties") if path.parts[-3:] == WRAPPER_FILE.parts]
+    if not poms and not wrappers:
+        return "no Maven project (no pom.xml and no Maven Wrapper)", []
+    problems: list[str] = []
+    if poms and not wrappers:
+        problems.append(
+            f"Maven: {', '.join(str(p) for p in poms)} exists, but no {WRAPPER_FILE} (the Maven Wrapper). "
+            f"Add the wrapper for Maven {version}: CI has no Maven setup action and must not use the Maven of the runner"
+        )
+    url_pattern = re.compile(r"/apache-maven-" + re.escape(version) + r"-bin\.(zip|tar\.gz)")
+    for wrapper in wrappers:
+        properties = read_properties(root / wrapper)
+        url = properties.get("distributionUrl")
+        if url is None:
+            problems.append(f"Maven: {wrapper} has no `distributionUrl`")
+        elif not url_pattern.search(url):
+            problems.append(
+                f"Maven: {wrapper}: `distributionUrl` is {url}, but MAVEN_VERSION in tools/versions.env is {version} "
+                f"(the URL must have apache-maven-{version}-bin.zip)"
+            )
+        checksum = properties.get("distributionSha256Sum")
+        if checksum is None:
+            problems.append(f"Maven: {wrapper} has no `distributionSha256Sum` (the sha256 of the Maven download)")
+        elif not re.fullmatch(r"[0-9a-fA-F]{64}", checksum):
+            problems.append(f"Maven: {wrapper}: `distributionSha256Sum` is not a sha256 value ({checksum!r})")
+    note = f"Maven Wrapper: {len(wrappers)} file(s), Maven {version}" if not problems else ""
+    return note, problems
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 4:
-        print("Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions>", file=sys.stderr)
+    if len(argv) != 5:
+        print("Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root>", file=sys.stderr)
         return 2
     try:
         versions = read_versions(Path(argv[1]))
@@ -187,6 +271,9 @@ def main(argv: list[str]) -> int:
             print(f"{path}: {count} `uses:` step(s), {len(found)} problem(s)")
             total += count
             problems += found
+        note, maven_problems = check_maven(Path(argv[4]), versions)
+        print(f"Maven pin: {note or str(len(maven_problems)) + ' problem(s)'}")
+        problems += maven_problems
     except GateError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2

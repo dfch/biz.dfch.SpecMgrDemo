@@ -1,8 +1,8 @@
 """Shared code of the gates for the GitHub Actions workflows.
 
 feat-5-foundation-monorepo-ci, Tasks 130.140 and 130.142. Do not run this file.
-check_workflows.py and check_pins.py import it. PyYAML must be installed (the
-scripts check-workflows.sh and check-pins.sh start Python with `uv run --with`).
+check_workflows.py and check_pins.py import it. PyYAML must be installed (the scripts
+check-workflows.sh and check-pins.sh install it with checksums, see make_python_env in _lib.sh).
 """
 
 from pathlib import Path
@@ -44,7 +44,7 @@ def load_workflows(directory: Path) -> list[tuple[Path, dict[Any, Any]]]:
     workflows: list[tuple[Path, dict[Any, Any]]] = []
     for path in files:
         try:
-            data = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)  # noqa: S506
+            data = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
         except (OSError, yaml.YAMLError) as error:
             raise GateError(f"{path}: cannot read the YAML: {error}") from error
         if not isinstance(data, dict):

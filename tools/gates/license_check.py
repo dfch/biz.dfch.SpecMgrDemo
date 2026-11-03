@@ -5,8 +5,8 @@ feat-5-foundation-monorepo-ci, Task 130.130 (REQ-006, DEC 84c37f7d-08cb-457d-8ab
 
 Usage: license_check.py <sbom-dir> <permitted-list> <names-table>
 
-The script is started by license-check.sh with `uv run --with license-expression==<version>`.
-It does not parse license expressions. The library `license-expression` does this. The
+The script is started by license-check.sh in a temporary virtual environment that has
+`license-expression` (installed with checksums). It does not parse license expressions. The library `license-expression` does this. The
 script only evaluates the parsed tree against the list:
 
   * OR   is permitted if any alternative is permitted.

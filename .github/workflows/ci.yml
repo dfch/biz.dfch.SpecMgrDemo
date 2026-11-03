@@ -71,7 +71,8 @@ jobs:
           version: "0.13.7"
       # The SBOM tools need Java (Maven) and Node and pnpm (cdxgen), as soon as feat-6 adds the
       # manifests. The versions are the ones of tools/versions.env (`just check-pins` compares them).
-      # Maven is not here: feat-6-contracts-openapi-pipeline decides about the Maven Wrapper (mvnw).
+      # Maven is not here: no Maven setup action is in the license table. The Maven Wrapper (mvnw) next to the
+      # pom.xml pins Maven. sbom.sh stops if mvnw is missing, and check-pins checks its version (finding G1).
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
         with:
           distribution: temurin
