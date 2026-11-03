@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:08.220+01:00'
 id: 1a29c825-6862-4fe9-8069-6566262d5c97
 status: accepted
 type: dec
-updated: '2026-11-03T07:31:41.718+01:00'
+updated: '2026-11-03T07:51:37.869+01:00'
 version: 1.0.0
 ---
 
@@ -38,7 +38,7 @@ The project uses React with TypeScript for the frontend. The owner selected Reac
 
 ### Confirmation
 
-The results of the spike are in `prototypes/COMPARISON.md`. The license gate must show no error for React and for each frontend library.
+The results of the spike are in `.specmgr/feat/feat-2-react-angular-visualization-spike/prototypes/COMPARISON.md`. The license gate must show no error for React and for each frontend library.
 
 ## Roles and Responsibilities
 
@@ -82,6 +82,10 @@ The spike did not examine large data sets, data that changes with time, integrat
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 00:00:00.000Z - Path of the spike results changed
+
+The owner approved a change of the path in the section Confirmation. The prototypes moved to the folder of feature feat-2-react-angular-visualization-spike. The decision is not changed.
 
 ### 2026-11-03 00:00:00.000Z - Accepted
 
