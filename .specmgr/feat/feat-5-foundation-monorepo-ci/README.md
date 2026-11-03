@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T14:05:09.199+01:00'
+updated: '2026-11-03T14:36:02.741+01:00'
 version: 1.0.0
 ---
 
@@ -285,7 +285,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Each gate recipe in the `justfile` stops with the message "NOT IMPLEMENTED" until its script exists. The next step is phase 130 (CI and gates). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Each gate recipe in the `justfile` stops with the message "NOT IMPLEMENTED" until its script exists. The next step is phase 130 (CI and gates). The handoff of 2026-11-03 13:35:40 in Updates has what the next agent needs. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
@@ -301,6 +301,46 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 13:35:40.000Z - Handoff at the end of the second session (replaces the first handoff)
+
+Phases 100, 110 and 120 are done. Phase 130 (CI and gates) is next. Nothing is pushed. The work is on the branch `feat-5-foundation-monorepo-ci` (from `dev`), and the working tree is clean at commit `dc4eea2`. The first handoff (2026-11-03 09:45:52) is out of date in these points: it said "start with phase 100", "use the home directory for corepack" and "commits on `dev`".
+
+For the next agent:
+
+1. Start with Task 130.100. Read this plan first, mainly Requirements, Acceptance Criteria, Design Notes (the license table and the rules) and the Updates since 2026-11-03 09:58. Read DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 (licenses) before the license gate.
+2. Rules that the owner decided (do not change them without the owner):
+   - Rule A for licenses: for a tool that does not go to users, the check covers the main license only. For a library that goes to users, the gate checks each dependency.
+   - The license gate uses the library `license-expression` (with `boolean.py`), and fails closed. `OR` needs one permitted alternative, `AND` needs all, and `WITH` must match as a complete expression. Names that are not SPDX ids need a table of names.
+   - One register DEC for all license deviations. It does not exist, because no deviation exists.
+   - Pin each GitHub Action to a full commit SHA with a comment on the same line: `uses: <name>@<sha> # <name> <tag>`. The SHAs in the license table are from 2026-11-03. Resolve them again with `git ls-remote` before writing the workflow.
+   - The commit message gate and the license gate are scripts of this project in `tools/gates/`. The commit scope is `feat-N` (example: `feat(feat-5): ...`).
+   - No bootstrap `run:` step: `extractions/setup-just` installs `just`. Every `run:` step is `just <recipe>`.
+3. The `justfile` is written. Each gate recipe starts `tools/gates/<script>` and stops with "NOT IMPLEMENTED" if the script is missing. The scripts and their arguments that the recipes expect:
+   - `validate-docs.sh <base>` (Task 130.110), base is `origin/dev`
+   - `commit-check.sh <base>` (Task 130.120)
+   - `sbom.sh <dir>` (Task 130.130), dir is `build/sbom`
+   - `license-check.sh <sbom-dir> <permitted-list>` (Task 130.130), list is `tools/license/permitted-licenses.txt`
+   - `check-workflows.sh justfile .github/workflows` (Task 130.140)
+   - `check-pins.sh tools/versions.env .github/workflows` (Task 130.142)
+   - `check-sudo.sh tools .specmgr/feat` (Task 130.145)
+   Change the `justfile` if a script needs other arguments, and run `just --fmt --unstable` after a change.
+4. The tools are installed in `~/.local/opt/biz.dfch.SpecMgrDemo/` and the profile `~/.bashrc` reads `~/.config/biz.dfch.SpecMgrDemo/env.sh`. A new interactive shell has `java` (Temurin 21), `mvn`, `node` (26), `pnpm` and `just`. A shell that is not interactive does not: use `source ~/.config/biz.dfch.SpecMgrDemo/env.sh`. `just verify-tools` checks the install. The machine has its own `uv` 0.12.5 (the pin 0.13.7 is for CI).
+5. Facts that are easy to miss:
+   - Node 26.13.0 has no corepack. pnpm is the standalone release.
+   - `@cyclonedx/cdxgen`: the GitHub page shows v13.6.0, and npm has 12.9.0 as the latest. The pin is 12.9.0. Task 130.130 must check this again, and read the license of any other version before it changes the pin.
+   - No Maven or pnpm manifest exists (feat-6 adds them). Test the license gate and the SBOM with fixtures in `tools/license/fixtures/` (Task 130.135). The test with real dependencies is out of scope.
+   - `.github/workflows/` does not exist yet. `.github/CODEOWNERS` has the owner `@dfch`, and GitHub can check it only after a push to the default branch.
+   - `extractions/setup-just` calls `extractions/setup-crate` (both MIT OR Apache-2.0).
+6. Before the first push: create the pull request at the end of the feature (the owner agreed). Use `gh`, and use the issue number #5. The owner turns on the branch protection later (Task 130.150), so the instructions for it must be a document in this feature folder.
+7. Rules for documents and commits:
+   - Use `specmgr_edit` for the plan. Do not change a status. An agent must not accept a DEC. A permission of the owner is for one time and one change.
+   - Take timestamps from `date -u`, and never write a made-up time.
+   - Write documents in ASD-STE100 English (see the first handoff, item 6, for the word check scripts, which are a reference and not a gate).
+   - Make separate commits with the scope `feat-5`. Use the types `feat` for code and `docs` for plan changes.
+   - Tick a task or an acceptance criterion only after you ran the check.
+8. Open items for the owner (also in Blockers): the legal review of the licenses is done by the owner (dfch, 2026-11-03). NOTICE has no copyright line. The CODEOWNERS entry for the thresholds comes with the walking skeleton. Issue #8 (traceability gate and security checks) has no feature. GitHub issue #4 is for specmgr.
+9. State of the acceptance criteria: ACC-001 and ACC-007 are ticked. ACC-002 to ACC-006 and ACC-008 to ACC-013 are open. ACC-004 is shown on this machine (the versions are correct in a new shell), but the part about the CI workflow needs Task 130.142, so it is not ticked.
 
 #### 2026-11-03 13:04:44.000Z - Layout, justfile, NOTICE and CODEOWNERS (phase 120)
 
