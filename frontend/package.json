@@ -1,0 +1,8 @@
+{
+  "name": "feat-5-test-license-not-known",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "jsonify": "0.0.1"
+  }
+}
