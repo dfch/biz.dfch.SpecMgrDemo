@@ -16,6 +16,12 @@
 #     project with a pom.xml must have a wrapper. No pom.xml and no wrapper: "no Maven project".
 #     The folder for the search is GATE_WORK_ROOT (the default is the repository root).
 #
+#   - the lock file of cdxgen (finding G2, feat-16-cdxgen-lockfile): tools/sbom/package.json and
+#     tools/sbom/pnpm-lock.yaml must have the CDXGEN_VERSION and the CDXGEN_INTEGRITY of the versions file
+#     (the first argument), one dependency only, and an integrity value for each package. A missing folder
+#     or file stops the check. The folder is SBOM_TOOL_DIR (a variable for the tests; the default is
+#     tools/sbom of this repository, as in sbom.sh, and not of GATE_WORK_ROOT: the tool belongs to the gates).
+#
 # check_pins.py does the work. It reads the YAML with PyYAML. The version and the sha256 value
 # (the source archive) are PYYAML_VERSION and PYYAML_SHA256 in the versions file (the first
 # argument), and the script installs it with `uv pip install --require-hashes` (make_python_env in
@@ -28,4 +34,4 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 allowed="${3:-${REPO_ROOT}/tools/license/allowed-actions.txt}"
 VERSIONS_FILE="$1"
 make_python_env require "PyYAML:PYYAML_VERSION:PYYAML_SHA256"
-"${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}"
+"${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}" "${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}"
