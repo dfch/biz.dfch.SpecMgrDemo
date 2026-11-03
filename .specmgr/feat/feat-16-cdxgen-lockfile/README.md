@@ -4,7 +4,7 @@ created: '2026-11-03T21:02:30.390+01:00'
 id: feat-16-cdxgen-lockfile
 status: review
 type: feat
-updated: '2026-11-03T21:37:33.086+01:00'
+updated: '2026-11-03T21:45:26.402+01:00'
 version: 1.0.0
 ---
 
@@ -50,9 +50,9 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 - [x] ACC-007: `.github/CODEOWNERS` and `tools/gates/required-setup.txt` are not changed, and the line `/tools/` of CODEOWNERS covers the new files. `just check-workflows` and `just check-pins` return exit code 0 (REQ-006).
 
-- [ ] ACC-008: These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, and `just --fmt --unstable --check`. The pull request has all seven checks green.
+- [x] ACC-008: These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, and `just --fmt --unstable --check`. The pull request has all seven checks green.
 
-- [ ] ACC-009: A throwaway test pull request (closed, not merged) that adds `frontend/package.json` and `frontend/pnpm-lock.yaml` shows in the log of the job `license-check` the install in `tools/sbom/` with `--frozen-lockfile --ignore-scripts` and the SBOM file, and the job passes (REQ-002, REQ-006).
+- [x] ACC-009: A throwaway test pull request (closed, not merged) that adds `frontend/package.json` and `frontend/pnpm-lock.yaml` shows in the log of the job `license-check` the install in `tools/sbom/` with `--frozen-lockfile --ignore-scripts` and the SBOM file, and the job passes (REQ-002, REQ-006).
 
 ### Scope
 
@@ -164,13 +164,13 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 - [x] Task 110.130: Run the whole gate: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, `just --fmt --unstable --check`, `ruff check` and `ruff format --check` for the Python files. Confirm that `.github/CODEOWNERS` and `required-setup.txt` are not changed (ACC-007, ACC-008)
 
-- [ ] Task 110.140: Write the record in this plan (Progress), open the pull request with `Closes #16` (commit type `build`, scope `feat-16`), let all seven checks pass, and run the throwaway test pull request of ACC-009 (close it, do not merge it). The owner merges the pull request (ACC-008, ACC-009)
+- [x] Task 110.140: Write the record in this plan (Progress), open the pull request with `Closes #16` (commit type `build`, scope `feat-16`), let all seven checks pass, and run the throwaway test pull request of ACC-009 (close it, do not merge it). The owner merges the pull request (ACC-008, ACC-009)
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-03 20:34**: Phase 100 is committed. Tasks 110.100 to 110.130 of Phase 110 are done and not committed. `check_pins.py` has the pin check of `tools/sbom/` (`check_sbom_tool`), `tools/sbom/README.md` has the full update procedure (the agent ran it in a copy of the repository, see the update of this time), and the texts of `tools/versions.env`, `tools/README.md`, `tools/gates/README.md`, `sbom.sh` and `check_pins.py` are correct. `just test-gates` has 418 cases and all are ok (335 before). The whole gate is green, also with `GITHUB_BASE_REF=dev`. ACC-001 to ACC-007 are checked. Open: Task 110.140 (the record, the pull request with `Closes #16`, the seven checks, and the throwaway pull request of ACC-009), so ACC-008 and ACC-009 are open. The branch is `feat-16-cdxgen-lockfile`. No decision of the owner is open.
+**As of 2026-11-03 20:45**: All tasks and all acceptance criteria (ACC-001 to ACC-009) are done and checked. Pull request #17 (`Closes #16`, against `dev`) is open and has seven green checks. The throwaway test pull request #18 of ACC-009 showed in real CI the frozen install in `tools/sbom` with `--frozen-lockfile --ignore-scripts`, the SBOM file and `RESULT: PASS. 1 component(s)`. It is closed and not merged, and its branch and worktree are deleted. The local recipes of ACC-008 return exit code 0 again. The status of the feature is `review`. The owner merges pull request #17 and sets the status to `done`. No decision of the owner is open.
 
 ### Blockers
 
@@ -183,6 +183,35 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 20:45:00.000Z - ACC-009 done: throwaway test pull request #18 (closed, not merged) and result of pull request #17
+
+The agent made one throwaway test pull request. It is a draft pull request against `dev` from the branch `test/feat-16-pr-frontend` (commit `test(feat-16): add a test frontend for the SBOM job`, made from the commit "docs(feat-16): set the status of the feature to review" in a separate `git worktree`). The commit adds only `frontend/package.json` (one dependency `lodash.get` 4.4.2, license MIT on npm, no `packageManager` field) and `frontend/pnpm-lock.yaml` (made with the pinned pnpm 12.16.1, `pnpm install --lockfile-only`). Only the test branch was pushed.
+
+| Case | Expected | Actual | Pull request | Run URL |
+| --- | --- | --- | --- | --- |
+| Test frontend with `lodash.get` 4.4.2 (MIT) | `license-check` installs cdxgen in `tools/sbom` with `--frozen-lockfile --ignore-scripts`, makes the SBOM, passes with 1 component; the other six checks pass | As expected: seven checks pass (`check-pins` 27 s, `check-sudo` 19 s, `check-workflows` 22 s, `commit-check` 10 s, `license-check` 35 s, `test-gates` 1 min 30 s, `validate` 25 s) | #18 (draft) | https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41714729287 (job `license-check`: https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/41714729287/job/126191638446) |
+
+Key lines of the log of the job `license-check`:
+
+- `[sbom.sh] Frontend: frontend/, @cyclonedx/cdxgen 12.9.0`
+- `[sbom.sh] Install: pnpm install --frozen-lockfile --ignore-scripts in /home/runner/work/biz.dfch.SpecMgrDemo/biz.dfch.SpecMgrDemo/tools/sbom`
+- `✓ Lockfile passes supply-chain policies (199 entries in 1.3s)`, `Lockfile is up to date, resolution step is skipped`, `Packages: +187`, `+ @cyclonedx/cdxgen 12.9.0`, `Done in 2.1s using pnpm v12.16.1`
+- `[sbom.sh] The installed @cyclonedx/cdxgen has the version 12.9.0 (CDXGEN_VERSION)`
+- `[sbom.sh] Wrote /home/runner/work/biz.dfch.SpecMgrDemo/biz.dfch.SpecMgrDemo/build/sbom/frontend.cdx.json`, `frontend.cdx.json: 1 component(s)`, `[sbom.sh] PASS`
+- `OK   lodash.get@4.4.2: PERMITTED (MIT)`
+- `RESULT: PASS. 1 component(s), all licenses permitted.`
+- The log has 0 times `pnpm dlx` and 0 times `pnpm view`.
+
+Findings:
+
+- The install works on the runner with the Node and the pnpm that the job has now (pnpm 12.16.1). No network setting, no pnpm setting and no version of uv or Node failed. No change of the feature branch is needed.
+- For information (not an error of this feature, and the same as the open item of the update of Phase 100): cdxgen prints a table "SECURE MODE: Environment audit, 1 high" because `NODE_PATH` is set on the runner. It does not stop the run. A possible later change: `env -u NODE_PATH` at the start of cdxgen in `sbom.sh`.
+- The old `gh` 2.4.0 has no `--comment` for `gh pr close`. The test pull request was closed by the delete of its remote branch (it was already `CLOSED` and `mergedAt` is null). The comment "Test pull request done. Closed, not merged." was added with `gh pr comment` afterwards.
+
+Cleanup: pull request #18 is `CLOSED` and not merged. The remote branch `test/feat-16-pr-frontend` is deleted, the worktree `/tmp/opencode/feat16-real-pr/accept` is removed and pruned, and the local test branch is deleted. `gh pr list --state open` shows only #17. `git ls-remote --heads origin` shows no `test/feat-16-pr-*` branch. `git worktree list` shows only the main working tree.
+
+Result of pull request #17 and ACC-008: `gh pr checks 17` shows seven passes (`check-pins`, `check-sudo`, `check-workflows`, `commit-check`, `license-check`, `test-gates`, `validate`). The body has `Closes #16`. The agent ran the local recipes again on the branch (tree clean): `just test-gates` exit code 0 (418 ok, 0 failed), `just test-license-gate` 0 (46 ok, 0 failed), `just check-pins` 0, `just check-workflows` 0, `just check-sudo` 0, `just validate` 0, `just commit-check` 0 (4 commit messages correct), `just license-check` 0 (0 components) and `just --fmt --unstable --check` 0. ACC-008, ACC-009 and Task 110.140 are checked. Nothing in this entry is committed or pushed.
 
 #### 2026-11-03 20:34:30.000Z - Phase 110 (Tasks 110.100 to 110.130) done: pin check, procedure, texts and gate
 
