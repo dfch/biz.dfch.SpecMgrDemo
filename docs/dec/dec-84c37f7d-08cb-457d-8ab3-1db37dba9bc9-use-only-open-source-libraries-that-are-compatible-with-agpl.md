@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T12:22:22.640+01:00'
+updated: '2026-11-03T12:45:24.763+01:00'
 version: 1.0.0
 ---
 
@@ -22,7 +22,7 @@ The repository has the license AGPL-3.0. Each library that the project uses must
 
 ## Considered Options
 
-- A list of permitted licenses that a gate in CI examines, and a DEC for each approved deviation.
+- A list of permitted licenses that a gate in CI examines, and one register DEC for all approved deviations.
 - A person examines each dependency by hand.
 - No rule.
 
@@ -32,7 +32,7 @@ The project uses only open source libraries that are compatible with AGPL-3.0-on
 
 ### Consequences
 
-- The rule includes build tools, test libraries and tools in CI, and also the libraries that go to users.
+- The rule includes build tools, test libraries and tools in CI, and also the libraries that go to users. For a tool that does not go to users, the check covers the main license of the tool only. The licenses of the parts that the tool bundles are not checked. For a library that goes to users, the gate checks each dependency, with no exception.
 - If the gate finds a license that it does not know, it stops the pull request.
 - Each tool in the DECs about technology has a status of license check. The first operation of the gate gives the result.
 
@@ -79,9 +79,15 @@ These are the first classes of licenses. The owner must make sure that they are 
 
 Some tools for security scans can have terms that are not open source, for example the engine of CodeQL. The gate must examine each tool. The AGPL clause about networks applies if users operate the web application through a network. The owner must make a decision about how the project obeys this clause.
 
+All approved deviations are in one register DEC, with one dated section for each deviation. The register is made when the first deviation is approved. Each new section is a change to an accepted DEC, so the owner must accept it. No deviation exists at this time.
+
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 11:45:17.000Z - Rule for tools and one register for deviations
+
+The owner gave a permission for one time to make these changes, and no other change. The agent made three changes. First, the first bullet in Consequences now says that, for a tool that does not go to users, the check covers the main license only (decision of the owner on 2026-11-03: "Option A"). Second, the option in Considered Options now says one register DEC for all deviations, and a paragraph in More Information gives the form of the register (decision of the owner on 2026-11-03). Third, this entry. The text of the Decision Outcome is not changed. A DEC that is a register is also "a DEC that records the deviation". The class table is not changed.
 
 ### 2026-11-03 11:22:16.000Z - Five licenses added to the class Permitted
 
