@@ -4,7 +4,7 @@ created: '2026-11-02T14:43:28.229+01:00'
 id: eb6e66ca-4ceb-46b5-9865-47e20a44674a
 status: draft
 type: dec
-updated: '2026-11-03T06:59:10.989+01:00'
+updated: '2026-11-03T07:32:54.415+01:00'
 version: 1.0.0
 ---
 
@@ -70,7 +70,7 @@ Planning session of 2026-11-02.
 
 ## More Information
 
-The asdste100 MCP gives the rules and the words of ASD-STE100. It loads the terminology register as an extra word list. Authors and reviewers use the MCP to look up words and rules. They do not use a separate script for the STE check.
+The asdste100 MCP gives the rules and the words of ASD-STE100. It loads the terminology register as one more word list. Authors and reviewers use the MCP to look up words and rules. They do not use a different script for the STE check.
 
 Rules 1.5 and 1.12 of ASD-STE100 let an author use technical nouns and technical verbs from the glossary of a company. Rule 1.12 tells an author to use an approved verb with a technical noun if it gives the same information. Rule 1.7 tells an author not to use a technical noun as a verb.
 
