@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
-status: planning
+status: done
 type: feat
-updated: '2026-11-03T10:45:47.906+01:00'
+updated: '2026-11-03T10:46:57.908+01:00'
 version: 1.0.0
 ---
 
@@ -94,7 +94,7 @@ The frontmatter field `classification` holds the data class. The values are INTE
 
 The first application is a web application for menu selection in a company canteen.
 
-STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loads the terminology register in `terminology/en/` as an extra word list. The project does not use its own script for the STE check. A reviewer must examine the rules that a word lookup does not show. The register has technical nouns that are not approved nouns in the base dictionary. An agent wrote the records, and they have the source `SPECMGR-DEMO:1`. The owner has not accepted them at this time.
+STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loads the terminology register in `terminology/en/` as an extra word list. The project does not use its own script for the STE check. A reviewer must examine the rules that a word lookup does not show. The register has technical nouns that are not approved nouns in the base dictionary. An agent wrote the records, and they have the source `SPECMGR-DEMO:1`. The owner accepted them on 2026-11-03.
 
 ### Related Decisions
 
@@ -187,7 +187,7 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 - [x] Task 500.130: A reviewer examines the STE rules that the tool does not examine (reviewer: dfch, worksheet TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f)
 
-- [x] Task 500.140: The owner examines the records of the terminology register and accepts them (the owner keeps the records not accepted for now)
+- [x] Task 500.140: The owner examines the records of the terminology register and accepts them (the owner accepted the register on 2026-11-03)
 
 ## Progress
 
@@ -202,6 +202,12 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - Register accepted, feature done
+
+The owner accepted the terminology register (task 500.140) and told the agent to set the status of this feature to done. The agent set the status. The records in `terminology/en/` are not changed. Their field `source` keeps the value `SPECMGR-DEMO:1`, and they have no field for the acceptance of the owner. All acceptance criteria and all tasks are ticked.
+
+The text of the DEC about the register (9eade4ab-2f03-439b-b798-770e43154f8b) still says "The owner has not accepted a record that an agent writes". The text is not correct now. The agent did not change this accepted DEC, because the owner gave no permission for it. The owner can tell the agent to add a log entry.
 
 #### 2026-11-03 00:00:00.000Z - Reviews done
 
