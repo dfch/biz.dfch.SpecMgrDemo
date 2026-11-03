@@ -1,0 +1,46 @@
+# Expected results of the license gate for the fixtures in this folder
+# (feat-5-foundation-monorepo-ci, Task 130.135, ACC-009).
+#
+# Format: file | result | reason
+#   PASS           the gate passes (exit code 0)
+#   NOT PERMITTED  the gate stops (exit code 1) and reports a license that is not permitted
+#   NOT KNOWN      the gate stops (exit code 1) and reports a license that is not known
+#   ERROR          the gate cannot decide (exit code 2)
+# The test is `just test-license-gate`. It uses tools/license/permitted-licenses.txt and
+# tools/license/license-names.txt.
+01-permitted-mit.cdx.json | PASS | a permitted license
+02-not-permitted-sspl.cdx.json | NOT PERMITTED | a license that is known, but not in the list
+03-not-known-id.cdx.json | NOT KNOWN | an identifier that is not on the SPDX list
+04-gpl2-only-no-exception.cdx.json | NOT PERMITTED | GPL-2.0-only with no exception
+05-gpl2-classpath-expression.cdx.json | PASS | the complete expression with the Classpath exception
+06-or-one-permitted.cdx.json | PASS | OR with two permitted alternatives
+07-or-one-permitted-one-not.cdx.json | PASS | OR with one permitted alternative
+08-or-none-permitted.cdx.json | NOT PERMITTED | OR with no permitted alternative
+09-and-all-permitted.cdx.json | PASS | AND with all parts permitted
+10-and-one-not-permitted.cdx.json | NOT PERMITTED | AND with one part not permitted
+11-parentheses-or-and.cdx.json | PASS | parentheses, OR inside AND
+12-parentheses-and-not-permitted.cdx.json | NOT PERMITTED | parentheses, the OR part has no permitted alternative
+13-parentheses-with.cdx.json | PASS | parentheses and WITH: the WITH expression is permitted as a whole
+14-with-other-license.cdx.json | NOT PERMITTED | WITH is matched as a complete expression, and this one is not in the list
+15-unparseable-open-parenthesis.cdx.json | NOT KNOWN | an expression that the library cannot parse
+16-unparseable-comma.cdx.json | NOT KNOWN | an expression where the library raises an error
+17-unparseable-operator.cdx.json | NOT KNOWN | an expression with an operator and no second part
+18-name-in-table.cdx.json | PASS | a name that is not an SPDX identifier, and is in the table of names
+19-name-not-in-table.cdx.json | NOT KNOWN | a name that is not an SPDX identifier, and is not in the table
+20-name-in-table-not-permitted.cdx.json | NOT PERMITTED | a name in the table that gives a license that is not in the list (EPL-2.0)
+21-name-is-spdx-id-not-in-table.cdx.json | NOT KNOWN | a name is read only with the table, also if it looks like an SPDX identifier
+22-no-license.cdx.json | NOT KNOWN | a component with no license
+23-empty-licenses.cdx.json | NOT KNOWN | a component with an empty list of licenses
+24-licenseref.cdx.json | NOT KNOWN | LicenseRef is not an SPDX identifier (the library has an alias for it)
+25-unknown-exception.cdx.json | NOT KNOWN | an exception that is not on the SPDX list
+26-or-with-unknown.cdx.json | NOT KNOWN | OR with one permitted alternative and one unknown license: unknown stops (fail closed)
+27-multiple-entries-all-permitted.cdx.json | PASS | more than one entry in licenses: all must be permitted
+28-multiple-entries-one-not-permitted.cdx.json | NOT PERMITTED | more than one entry in licenses: one is not permitted
+29-deprecated-id-lgpl.cdx.json | PASS | a deprecated identifier is read in its current form (LGPL-3.0-only), the same as the list
+30-lowercase.cdx.json | PASS | SPDX identifiers do not depend on the case of the letters
+31-nested-component.cdx.json | NOT PERMITTED | a nested component with a license that is not permitted
+32-empty-components.cdx.json | PASS | an SBOM with no component (the SBOM of the repository now)
+33-two-components-one-not-known.cdx.json | NOT KNOWN | the gate stops if one component of many is not known
+40-error-not-json.cdx.json | ERROR | a file that is not JSON
+41-error-not-cyclonedx.cdx.json | ERROR | a JSON file that is not a CycloneDX SBOM
+42-error-no-components.cdx.json | ERROR | a CycloneDX SBOM with no `components` list

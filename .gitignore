@@ -25,3 +25,4 @@ replay_pid*
 
 # Files that the recipes make (feat-5-foundation-monorepo-ci)
 /build/
+**/__pycache__/

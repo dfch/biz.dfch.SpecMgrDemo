@@ -1,0 +1,25 @@
+# The table of names (feat-5-foundation-monorepo-ci, Task 130.130, ACC-009).
+#
+# Some SBOM files give a license as a free name (`license.name`) and not as an SPDX identifier,
+# for example `Apache License, Version 2.0` in a POM file of Maven. The gate does not guess. It
+# uses this table. A name that is not in this table is "not known", and the gate stops.
+#
+# Format: `name => SPDX expression`, one on each line. The name must be the exact text (the gate
+# ignores differences in white space only). The SPDX expression must be valid. The table gives the
+# identity of a license only. It does not make a license permitted: the list
+# permitted-licenses.txt does that. CODEOWNERS covers this file.
+Apache License, Version 2.0 => Apache-2.0
+The Apache Software License, Version 2.0 => Apache-2.0
+Apache License 2.0 => Apache-2.0
+Apache 2.0 => Apache-2.0
+MIT License => MIT
+The MIT License => MIT
+The MIT License (MIT) => MIT
+BSD 2-Clause License => BSD-2-Clause
+BSD 3-Clause License => BSD-3-Clause
+The 3-Clause BSD License => BSD-3-Clause
+ISC License => ISC
+Eclipse Public License v2.0 => EPL-2.0
+Eclipse Public License - v 2.0 => EPL-2.0
+GNU General Public License, version 2, with the Classpath Exception => GPL-2.0-only WITH Classpath-exception-2.0
+GPLv2+CE => GPL-2.0-only WITH Classpath-exception-2.0

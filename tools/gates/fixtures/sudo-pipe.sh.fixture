@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fixture: the word in a pipe.
+echo "x" | sudo tee /etc/x

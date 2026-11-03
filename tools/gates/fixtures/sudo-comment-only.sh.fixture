@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Fixture: comments with the word are not a command.
+# This script does not use sudo. It has no sudo.
+set -euo pipefail
+"$(dirname "$0")"/check-sudo.sh --help || true
+echo "ok"

@@ -1,0 +1,146 @@
+# The CI workflow (feat-5-foundation-monorepo-ci, Task 130.100, REQ-002, REQ-009, REQ-015).
+#
+# Rules (the gates check them, see `just check-workflows` and `just check-pins`):
+#   - Each job runs one `just` recipe. Each `run:` step is exactly `just <recipe>` (ACC-003).
+#   - Each `uses:` has a full commit SHA and a comment on the same line with the name and the
+#     release tag. The actions are the ones in tools/license/allowed-actions.txt (ACC-013).
+#   - The versions in the inputs of the setup actions are the same as in tools/versions.env.
+#     An action cannot read that file, so `just check-pins` compares them (ACC-013).
+#   - `extractions/setup-just` installs `just`, so no step needs a bootstrap `run:`.
+#   - The checkout has `fetch-depth: 0`, so the branch origin/dev is in the clone and the gates
+#     can compare with it.
+#   - Each job has the name of the gate. Use these names for the required checks of the branch
+#     protection (branch-protection.md in the folder of the feature).
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just validate
+
+  commit-check:
+    name: commit-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - run: just commit-check
+
+  license-check:
+    name: license-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just license-check
+      # The SBOM files are an artifact of each run, also if the gate stops (REQ-006, NOTICE).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: sbom
+          path: build/sbom/
+          if-no-files-found: error
+
+  check-workflows:
+    name: check-workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just check-workflows
+
+  check-pins:
+    name: check-pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just check-pins
+
+  check-sudo:
+    name: check-sudo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - run: just check-sudo
+
+  # The tests of the gates themselves: the license gate with its fixtures, and the other
+  # gates with good and bad input.
+  test-gates:
+    name: test-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just test-gates

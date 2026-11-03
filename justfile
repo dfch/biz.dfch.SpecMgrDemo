@@ -2,9 +2,9 @@
 # CI jobs start one recipe from this file, and nothing else (ACC-003).
 #
 # feat-5-foundation-monorepo-ci, Task 120.110.
-# The gate scripts are in tools/gates/. Phase 130 writes them. Until a
-# script exists, its recipe stops with an error and a message. A recipe
-# never passes because a script is missing.
+# The gate scripts are in tools/gates/ (Phase 130). If a script does not
+# exist, its recipe stops with an error and a message. A recipe never passes
+# because a script is missing.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -40,11 +40,19 @@ check-workflows:
 
 # Gate: each `uses:` step has a full commit SHA and a comment, and the versions are those of tools/versions.env.
 check-pins:
-    @{{ just_executable() }} _gate check-pins.sh 130.142 tools/versions.env .github/workflows
+    @{{ just_executable() }} _gate check-pins.sh 130.142 tools/versions.env .github/workflows tools/license/allowed-actions.txt
 
 # Gate: no script of the project uses sudo.
 check-sudo:
-    @{{ just_executable() }} _gate check-sudo.sh 130.145 tools .specmgr/feat
+    @{{ just_executable() }} _gate check-sudo.sh 130.145 justfile tools .specmgr/feat .github
+
+# Test: the license gate with the fixtures in tools/license/fixtures/ (ACC-009).
+test-license-gate:
+    @{{ just_executable() }} _gate test-license-gate.sh 130.135
+
+# Test: all gates with good and bad input (the license gate and its fixtures too).
+test-gates: test-license-gate
+    @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:
