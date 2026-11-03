@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T10:36:34.240+01:00'
+updated: '2026-11-03T10:45:47.906+01:00'
 version: 1.0.0
 ---
 
@@ -46,7 +46,7 @@ This feature gives the policies and standards for development in this repository
 
 - [x] ACC-006: A word check of the documents of this feature found no rejected word and no unknown word. A temporary script did the check with the word data of the asdste100 MCP. The project does not keep the script.
 
-- [ ] ACC-007: A reviewer examines the STE rules that the tool does not examine.
+- [x] ACC-007: A reviewer examines the STE rules that the tool does not examine. (dfch did a review on 2026-11-03 of TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f.)
 
 ### Scope
 
@@ -185,9 +185,9 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 - [x] Task 500.120: Write the documents again. Then the word check shows no rejected word and no unknown word
 
-- [ ] Task 500.130: A reviewer examines the STE rules that the tool does not examine (reviewer: dfch, worksheet TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f)
+- [x] Task 500.130: A reviewer examines the STE rules that the tool does not examine (reviewer: dfch, worksheet TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f)
 
-- [ ] Task 500.140: The owner examines the records of the terminology register and accepts them (the owner keeps the records not accepted for now)
+- [x] Task 500.140: The owner examines the records of the terminology register and accepts them (the owner keeps the records not accepted for now)
 
 ## Progress
 
@@ -197,11 +197,17 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 ### Blockers
 
-- None. The conflict between the STE gate and the rule that the project has no script for the STE check is on hold (decision of the owner on 2026-11-03). The review of ACC-007 by dfch is open.
+- None. The conflict between the STE gate and the rule that the project has no script for the STE check is on hold (decision of the owner on 2026-11-03). The review of ACC-007 by dfch is done.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - Reviews done
+
+The owner (dfch) did the review of ACC-007 and examined tasks 500.130 and 500.140, and ticked them. The owner also told the agent that the review of the license classes is done and that the result is OK. The paths of the STE scripts in `bin/` are now relative to the repository root. The agent did not change the text of tasks 500.140 and ACC-006. Task 500.140 still says that the owner keeps the register records not accepted. The status of each register record is not changed.
+
+All tasks of this feature are now ticked. The status of this feature is `planning`. The owner makes the decision to set it to `done`.
 
 #### 2026-11-03 00:00:00.000Z - Handoff: next features planned, license class added
 
