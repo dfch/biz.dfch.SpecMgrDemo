@@ -4,7 +4,7 @@ created: '2026-11-03T07:33:36.702+01:00'
 id: 852a2766-971a-4b1e-82c7-5d8a1539e77f
 status: draft
 type: txt
-updated: '2026-11-03T10:36:32.580+01:00'
+updated: '2026-11-03T10:45:48.513+01:00'
 version: 1.0.0
 ---
 
@@ -87,8 +87,8 @@ About 90 words are approved as one part of speech and rejected as a different pa
 The reviewer writes the result in this section. The reviewer then marks ACC-007 in the feature plan as done.
 
 - Reviewer: dfch
-- Date:
-- Result:
+- Date: 2026-11-03
+- Result: dfch did the review. The owner told the agent about the review in the session. The agent has no other text from the reviewer.
 
 ## Updates
 
