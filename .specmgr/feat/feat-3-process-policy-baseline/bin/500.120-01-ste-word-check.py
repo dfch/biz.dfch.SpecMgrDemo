@@ -16,10 +16,10 @@
 #     the base dictionary is in the cache of uv and changes with the package.
 #   - It finds known words by simple suffix rules, so it can show a
 #     false result.
-#   - It does not read the feature plans in .specmgr/. Change the glob in
-#     the line that sets `docs` to include them.
+#   - By default it does not read the feature plans in .specmgr/. The flag
+#     --plans reads .specmgr/feat/*/README.md and not docs/.
 #
-# Use:  python3 500.120-01-ste-word-check.py
+# Use:  python3 500.120-01-ste-word-check.py [--plans]
 import json,re,glob,collections,sys
 B="/home/user/.cache/uv/archive-v0/hGlHdr7uTYq3wLtr/lib/python3.13/site-packages/biz/dfch/asdste100vocab/data/"
 T="/home/user/src/biz.dfch.AsdSte100TechnicalWords/src/biz/dfch/asdste100technicalwords/data/"
@@ -44,7 +44,10 @@ def known(w):
     for x in list(c):
         if len(x)>3 and x[-1]==x[-2]: c.append(x[:-1])
     return c
-docs=sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/docs/*/*.md")) ; docs=[d for d in docs if "/docs/qa/" not in d]
+if "--plans" in sys.argv:
+    docs=sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/.specmgr/feat/*/README.md"))
+else:
+    docs=sorted(glob.glob("/home/user/src/biz.dfch.SpecMgrDemo/docs/*/*.md")) ; docs=[d for d in docs if "/docs/qa/" not in d]
 unk=collections.defaultdict(set); rj=collections.defaultdict(set)
 for p in docs:
     t=open(p).read()
