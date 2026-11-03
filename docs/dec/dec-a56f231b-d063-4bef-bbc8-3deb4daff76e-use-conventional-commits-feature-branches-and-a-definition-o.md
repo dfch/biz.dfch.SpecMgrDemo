@@ -4,7 +4,7 @@ created: '2026-11-02T14:43:39.068+01:00'
 id: a56f231b-d063-4bef-bbc8-3deb4daff76e
 status: accepted
 type: dec
-updated: '2026-11-02T15:17:51.720+01:00'
+updated: '2026-11-03T10:56:52.983+01:00'
 version: 1.0.0
 ---
 
@@ -71,13 +71,17 @@ Definition of done:
 
 - No blocking gate stops the pull request.
 - Each changed requirement has a verification case record.
-- The STE check shows no error in changed documents.
+- The specmgr validation shows no error in changed documents. The STE check is on hold (see Updates).
 - The license gate shows no error.
 - The section `Progress` of the FEAT has correct data.
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 09:56:46.000Z - STE check is on hold in the definition of done
+
+The owner gave a permission for one time to change this DEC for this change only. In the same way as DEC 361678a6-f941-473b-a058-1ba2bacf7d3d and DEC eb6e66ca-4ceb-46b5-9865-47e20a44674a, the STE check is not a blocking gate at this time (decision of the owner on 2026-11-03). The agent changed one line in More Information: the definition of done now says that the specmgr validation shows no error in changed documents. The STE check comes back into the definition of done when the owner makes a new decision. The text of the decision is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 
