@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:08.220+01:00'
 id: 1a29c825-6862-4fe9-8069-6566262d5c97
 status: accepted
 type: dec
-updated: '2026-11-03T07:30:27.845+01:00'
+updated: '2026-11-03T07:31:31.557+01:00'
 version: 1.0.0
 ---
 
@@ -85,7 +85,7 @@ The spike did not examine large data sets, data that changes with time, integrat
 
 ### 2026-11-03 00:00:00.000Z - Accepted
 
-The project owner gave an explicit authorization in the session of 2026-11-03 to set the status of this DEC to accepted. A coding agent set the status with the authorization of the owner. This authorization is for this DEC only.
+The project owner told the coding agent in the session of 2026-11-03: set the status of this DEC to accepted. The agent set the status because of this order. The order is for this DEC only and for one time.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 
