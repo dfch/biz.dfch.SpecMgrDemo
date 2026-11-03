@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: done
 type: feat
-updated: '2026-11-03T22:18:55.421+01:00'
+updated: '2026-11-03T22:23:58.483+01:00'
 version: 1.0.0
 ---
 
@@ -286,7 +286,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Phase 140 is done (Task 140.100, see the update of 2026-11-03 14:39): the suggestion for the skill about the names of scripts is `skill-suggestion-script-names.md` in the folder of this feature, and ACC-012 is ticked. The owner decides where the skill goes. Phase 150 is started (see the update of 2026-11-03 14:46): the local simulation of the six test pull requests is done and all results are as expected (one finding: the job `license-check` has no `pnpm`, so a real pull request with a bad dependency stops for the wrong reason). The finding was fixed (see the update of 2026-11-03 14:48). The branch is pushed and the main pull request is #9 (7 checks pass). The real test pull requests #10 to #14 gave the expected result in real CI and are closed and not merged (see the update of 2026-11-03 14:56): Task 150.100 is done, and ACC-004 and ACC-006 are ticked. Update of 2026-11-03 18:03 (see the entry of that time): all tasks and all ACC boxes are ticked, so no `[ ]` box is open. The owner set the ruleset `dev` (ACC-008) and the owner said that the license table is reviewed (Task 150.110). The owner also decided that `GPL-2.0-only` with no exception stays not permitted. Open (not blocking): PR #9 cannot be merged yet (state BLOCKED, REVIEW_REQUIRED), `main` has no ruleset, the legal review of the license entries added on 2026-11-03 is open, and the findings E1, E2, G1 and G2 of the post-implementation review were not worked on at that time. Update of 2026-11-03 18:28 (see the entry of that time): the agent fixed E1, E2, G1 and G2 in the gates (work not committed). `just test-gates` now has 269 cases (101 before) and `just test-license-gate` has 46 fixtures. G1 and G2 have limits that stay open for the owner: until feat-6 adds the Maven Wrapper, a `pom.xml` stops `just check-pins` and `just sbom` on purpose, and the checksums cover the direct artifact of a tool only, not its dependencies (see Blockers). The local commits de04687 and 25089cd are not pushed. Update of 2026-11-03 18:55 (see the entry of that time): the owner asked to protect `main` too. The workflow now runs for pull requests to `dev` and to `main`, the `justfile` compares with the target branch of the pull request (`GITHUB_BASE_REF`, `origin/dev` if not set), `just test-gates` has 294 cases, and `branch-protection.md` has the section "Ruleset for `main`" (the owner applies it, in the order that the section gives). The release case from `dev` to `main` was checked: 4 of 43 old commits (scope `dec`) fail `commit-check`, and the owner must decide how the first release is made (open, not blocking, see Blockers). The work is not committed and not pushed.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Phase 130 is done (Tasks 130.100 to 130.150, see the update of 2026-11-03 14:30): the workflow `.github/workflows/ci.yml` with seven jobs (one `just` recipe each), the seven gate scripts in `tools/gates/`, the license list, the table of names, the list of allowed actions, the fixtures of the license gate (36 files with the expected result of each) and the instructions for the branch protection (`branch-protection.md`) are written. All recipes and the self-tests pass on this branch (94 cases in `just test-gates`, 36 fixtures in `just test-license-gate`). ACC-002, ACC-003, ACC-005, ACC-009, ACC-010, ACC-011 and ACC-013 are ticked. ACC-004 and ACC-006 need a real CI run (Phase 150), and ACC-008 is for the owner. Phase 140 is done (Task 140.100, see the update of 2026-11-03 14:39): the suggestion for the skill about the names of scripts is `skill-suggestion-script-names.md` in the folder of this feature, and ACC-012 is ticked. The owner decides where the skill goes. Phase 150 is started (see the update of 2026-11-03 14:46): the local simulation of the six test pull requests is done and all results are as expected (one finding: the job `license-check` has no `pnpm`, so a real pull request with a bad dependency stops for the wrong reason). The finding was fixed (see the update of 2026-11-03 14:48). The branch is pushed and the main pull request is #9 (7 checks pass). The real test pull requests #10 to #14 gave the expected result in real CI and are closed and not merged (see the update of 2026-11-03 14:56): Task 150.100 is done, and ACC-004 and ACC-006 are ticked. Update of 2026-11-03 18:03 (see the entry of that time): all tasks and all ACC boxes are ticked, so no `[ ]` box is open. The owner set the ruleset `dev` (ACC-008) and the owner said that the license table is reviewed (Task 150.110). The owner also decided that `GPL-2.0-only` with no exception stays not permitted. Open (not blocking): PR #9 cannot be merged yet (state BLOCKED, REVIEW_REQUIRED), `main` has no ruleset, the legal review of the license entries added on 2026-11-03 is open, and the findings E1, E2, G1 and G2 of the post-implementation review were not worked on at that time. Update of 2026-11-03 18:28 (see the entry of that time): the agent fixed E1, E2, G1 and G2 in the gates (work not committed). `just test-gates` now has 269 cases (101 before) and `just test-license-gate` has 46 fixtures. G1 and G2 have limits that stay open for the owner: until feat-6 adds the Maven Wrapper, a `pom.xml` stops `just check-pins` and `just sbom` on purpose, and the checksums cover the direct artifact of a tool only, not its dependencies (see Blockers). The local commits de04687 and 25089cd are not pushed. Update of 2026-11-03 18:55 (see the entry of that time): the owner asked to protect `main` too. The workflow now runs for pull requests to `dev` and to `main`, the `justfile` compares with the target branch of the pull request (`GITHUB_BASE_REF`, `origin/dev` if not set), `just test-gates` has 294 cases, and `branch-protection.md` has the section "Ruleset for `main`" (the owner applies it, in the order that the section gives). The release case from `dev` to `main` was checked: 4 of 43 old commits (scope `dec`) fail `commit-check`, and the owner must decide how the first release is made (open, not blocking, see Blockers). The work is not committed and not pushed. The handoff of 2026-11-03 21:23:19 in Updates has the state at the end of the third session.
 
 **Update of 2026-11-03 19:40** (see the entry of that time): the owner merged PR #9 into `dev` (squash merge, commit 945e669, 2026-11-03T19:38:09Z). With the permission of the owner, `main` was made the same as `dev` with a fast-forward push (option A of the release case), so `main` is at 945e669 too. The workflow and the gate files are now in `main`. Open items for the owner: apply the ruleset for `main` now (`branch-protection.md`, "Ruleset for `main`"); the bypass mode on `dev` (`always` or `pull_request`); the merge method for `main`; the legal review of the license entries added on 2026-11-03; the lock file for cdxgen (the largest gap left in G2); the remote branch `feat-5-foundation-monorepo-ci` can be deleted. The feature unblocks feat-6-contracts-openapi-pipeline (it must add `mvnw` with the pinned Maven version and sha256, because `sbom.sh` stops on a `pom.xml` without it) and feat-7-verification-architecture-tools.
 
@@ -318,6 +318,75 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 21:23:19.000Z - Handoff at the end of the third session (replaces the second handoff)
+
+This entry replaces the second handoff (2026-11-03 13:35:40). The agent checked the facts with `gh`, `git ls-remote` and `gh api` on 2026-11-03 at 21:23 UTC. The text of the requirements and of the acceptance criteria is not changed, and no box is ticked or unticked. The status is not changed. Nothing in this entry is committed or pushed yet.
+
+The second handoff is out of date in these points: "Phase 130 is next", "nothing is pushed" and "the branch is `feat-5-foundation-monorepo-ci`". The real state is below. Its rules for documents and commits (item 7) are still valid and are repeated at the end of this entry.
+
+State
+
+1. feat-5 (issue #5, PR #9) and feat-16-cdxgen-lockfile (issue #16, PR #17) are merged into `dev`. Both have the status `done`. All phases of feat-5 are done.
+2. Release: `dev` went to `main` with PR #20 (merge commit 0584392). `main` is 1 commit ahead of `dev` (that merge commit). A merge of `main` back into `dev` is NOT necessary, because the owner set `strict_required_status_checks_policy` to false on the ruleset `main`.
+3. Open PR: #21, from the branch `docs/dec-84c37f7d-license-review`. It records the review of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 by the owner (an entry in the DEC and plan updates). The 7 checks are green. The state is BLOCKED and REVIEW_REQUIRED, so the owner merges it with the bypass (role `maintain`, mode `pull_request`). This handoff entry is part of PR #21. The owner must merge the PR, or the next agent must push to the branch while the PR is open.
+4. Rulesets. The owner set them. Agents must not change them without the owner.
+   - `dev`: 1 approval, code owner review, stale reviews dismissed, 7 required checks with the strict policy, bypass `maintain` in mode `pull_request`, merge methods merge, squash and rebase.
+   - `main`: the same, but the strict policy is false and the merge method is `merge` only.
+   - The 7 required checks are the job names of `.github/workflows/ci.yml`: `validate`, `commit-check`, `license-check`, `check-workflows`, `check-pins`, `check-sudo` and `test-gates`. The list is in `tools/gates/required-setup.txt`. The workflow runs for pull requests to `dev` and `main`, and the `justfile` takes the base from `GITHUB_BASE_REF`.
+5. Branches. These branches are left on purpose, on the remote and on the local machine: `feat-5-foundation-monorepo-ci`, `docs/feat-5-set-done`, `feat-16-cdxgen-lockfile` and `docs/feat-16-set-done`. Do not delete them unless the owner asks.
+6. The local checkout of `dev` can be old. Run `git fetch origin` and make new branches from `origin/dev`.
+
+Decisions of the owner in this session (do not change them)
+
+1. `GPL-2.0-only` alone stays NOT permitted.
+2. These licenses are permitted since 2026-11-03: `GPL-3.0-only`, `GPL-3.0-or-later`, `LGPL-3.0-only`, `LGPL-3.0-or-later` and `GPL-2.0-or-later`. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 and `tools/license/permitted-licenses.txt` have the same 20 entries.
+3. The owner reviewed DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03.
+
+Rules of the gates (easy to miss)
+
+1. The commit scope must be `feat-N`. A scope like `dec` stops `commit-check`. Use the feature of the plan, for example `docs(feat-5): ...`.
+2. Each `run:` step in a workflow is exactly `just <recipe>`.
+3. Each `uses:` is a full commit SHA with a comment, and it is in `tools/license/allowed-actions.txt`.
+4. A new tool or action needs a license check first (rule A, DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). If the license class is not clear, the owner decides.
+5. `just test-gates` (418 cases at the end of feat-16) and `just test-license-gate` (46 cases) must stay green.
+6. A `pom.xml` stops `just sbom` until `mvnw` exists with the pinned Maven version and the sha256 (feat-6 adds it). `just check-pins` checks the wrapper.
+7. A manifest outside `backend/` and `frontend/` stops `sbom.sh`. The two files of `tools/sbom/` are the exception.
+
+Tools
+
+1. Run `source ~/.config/biz.dfch.SpecMgrDemo/env.sh` first. A shell that is not interactive needs it. It gives java 21 (Temurin), mvn 3.10.0, node 26.13.0, pnpm 12.16.1 and just 1.59.0.
+2. `gh` is version 2.4.0 and is old. `gh pr close` has no `--comment`. `gh run view --json jobs` does not exist. Use `gh api` for these.
+
+How the session worked (the owner asked for it; the next agent can do the same)
+
+1. The agent is the orchestrator. It gives each phase to a new `phase-implementer` subagent, runs the quality gate again itself, reads `git diff`, and then makes the commit (Conventional Commit, scope `feat-N`).
+2. The agent does not push a feature branch without the "go ahead" of the owner. The agent opens PRs with `gh pr create` and never merges them. The owner merges.
+3. Test PRs (`test/feat-N-pr-<case>`) show the failure of a gate in real CI. The agent closes them (does not merge them) and deletes their branches.
+
+Next work (the owner decides the order. The agent asks first)
+
+1. The owner merges PR #21.
+2. Issue #22: hash-locked install of the Python tools (the 40 dependencies of specmgr and the build tools of PyYAML). This is a small FEAT like feat-16: `uv pip compile --generate-hashes` and `--require-hashes`, and `check-pins` ties it to `tools/versions.env`. The name of the FEAT uses the issue number: `feat-22-...`. This is the recommended next small work.
+3. Issue #23: pin the dependencies of `cyclonedx-maven-plugin`. Wait until feat-6 has a `pom.xml`.
+4. feat-6-contracts-openapi-pipeline (issue #6) and feat-7-verification-architecture-tools (issue #7) are planned and not blocked. They are not started (status `planning`). feat-6 must add `mvnw` with the pinned Maven version and the sha256, and must decide the Maven setup for CI.
+5. Issue #8 (traceability gate and security checks) has no feature yet. When these gates exist, the branch protection must get them (`branch-protection.md` has the table). Issue #4 (French heading table) belongs to specmgr. feat-1-frontend-technology-decision is still `planning`.
+
+Open items for the owner (not blockers)
+
+1. The cdxgen warning about `NODE_PATH`. A later change can add `env -u NODE_PATH` in `sbom.sh`.
+2. NOTICE has no copyright line.
+3. The CODEOWNERS entry for the thresholds comes with the walking skeleton.
+4. The owner is the only reviewer that the DEC records. No person with legal competence is named as a reviewer.
+
+Rules for documents and commits (from the second handoff, still valid)
+
+1. Use `specmgr_edit` (not scripts) for plans and DECs.
+2. Do not change the status of a DEC. An agent must not accept a DEC. A permission of the owner is for one time and one change.
+3. Take timestamps from `date -u`. Never write a made-up time.
+4. Write documents in ASD-STE100 English.
+5. Make separate commits with the scope `feat-N`.
+6. Tick a task or an acceptance criterion only after the check ran.
 
 #### 2026-11-03 21:18:40.000Z - Release PR #20 merged, strict status checks off on `main`, DEC reviewed by the owner
 
