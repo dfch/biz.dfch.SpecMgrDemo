@@ -68,6 +68,9 @@ VERSION_KEY = re.compile(r"(^|[-_])version([-_]|$)", re.IGNORECASE)
 
 # The folders that the search for pom.xml and for the wrapper does not enter (see the header). The names
 # are at each level; the paths are relative to the project root. manifest_files in _lib.sh has the same list.
+# manifest_files also does not list tools/sbom/package.json and tools/sbom/pnpm-lock.yaml (the lock file of
+# cdxgen, feat-16-cdxgen-lockfile). This script needs no entry for them: it searches for pom.xml and for the
+# Maven Wrapper only.
 EXCLUDED_NAMES = {".git", "node_modules", "build", "target"}
 EXCLUDED_PATHS = {".specmgr", "tools/license/fixtures", "tools/gates/fixtures"}
 WRAPPER_FILE = Path(".mvn") / "wrapper" / "maven-wrapper.properties"

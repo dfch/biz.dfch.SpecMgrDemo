@@ -36,15 +36,15 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: `tools/sbom/` has `package.json`, `pnpm-lock.yaml` and `README.md`. In a clean copy of the repository, `cd tools/sbom && pnpm install --frozen-lockfile --ignore-scripts` returns exit code 0, and `node_modules/.bin/cdxgen --version` shows 12.9.0 (REQ-001).
+- [x] ACC-001: `tools/sbom/` has `package.json`, `pnpm-lock.yaml` and `README.md`. In a clean copy of the repository, `cd tools/sbom && pnpm install --frozen-lockfile --ignore-scripts` returns exit code 0, and `node_modules/.bin/cdxgen --version` shows 12.9.0 (REQ-001).
 
-- [ ] ACC-002: `sbom.sh` has no `pnpm dlx` command and no `pnpm view` command. A run with a test frontend (`SBOM_PROJECT_ROOT` set to a folder with `frontend/package.json` and a lock file) writes `frontend.cdx.json` with the components of the test frontend, and the log shows the install in `tools/sbom/` (REQ-002).
+- [x] ACC-002: `sbom.sh` has no `pnpm dlx` command and no `pnpm view` command. A run with a test frontend (`SBOM_PROJECT_ROOT` set to a folder with `frontend/package.json` and a lock file) writes `frontend.cdx.json` with the components of the test frontend, and the log shows the install in `tools/sbom/` (REQ-002).
 
-- [ ] ACC-003: `sbom.sh` stops with exit code 1 and writes no SBOM file in each of these cases, tested with the real pnpm and by hand: the version in `tools/sbom/package.json` is not the version in the lock file; a package integrity value in the lock file is wrong; the installed cdxgen has another version than `CDXGEN_VERSION`. `just test-gates` has the cases with a stub (REQ-002).
+- [x] ACC-003: `sbom.sh` stops with exit code 1 and writes no SBOM file in each of these cases, tested with the real pnpm and by hand: the version in `tools/sbom/package.json` is not the version in the lock file; a package integrity value in the lock file is wrong; the installed cdxgen has another version than `CDXGEN_VERSION`. `just test-gates` has the cases with a stub (REQ-002).
 
 - [ ] ACC-004: `just check-pins` returns exit code 0 now. It returns exit code 1 for each of these cases in `just test-gates`: another version in `package.json`; a version range in `package.json`; another dependency in `package.json`; another version of cdxgen in the lock file; another integrity value in the lock file; another `CDXGEN_VERSION` or `CDXGEN_INTEGRITY` in `versions.env`; a package without an integrity value in the lock file; no `tools/sbom/package.json` and no lock file (REQ-003, REQ-005).
 
-- [ ] ACC-005: `just test-gates` has these E1 cases. Positive: `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` with a `frontend/package.json` do not stop `sbom.sh`. Negative (exit code 1 with the path of the file): `tools/other/package.json`, `tools/sbom/pnpm-workspace.yaml`, `tools/sbom/sub/package.json` and a `package.json` in the root (REQ-004).
+- [x] ACC-005: `just test-gates` has these E1 cases. Positive: `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` with a `frontend/package.json` do not stop `sbom.sh`. Negative (exit code 1 with the path of the file): `tools/other/package.json`, `tools/sbom/pnpm-workspace.yaml`, `tools/sbom/sub/package.json` and a `package.json` in the root (REQ-004).
 
 - [ ] ACC-006: The procedure in `tools/sbom/README.md` ran once in a copy of the repository (delete the lock file, `pnpm install --lockfile-only`, then the three places have the same version and integrity value), and `just check-pins` returns exit code 0 after it (REQ-005).
 
@@ -146,13 +146,13 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 #### Phase 100: The Project tools/sbom and the Install in sbom.sh
 
-- [ ] Task 100.100: Make `tools/sbom/package.json` (name, `private`, one dependency `@cyclonedx/cdxgen` 12.9.0, no `packageManager` field), write `tools/sbom/pnpm-lock.yaml` with the pinned pnpm (`pnpm install --lockfile-only`), add `node_modules/` to `.gitignore`, and confirm by hand that the frozen install with `--ignore-scripts` works and that cdxgen starts (ACC-001)
+- [x] Task 100.100: Make `tools/sbom/package.json` (name, `private`, one dependency `@cyclonedx/cdxgen` 12.9.0, no `packageManager` field), write `tools/sbom/pnpm-lock.yaml` with the pinned pnpm (`pnpm install --lockfile-only`), add `node_modules/` to `.gitignore`, and confirm by hand that the frozen install with `--ignore-scripts` works and that cdxgen starts (ACC-001)
 
-- [ ] Task 100.110: Change `tools/gates/sbom.sh`: replace `pnpm view` and `pnpm dlx` with the frozen install in `tools/sbom/` (variable `SBOM_TOOL_DIR` for the tests), the version check of the installed cdxgen, and the start of `node_modules/.bin/cdxgen` with absolute paths. Change the header of the script (rule G2 and the Node line) (ACC-002, ACC-003)
+- [x] Task 100.110: Change `tools/gates/sbom.sh`: replace `pnpm view` and `pnpm dlx` with the frozen install in `tools/sbom/` (variable `SBOM_TOOL_DIR` for the tests), the version check of the installed cdxgen, and the start of `node_modules/.bin/cdxgen` with absolute paths. Change the header of the script (rule G2 and the Node line) (ACC-002, ACC-003)
 
-- [ ] Task 100.120: Add the exclusion of `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` to `manifest_files` in `tools/gates/_lib.sh`, and write the rule in the header of `sbom.sh` and in the comment of `EXCLUDED_*` in `check_pins.py` (ACC-005)
+- [x] Task 100.120: Add the exclusion of `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` to `manifest_files` in `tools/gates/_lib.sh`, and write the rule in the header of `sbom.sh` and in the comment of `EXCLUDED_*` in `check_pins.py` (ACC-005)
 
-- [ ] Task 100.130: Change the tests in `tools/gates/selftest.sh`: the stub of pnpm (`install` and the file `.bin/cdxgen` in a stub `SBOM_TOOL_DIR`), replace the cases for `pnpm view` and the integrity value, and add the cases for the install (flags, failure, version of cdxgen) and the E1 cases of ACC-005. Test the real pnpm cases of ACC-003 once by hand (ACC-003, ACC-005)
+- [x] Task 100.130: Change the tests in `tools/gates/selftest.sh`: the stub of pnpm (`install` and the file `.bin/cdxgen` in a stub `SBOM_TOOL_DIR`), replace the cases for `pnpm view` and the integrity value, and add the cases for the install (flags, failure, version of cdxgen) and the E1 cases of ACC-005. Test the real pnpm cases of ACC-003 once by hand (ACC-003, ACC-005)
 
 #### Phase 110: Pin Check, Documents and Pull Request
 
@@ -170,7 +170,7 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and not started. Nothing is implemented. The branch is `feat-16-cdxgen-lockfile`. The agent checked the facts in a temporary folder (see Design Notes) and did not change a file of the repository except this plan. No decision of the owner is open.
+**As of 2026-11-03**: Phase 100 is done and not committed. `tools/sbom/` has `package.json`, `pnpm-lock.yaml` (written by pnpm 12.16.1, 199 packages, each with an integrity value) and a first `README.md`. `sbom.sh` installs cdxgen from the lock file and starts `node_modules/.bin/cdxgen`. The E1 check skips the two files of `tools/sbom/`. `just test-gates` has 335 cases and all are ok. ACC-001, ACC-002, ACC-003 and ACC-005 are checked. Phase 110 is open: the pin check in `check_pins.py` (ACC-004), the full procedure in `tools/sbom/README.md` (ACC-006), the other texts, and the pull request (ACC-007 to ACC-009). The branch is `feat-16-cdxgen-lockfile`. No decision of the owner is open.
 
 ### Blockers
 
@@ -180,6 +180,19 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
 
+#### 2026-11-03 20:15:33.000Z - Phase 100 done: tools/sbom and the install in sbom.sh
+
+The agent did Tasks 100.100 to 100.130. Nothing is committed.
+
+- `tools/sbom/package.json` has one dependency, `@cyclonedx/cdxgen` 12.9.0, and no `packageManager` field. pnpm 12.16.1 wrote `pnpm-lock.yaml` (1695 lines, `lockfileVersion: '9.0'`, 199 packages, each with `resolution.integrity`). A second run of `pnpm install --lockfile-only` gave a byte-equal file. The integrity value of cdxgen in the lock file is `CDXGEN_INTEGRITY`. `node_modules/` is in `.gitignore`, and the lock file is not ignored. `tools/sbom/README.md` is a first version (Phase 110 writes the full procedure).
+- A frozen install with `--ignore-scripts` in a clean copy of the three files returned exit code 0 (187 packages), and `cdxgen --version` shows 12.9.0. The agent read the 472 `package.json` files of the install: no package has a `preinstall`, `install` or `postinstall` script.
+- `sbom.sh` installs with `pnpm install --frozen-lockfile --ignore-scripts` in `tools/sbom/` (`SBOM_TOOL_DIR` sets another folder), checks the installed version, and starts `node_modules/.bin/cdxgen` with absolute paths. It has no `pnpm dlx` and no `pnpm view`. It stops with exit code 1 if the folder, `package.json` or the lock file is missing, if the install fails, or if the version is not `CDXGEN_VERSION`. It does not install if no Node manifest is scanned.
+- `manifest_files` skips `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` by path. The rule is in the header of `sbom.sh`, in `_lib.sh`, in the comment of `EXCLUDED_*` in `check_pins.py` and in `tools/gates/README.md` (E1 list, G2 table and limits). Phase 110 changes the other texts.
+- `selftest.sh`: the stub of pnpm has only `install` (it writes a stub cdxgen and its `package.json`; `dlx` and `view` give exit code 64). New cases: flags of the install, folder of the install, absolute paths, one pnpm call, no install without a Node manifest, failed install, another version of cdxgen (lock file and `versions.env`), missing folder, `package.json` or lock file, no old SBOM stays, and all E1 cases of ACC-005 (positive and negative, also `tools/sbom/sub/pnpm-lock.yaml`, `tools/sbom/pom.xml`, `tools/other/pnpm-lock.yaml` and a root `pnpm-lock.yaml`). `just test-gates`: 335 ok, 0 failed.
+- Test with the real pnpm and cdxgen (test frontend with `left-pad` 1.3.0 in `/tmp/opencode/fe`, `SBOM_PROJECT_ROOT` set): the run wrote `frontend.cdx.json` with 1 component (left-pad 1.3.0), and the log shows the install in `tools/sbom/`. Stop with exit code 1 and no SBOM file: `package.json` with 12.8.0 and the lock file with 12.9.0 (`ERR_PNPM_OUTDATED_LOCKFILE`); a wrong integrity value of cdxgen (`ERR_PNPM_TARBALL_INTEGRITY`); a wrong integrity value of `yargs` (`ERR_PNPM_TARBALL_INTEGRITY`); `package.json` and lock file for 12.8.0 (the version check: installed 12.8.0, `CDXGEN_VERSION` is 12.9.0); no lock file.
+- Unexpected, for information: a wrong integrity value of an optional dependency (`@appthreat/atom-common`) does not stop the install. pnpm logs `ERR_PNPM_TARBALL_INTEGRITY`, does not install that package, and returns exit code 0. The package with the wrong value is not installed and does not run, so no code of it is trusted. A real tampering would at most remove a feature of cdxgen. The statement is in the G2 table of `tools/gates/README.md`.
+- Unexpected, for information: cdxgen shows a warning "NODE_PATH is set" in its environment audit (in the shell of the agent `NODE_PATH` is set and empty). The run is not affected.
+
 #### 2026-11-03 19:58:43.000Z - Plan written
 
 The agent wrote this plan for GitHub issue #16. It read the issue, `sbom.sh`, `check_pins.py`, `_lib.sh`, the tests, `tools/versions.env`, CODEOWNERS, `required-setup.txt` and the plan of feat-5. In a temporary folder under `/tmp/opencode` it tested `pnpm install --lockfile-only`, `pnpm install --frozen-lockfile --ignore-scripts`, a wrong version and a wrong integrity value in the lock file, and cdxgen on a test project (the results are in Design Notes). Nothing is implemented, and no file is committed or pushed.
@@ -187,6 +200,14 @@ The agent wrote this plan for GitHub issue #16. It read the issue, `sbom.sh`, `c
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 20:15:33.000Z - Decisions of Phase 100
+
+1. `sbom.sh` reads the installed version of cdxgen with the Python of `uv run --no-project` (the same way as `sbom_check.py`) and not with `node`. Reason: the job `test-gates` has no Node setup, and the self-test must not depend on the Node of the runner. The job `license-check` has `uv`. The result is the same: the `version` field of `node_modules/@cyclonedx/cdxgen/package.json`.
+2. The install runs in a subshell with `cd <tool dir>` and not with `pnpm --dir`, so that the stub of pnpm in the self-test can write its files in the current folder. The paths for cdxgen are absolute, and cdxgen runs from the root of the project.
+3. `sbom.sh` stops if `package.json` or `pnpm-lock.yaml` is missing in the tool folder, before it starts pnpm (without the lock file pnpm would write one and the install would not be frozen).
+4. The key `CDXGEN_INTEGRITY` stays in `tools/versions.env`. `sbom.sh` does not read it now, and the pin check of Phase 110 will. The self-test no longer changes it.
+5. In `tools/gates/README.md` Phase 100 changed only the lines that were wrong after the change (E1 exclusion, G2 row, `sbom` tool row, one limit). Task 110.120 does the other texts.
 
 #### 2026-11-03 19:58:43.000Z - Choices of the plan (the owner can change them)
 

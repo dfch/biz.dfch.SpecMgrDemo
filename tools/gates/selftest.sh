@@ -630,13 +630,27 @@ exit 1
 STUB
 cat >"${stubs}/pnpm" <<'STUB'
 #!/usr/bin/env bash
-# Stub of pnpm for the test: `pnpm view` gives the integrity value; `pnpm dlx` writes the file of the argument
-# --output, like cdxgen.
+# Stub of pnpm for the test (feat-16-cdxgen-lockfile): only `pnpm install` exists, like the real call of sbom.sh. It
+# writes the install of the stub cdxgen in the current folder (the folder of the cdxgen project): the package.json of
+# @cyclonedx/cdxgen with the version STUB_CDXGEN_VERSION, and node_modules/.bin/cdxgen. Each other command (dlx, view)
+# stops with exit code 64, so a script that uses it fails. The stub writes each call (folder and arguments) to
+# STUB_PNPM_LOG.
 echo "stub pnpm $*" >&2
-if [[ "$1" == "view" ]]; then
-    echo "${STUB_PNPM_INTEGRITY}"
-    exit 0
+echo "${PWD} $*" >>"${STUB_PNPM_LOG}"
+if [[ "$1" != "install" ]]; then
+    echo "stub pnpm: the command '$1' is not allowed" >&2
+    exit 64
 fi
+if [[ "${STUB_PNPM_INSTALL_FAIL:-}" == "1" ]]; then
+    echo "stub pnpm: ERR_PNPM_LOCKFILE_CONFIG_MISMATCH (the stub install failed)" >&2
+    exit 1
+fi
+mkdir -p node_modules/.bin node_modules/@cyclonedx/cdxgen
+printf '{"name":"@cyclonedx/cdxgen","version":"%s"}\n' "${STUB_CDXGEN_VERSION}" >node_modules/@cyclonedx/cdxgen/package.json
+cat >node_modules/.bin/cdxgen <<'CDX'
+#!/usr/bin/env bash
+# Stub of cdxgen: writes the file of the argument --output, like cdxgen.
+echo "stub cdxgen $*" >&2
 while [[ $# -gt 0 ]]; do
     if [[ "$1" == "--output" ]]; then
         if [[ "${STUB_EMPTY:-}" == "1" ]]; then
@@ -647,14 +661,16 @@ while [[ $# -gt 0 ]]; do
     fi
     shift
 done
+CDX
+chmod +x node_modules/.bin/cdxgen
 STUB
 chmod +x "${stubs}/mvnw-stub" "${stubs}/mvn" "${stubs}/pnpm"
 
-# A versions.env for these tests: the checksums are the ones of the stubs.
+# A versions.env for these tests: the checksum of the plugin jar is the one of the stub. (CDXGEN_INTEGRITY stays: the
+# integrity values of cdxgen are in its lock file, and pnpm checks them. The stub pnpm does not.)
 stub_jar_sha="$(printf 'stub-plugin-jar' | sha256sum | cut -d' ' -f1)"
 stub_versions="${work}/versions-stubs.env"
-sed -e "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=${stub_jar_sha}#" \
-    -e "s#^CDXGEN_INTEGRITY=.*#CDXGEN_INTEGRITY=sha512-stub-integrity#" "${real_versions}" >"${stub_versions}"
+sed -e "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=${stub_jar_sha}#" "${real_versions}" >"${stub_versions}"
 STUB_PLUGIN_VERSION="$(version_of CYCLONEDX_MAVEN_PLUGIN_VERSION)"
 export STUB_PLUGIN_VERSION
 
@@ -670,12 +686,22 @@ put_mvnw() {
     chmod +x "$1/$2/mvnw"
 }
 pom_deps='<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><dependencies><dependency><groupId>g</groupId><artifactId>a</artifactId><version>1</version></dependency></dependencies></project>'
-# sbom_run <root> [<VAR=value>...]: sbom.sh for a project tree, with the stubs
+# The cdxgen project for the tests (SBOM_TOOL_DIR): a package.json and a lock file with no content that the stub reads.
+tool_dir="${work}/tool-sbom"
+mkdir -p "${tool_dir}"
+echo '{"name":"sbom-tool","private":true,"dependencies":{"@cyclonedx/cdxgen":"'"$(version_of CDXGEN_VERSION)"'"}}' >"${tool_dir}/package.json"
+echo "lockfileVersion: '9.0'" >"${tool_dir}/pnpm-lock.yaml"
+pnpm_log="${work}/pnpm-calls.log"
+# sbom_run <root> [<VAR=value>...]: sbom.sh for a project tree, with the stubs. Each run starts with no install of cdxgen
+# and an empty log of the calls of pnpm.
 sbom_run() {
     local root="$1"
     shift
+    rm -rf "${tool_dir}/node_modules"
+    : >"${pnpm_log}"
     env PATH="${stubs}:${PATH}" SBOM_PROJECT_ROOT="${root}" SBOM_MAVEN_REPO_LOCAL="${root}/m2" VERSIONS_FILE="${stub_versions}" \
-        STUB_PNPM_INTEGRITY="sha512-stub-integrity" "$@" "${GATES_DIR}/sbom.sh" "${root}/build/sbom"
+        SBOM_TOOL_DIR="${tool_dir}" STUB_PNPM_LOG="${pnpm_log}" STUB_CDXGEN_VERSION="$(version_of CDXGEN_VERSION)" \
+        "$@" "${GATES_DIR}/sbom.sh" "${root}/build/sbom"
 }
 # new_tree <name>: an empty project tree (the function prints its path)
 new_tree() {
@@ -905,7 +931,7 @@ put "${root}" backend/pom.xml "${pom_xml}"
 put_mvnw "${root}" backend
 put "${root}" frontend/package.json '{}'
 expect 0 "sha256 of the plugin jar is the value of CYCLONEDX_MAVEN_PLUGIN_SHA256" "the plugin jar has the pinned sha256" sbom_run "${root}"
-expect 0 "integrity of @cyclonedx/cdxgen@" "the npm package has the pinned integrity value" sbom_run "${root}"
+expect 0 "The installed @cyclonedx/cdxgen has the version $(version_of CDXGEN_VERSION) (CDXGEN_VERSION)" "the installed cdxgen has the pinned version" sbom_run "${root}"
 root="$(new_tree g2-jar)"
 put "${root}" backend/pom.xml "${pom_xml}"
 put_mvnw "${root}" backend
@@ -923,20 +949,135 @@ expect 1 "CYCLONEDX_MAVEN_PLUGIN_SHA256 in ${work}/versions-badjar.env is 0000" 
     sbom_run "${root}" VERSIONS_FILE="${work}/versions-badjar.env"
 sed -e "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=abc#" "${stub_versions}" >"${work}/versions-shortjar.env"
 expect 1 "is not a sha256 value" "versions.env has a plugin sha256 that is not a sha256 value" sbom_run "${root}" VERSIONS_FILE="${work}/versions-shortjar.env"
+section "sbom.sh: cdxgen runs from the lock file (finding G2, feat-16-cdxgen-lockfile)"
+# no_frontend_sbom <root> <description>: no SBOM file of the frontend (the script stopped before cdxgen made it)
+no_frontend_sbom() {
+    if [[ ! -f "$1/build/sbom/frontend.cdx.json" ]]; then
+        echo "ok   $2: no frontend.cdx.json"
+        passed=$((passed + 1))
+    else
+        echo "FAIL $2: frontend.cdx.json exists"
+        failed=$((failed + 1))
+    fi
+}
+# pnpm_calls <count> <description>: the log of the calls of the stub pnpm has this number of lines
+pnpm_calls() {
+    local lines
+    lines="$(wc -l <"${pnpm_log}")"
+    if [[ ${lines} -eq $1 ]]; then
+        echo "ok   $2: ${lines} call(s) of pnpm"
+        passed=$((passed + 1))
+    else
+        echo "FAIL $2: expected $1 call(s) of pnpm, got ${lines}"
+        sed -e 's/^/     | /' "${pnpm_log}"
+        failed=$((failed + 1))
+    fi
+}
 root="$(new_tree g2-npm)"
 put "${root}" frontend/package.json '{}'
-expect 1 "CDXGEN_INTEGRITY" "the npm package has another integrity value than the pin" sbom_run "${root}" STUB_PNPM_INTEGRITY=sha512-other
-expect 1 "cdxgen did not start" "a wrong integrity value: no SBOM" sbom_run "${root}" STUB_PNPM_INTEGRITY=sha512-other
-if [[ ! -f "${root}/build/sbom/frontend.cdx.json" ]]; then
-    echo "ok   a wrong integrity value: cdxgen did not start"
+expect 0 "Install: pnpm install --frozen-lockfile --ignore-scripts in ${tool_dir}" "the log shows the install in the folder of the cdxgen project" sbom_run "${root}"
+expect 0 "stub pnpm install --frozen-lockfile --ignore-scripts" "pnpm gets install --frozen-lockfile --ignore-scripts" sbom_run "${root}"
+pnpm_calls 1 "one pnpm call for the frontend (no dlx and no view)"
+if [[ "$(cat "${pnpm_log}")" == "${tool_dir} install --frozen-lockfile --ignore-scripts" ]]; then
+    echo "ok   the install runs in the folder of the cdxgen project, and not in the project"
     passed=$((passed + 1))
 else
-    echo "FAIL a wrong integrity value: cdxgen started"
+    echo "FAIL the install does not run in the folder of the cdxgen project: $(cat "${pnpm_log}")"
     failed=$((failed + 1))
 fi
-sed -e "s#^CDXGEN_INTEGRITY=.*#CDXGEN_INTEGRITY=sha512-pinned-but-other#" "${stub_versions}" >"${work}/versions-badnpm.env"
-expect 1 "CDXGEN_INTEGRITY in ${work}/versions-badnpm.env is 'sha512-pinned-but-other'" "versions.env has another integrity value than the package" \
-    sbom_run "${root}" VERSIONS_FILE="${work}/versions-badnpm.env"
+expect 0 "stub cdxgen --type js --spec-version 1.6 --profile license-compliance --fail-on-error --output ${root}/build/sbom/frontend.cdx.json ${root}/frontend" \
+    "the cdxgen of the install gets the options and absolute paths" sbom_run "${root}"
+expect 0 "The installed @cyclonedx/cdxgen has the version $(version_of CDXGEN_VERSION)" "the log shows the version of the installed cdxgen" sbom_run "${root}"
+file_exists "${root}/build/sbom/frontend.cdx.json" "the frozen install: frontend.cdx.json exists"
+if grep -Eq 'pnpm +(dlx|view)' "${GATES_DIR}/sbom.sh"; then
+    echo "FAIL sbom.sh has a pnpm dlx or pnpm view command"
+    failed=$((failed + 1))
+else
+    echo "ok   sbom.sh has no pnpm dlx command and no pnpm view command"
+    passed=$((passed + 1))
+fi
+root="$(new_tree g2-nonode)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 0 "Backend: backend/pom.xml" "a project with no Node manifest" sbom_run "${root}"
+pnpm_calls 0 "no Node manifest: the script does not install"
+
+root="$(new_tree g2-fail)"
+put "${root}" frontend/package.json '{}'
+expect 1 "cdxgen did not start" "pnpm install fails (for example a lock file that is not the one of package.json, or a wrong integrity value)" \
+    sbom_run "${root}" STUB_PNPM_INSTALL_FAIL=1
+expect 1 "pnpm install --frozen-lockfile --ignore-scripts failed in ${tool_dir}" "the message names the install and the folder" sbom_run "${root}" STUB_PNPM_INSTALL_FAIL=1
+no_frontend_sbom "${root}" "a failed install"
+if [[ ! -e "${tool_dir}/node_modules/.bin/cdxgen" ]]; then
+    echo "ok   a failed install: cdxgen did not start (no cdxgen in the install)"
+    passed=$((passed + 1))
+else
+    echo "FAIL a failed install: the install has cdxgen"
+    failed=$((failed + 1))
+fi
+expect 1 "has the version '12.8.0', but CDXGEN_VERSION in ${stub_versions} is '$(version_of CDXGEN_VERSION)'" \
+    "the installed cdxgen has another version than CDXGEN_VERSION (lock file with another version)" sbom_run "${root}" STUB_CDXGEN_VERSION=12.8.0
+expect 1 "cdxgen did not start" "another version of cdxgen: it does not start" sbom_run "${root}" STUB_CDXGEN_VERSION=12.8.0
+no_frontend_sbom "${root}" "another version of cdxgen"
+sed -e "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=12.10.0#" "${stub_versions}" >"${work}/versions-badnpm.env"
+expect 1 "has the version '$(version_of CDXGEN_VERSION)', but CDXGEN_VERSION in ${work}/versions-badnpm.env is '12.10.0'" \
+    "versions.env has another CDXGEN_VERSION than the install" sbom_run "${root}" VERSIONS_FILE="${work}/versions-badnpm.env"
+no_frontend_sbom "${root}" "another CDXGEN_VERSION in versions.env"
+mkdir -p "${root}/build/sbom" && echo '{}' >"${root}/build/sbom/frontend.cdx.json"
+sbom_run "${root}" STUB_PNPM_INSTALL_FAIL=1 >/dev/null 2>&1 || true
+no_frontend_sbom "${root}" "a failed install after an old SBOM (the old file is deleted)"
+other_tool="${work}/tool-sbom-other"
+rm -rf "${other_tool}" && mkdir -p "${other_tool}"
+expect 1 "${other_tool}/package.json does not exist" "no package.json in the folder of the cdxgen project" sbom_run "${root}" SBOM_TOOL_DIR="${other_tool}"
+echo "lockfileVersion: '9.0'" >"${other_tool}/pnpm-lock.yaml"
+expect 1 "${other_tool}/package.json does not exist" "a lock file and no package.json" sbom_run "${root}" SBOM_TOOL_DIR="${other_tool}"
+rm "${other_tool}/pnpm-lock.yaml" && echo '{}' >"${other_tool}/package.json"
+expect 1 "${other_tool}/pnpm-lock.yaml does not exist" "a package.json and no lock file: cdxgen does not start" sbom_run "${root}" SBOM_TOOL_DIR="${other_tool}"
+pnpm_calls 0 "no lock file: pnpm did not start"
+expect 1 "The folder of the cdxgen project does not exist" "no folder for the cdxgen project" sbom_run "${root}" SBOM_TOOL_DIR="${work}/no-such-tool-dir"
+expect 64 "stub pnpm: the command 'dlx' is not allowed" "the stub stops a dlx call (the test of the stub)" \
+    env PATH="${stubs}:${PATH}" STUB_PNPM_LOG="${pnpm_log}" pnpm dlx x
+expect 64 "stub pnpm: the command 'view' is not allowed" "the stub stops a view call (the test of the stub)" \
+    env PATH="${stubs}:${PATH}" STUB_PNPM_LOG="${pnpm_log}" pnpm view x
+
+section "sbom.sh: the lock file of cdxgen in tools/sbom/ is not an unscanned manifest (finding E1, feat-16-cdxgen-lockfile, REQ-004)"
+tools_lock='lockfileVersion: 9'
+root="$(new_tree e1-tools-sbom)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"12.9.0"}}'
+put "${root}" tools/sbom/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Wrote ${root}/build/sbom/frontend.cdx.json" "tools/sbom/package.json and tools/sbom/pnpm-lock.yaml with frontend/package.json do not stop the script" sbom_run "${root}"
+expect 0 "PASS" "the two files of tools/sbom/: the script passes" sbom_run "${root}"
+root="$(new_tree e1-tools-sbom-alone)"
+put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"12.9.0"}}'
+put "${root}" tools/sbom/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Nothing to scan" "the two files of tools/sbom/ alone: nothing to scan, and no stop" sbom_run "${root}"
+pnpm_calls 0 "the two files of tools/sbom/ alone: no install"
+root="$(new_tree e1-tools-sbom-modules)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/sbom/package.json '{}'
+put "${root}" tools/sbom/pnpm-lock.yaml "${tools_lock}"
+put "${root}" tools/sbom/node_modules/pkg/package.json '{}'
+expect 0 "Wrote" "node_modules in tools/sbom/ is not entered" sbom_run "${root}"
+tools_sbom_files=(tools/sbom/package.json:'{}' tools/sbom/pnpm-lock.yaml:"${tools_lock}" frontend/package.json:'{}')
+unscanned_case toolsother tools/other/package.json '{}' "${tools_sbom_files[@]}"
+unscanned_case toolssbomworkspace tools/sbom/pnpm-workspace.yaml 'packages: []' "${tools_sbom_files[@]}"
+unscanned_case toolssbomsub tools/sbom/sub/package.json '{}' "${tools_sbom_files[@]}"
+unscanned_case toolssbomsublock tools/sbom/sub/pnpm-lock.yaml "${tools_lock}" "${tools_sbom_files[@]}"
+unscanned_case toolssbompom tools/sbom/pom.xml "${pom_xml}" "${tools_sbom_files[@]}"
+unscanned_case toolsotherlock tools/other/pnpm-lock.yaml "${tools_lock}" "${tools_sbom_files[@]}"
+unscanned_case toolsotherworkspace tools/other/pnpm-workspace.yaml 'packages: []' "${tools_sbom_files[@]}"
+unscanned_case rootwithtoolssbom package.json '{}' "${tools_sbom_files[@]}"
+unscanned_case rootlockwithtoolssbom pnpm-lock.yaml "${tools_lock}" "${tools_sbom_files[@]}"
+unscanned_case toolsotherwithoutfrontend tools/other/package.json '{}' tools/sbom/package.json:'{}' tools/sbom/pnpm-lock.yaml:"${tools_lock}"
+unscanned_case toolssbomnestedpackage tools/sbom/nested/deep/package.json '{}' "${tools_sbom_files[@]}"
+root="$(new_tree e1-tools-sbom-stops)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/sbom/package.json '{}'
+put "${root}" tools/sbom/sub/package.json '{}'
+sbom_run "${root}" >/dev/null 2>&1 || true
+no_frontend_sbom "${root}" "a package.json in tools/sbom/sub/ stops the script before cdxgen"
+pnpm_calls 0 "a manifest outside the set: the script stops before the install"
 
 
 # ---------------------------------------------------------------------------------------------

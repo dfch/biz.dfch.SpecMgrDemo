@@ -1,0 +1,8 @@
+{
+  "name": "sbom-tool",
+  "private": true,
+  "description": "The SBOM tool cdxgen with a lock file (feat-16-cdxgen-lockfile). Do not add a dependency or a packageManager field. See README.md.",
+  "dependencies": {
+    "@cyclonedx/cdxgen": "12.9.0"
+  }
+}
