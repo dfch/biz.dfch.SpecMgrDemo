@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T12:48:43.536+01:00'
+updated: '2026-11-03T12:52:50.591+01:00'
 version: 1.0.0
 ---
 
@@ -66,7 +66,7 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - [ ] ACC-008: The owner has set the branch protection with all the gates of this feature, one review, and the review of a code owner for the files in CODEOWNERS, or the plan shows the open item for the owner.
 
-- [ ] ACC-009: The license gate, on a fixture list of licenses, stops for a license that is not permitted, stops for a license that is not known, stops for `GPL-2.0-only` with no exception, and does not stop for `GPL-2.0-only WITH Classpath-exception-2.0` and the other permitted licenses (REQ-006). For an expression with `OR`, the gate does not stop if at least one alternative is permitted (for example `MIT OR Apache-2.0`), and it stops if no alternative is permitted. For a license name that is not an SPDX identifier (for example `Apache License, Version 2.0` in an SBOM), the gate uses a table of names. A name that is not in the table is "not known", and the gate stops.
+- [ ] ACC-009: The license gate, on a fixture list of licenses, stops for a license that is not permitted, stops for a license that is not known, stops for `GPL-2.0-only` with no exception, and does not stop for `GPL-2.0-only WITH Classpath-exception-2.0` and the other permitted licenses (REQ-006). The gate does not parse license expressions by itself. It uses the library `license-expression` (see Design Notes). An expression is permitted if the library evaluates it as permitted: `OR` needs one permitted alternative (for example `MIT OR Apache-2.0`), `AND` needs all parts permitted, `WITH` is matched as a complete expression, and parentheses are handled by the library. The gate fails closed: an expression that the library cannot parse is "not known", and the gate stops. For a license name that is not an SPDX identifier (for example `Apache License, Version 2.0` in an SBOM), the gate uses a table of names. A name that is not in the table is "not known", and the gate stops.
 
 - [ ] ACC-010: The `sbom` recipe operates and writes the SBOM file at the path in the `justfile` (REQ-006). The test of the content with real dependencies is open until feat-6 gives the manifests.
 
@@ -130,7 +130,9 @@ Each action is pinned to a full commit SHA with a comment on the same line that 
 
 For the Maven version, the Maven Wrapper (`mvnw`) is a choice for feat-6-contracts-openapi-pipeline, when `pom.xml` exists. The wrapper pins Maven in the repository, and a local run and a CI run then use the same Maven.
 
-Tools for the gates (decision of the owner on 2026-11-03). The commit message gate and the license gate are scripts of this project in `tools/gates/`, and need no tool of another vendor. The gate for the commit messages reads the format `type(feat-N): subject`. The license gate reads the SBOM in the CycloneDX format and the list `tools/license/permitted-licenses.txt`. The SBOM for Maven comes from `cyclonedx-maven-plugin` 2.9.3. The SBOM for pnpm comes from `@cyclonedx/cdxgen` 12.9.0 (the latest release on npm; the GitHub page of the project shows v13.6.0, which is not on npm under this name, so the agent pins 12.9.0). `@cyclonedx/cyclonedx-node-pnpm` is not in use because its repository is archived. `mojohaus/license-maven-plugin` is not in use because it covers Maven only. The specmgr gate needs `uv`, and the action `astral-sh/setup-uv` installs it.
+License expressions (decision on 2026-11-03, after a question of the owner): an own parser for `OR`, `AND`, `WITH` and parentheses is error prone. The license gate uses the library `license-expression` (Apache-2.0, a dependency of the gate that is a library of a tool and not of the product), which parses SPDX expressions. The gate has one small function that evaluates the parsed tree against the list of permitted licenses (`OR` is any, `AND` is all, a license with `WITH` is one symbol that must be in the list as a complete expression). The gate fails closed: it stops for each expression that the library cannot parse, and for each name that is not in the table of names. The gate runs with `uv run --with license-expression==<version>`, with the version in `tools/versions.env`. The alternative, a list of compound expressions that are permitted one by one, needs a manual entry for each expression of each transitive dependency, and the agent does not recommend it.
+
+Tools for the gates (decision of the owner on 2026-11-03). The commit message gate and the license gate are scripts of this project in `tools/gates/`, and need no tool of another vendor. The gate for the commit messages reads the format `type(feat-N): subject`. The license gate reads the SBOM in the CycloneDX format and the list `tools/license/permitted-licenses.txt`. The SBOM for Maven comes from `cyclonedx-maven-plugin` 2.9.3. The SBOM for pnpm comes from `@cyclonedx/cdxgen` 12.9.0 (the latest release on npm; the GitHub page of the project shows v13.6.0, which is not on npm under this name, so the agent pins 12.9.0). `@cyclonedx/cyclonedx-node-pnpm` is not in use because its repository is archived. `mojohaus/license-maven-plugin` is not in use because it covers Maven only. The library `license-expression` is in use for the license gate (see above). The specmgr gate needs `uv`, and the action `astral-sh/setup-uv` installs it.
 
 The version file has the version of each tool and the checksum of each download. The checksums come from the files that the vendor publishes with the release. The install script compares them with the checksum of the downloaded file. The file `tools/versions.env` is at repository level, because CI, feat-6 and feat-7 also read it.
 
@@ -173,7 +175,8 @@ License table (the agent filled it in tasks 100.100 to 100.120, from the license
 | Action `extractions/setup-crate` v2.0.0, SHA `0551596312d4008a6dfbc4d3c38fa20eaef46d2d` (called by `setup-just`) | CI | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the `README.md` at this commit | Permitted |
 | uv (latest release on GitHub: 0.13.7; version for Task 110.100) | CI (for specmgr) | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the `README.md` at the release tag | Permitted |
 | Commit message gate (script of this project) | gate | AGPL-3.0-only (project code). No tool of another vendor | Permitted (no check necessary) |
-| License gate (script of this project) | gate | AGPL-3.0-only (project code). No tool of another vendor | Permitted (no check necessary) |
+| License gate (script of this project) | gate | AGPL-3.0-only (project code) | Permitted (no check necessary) |
+| Library `license-expression` 30.4.4 (used by the license gate) | gate | Apache-2.0. Source: the metadata of the release on PyPI (the `LICENSE` file inside the release is not read yet, Task 110.100 reads it when it pins the checksum). It depends on `boolean.py`, which is not checked yet | Permitted by the metadata. The check of the file is open (Task 110.100) |
 | SBOM for Maven: `cyclonedx-maven-plugin` 2.9.3 | gate | Apache-2.0. Source: `LICENSE` in the repository at the tag commit `93e97e1c7e50b08cbba62549c2ed88c95202ed62`, and `<licenses>` in the POM. The jar has no license file. sha256 of the jar: `c452d5eebe28bc86bef2e7c72d129f04f60877bef843eac8120f01fb655be293` (the same as the value on Maven Central) | Permitted |
 | SBOM for pnpm: `@cyclonedx/cdxgen` 12.9.0 | gate | Apache-2.0. Source: `package/LICENSE` in the npm package. The integrity value of the package is `sha512-+LWBiyTgdSWdprdsA7xpNEhD9NV/Wo3TvqaVYQHjP3kEeNEZTV+08U8CYh+P2+2CHycwKFWHhtSREN+p/r6Sgw==`. The package has 29 dependencies, and under rule A they are not checked | Permitted |
 
@@ -227,7 +230,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 110: Install Scripts
 
-- [ ] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors, for the JDK, Maven, Node, pnpm, just, uv, `cyclonedx-maven-plugin` and `@cyclonedx/cdxgen`) and the `_common.sh` file in the `bin` folder of this feature
+- [ ] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors, for the JDK, Maven, Node, pnpm, just, uv, `cyclonedx-maven-plugin`, `@cyclonedx/cdxgen` and `license-expression`; read the license file of `license-expression` and of `boolean.py` in the release) and the `_common.sh` file in the `bin` folder of this feature
 
 - [ ] Task 110.105: Write the install script for Node. It checks the version, and does not use the Node of the machine without this check
 
@@ -253,9 +256,9 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 - [ ] Task 130.120: Write the gate for the commit messages (Conventional Commits with the feature number as scope, for example `feat(feat-5)`)
 
-- [ ] Task 130.130: Write the license gate with the list `tools/license/permitted-licenses.txt`, and the SBOM
+- [ ] Task 130.130: Write the license gate with the list `tools/license/permitted-licenses.txt`, and the SBOM. The gate uses the library `license-expression` for the expressions, and fails closed
 
-- [ ] Task 130.135: Test the license gate with the fixtures in `tools/license/fixtures/`: a license that is not permitted, a license that is not known, `GPL-2.0-only` with no exception, the complete expression with the Classpath exception, a permitted license, an expression with `OR` and one permitted alternative (for example `MIT OR Apache-2.0`), an expression with `OR` and no permitted alternative, and a license name that is not an SPDX identifier (one in the table of names, one not in the table). Write the expected result of each
+- [ ] Task 130.135: Test the license gate with the fixtures in `tools/license/fixtures/`: a license that is not permitted, a license that is not known, `GPL-2.0-only` with no exception, the complete expression with the Classpath exception, a permitted license, an expression with `OR` and one permitted alternative (for example `MIT OR Apache-2.0`), an expression with `OR` and no permitted alternative, an expression with `AND` (all permitted, and one not permitted), an expression with parentheses and `WITH` (for example `(MIT OR GPL-2.0-only) AND Apache-2.0`), an expression that cannot be parsed, and a license name that is not an SPDX identifier (one in the table of names, one not in the table). Write the expected result of each
 
 - [ ] Task 130.140: Write the gate for the build commands: each `run:` step must be `just <recipe>` with a recipe in the `justfile`. There is no list of exceptions
 
