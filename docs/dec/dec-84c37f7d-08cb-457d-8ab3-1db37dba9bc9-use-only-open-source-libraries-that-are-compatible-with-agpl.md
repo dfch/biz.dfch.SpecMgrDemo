@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T10:31:57.504+01:00'
+updated: '2026-11-03T11:58:18.122+01:00'
 version: 1.0.0
 ---
 
@@ -82,6 +82,10 @@ Some tools for security scans can have terms that are not open source, for examp
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 09:56:46.000Z - Review of the new license row
+
+The owner gave a permission for one time to add this entry. The owner told the coding agent on 2026-11-03 that the review of the row `GPL-2.0-only WITH Classpath-exception-2.0` is done. The reviewer is dfch, and the date of the review is 2026-11-03 (the owner told the agent both on 2026-11-03). The agent has no other source for this fact. The text of the decision is not changed.
 
 ### 2026-11-03 00:00:00.000Z - License class for the Classpath exception added
 
