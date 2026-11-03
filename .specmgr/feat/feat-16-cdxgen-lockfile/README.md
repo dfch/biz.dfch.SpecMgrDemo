@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-03T21:02:30.390+01:00'
 id: feat-16-cdxgen-lockfile
-status: review
+status: done
 type: feat
-updated: '2026-11-03T21:45:26.402+01:00'
+updated: '2026-11-03T21:51:45.888+01:00'
 version: 1.0.0
 ---
 
@@ -172,6 +172,8 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 **As of 2026-11-03 20:45**: All tasks and all acceptance criteria (ACC-001 to ACC-009) are done and checked. Pull request #17 (`Closes #16`, against `dev`) is open and has seven green checks. The throwaway test pull request #18 of ACC-009 showed in real CI the frozen install in `tools/sbom` with `--frozen-lockfile --ignore-scripts`, the SBOM file and `RESULT: PASS. 1 component(s)`. It is closed and not merged, and its branch and worktree are deleted. The local recipes of ACC-008 return exit code 0 again. The status of the feature is `review`. The owner merges pull request #17 and sets the status to `done`. No decision of the owner is open.
 
+**As of 2026-11-03 20:52**: The owner merged pull request #17 into `dev` (squash merge, commit `86d43ea`, 2026-11-03T20:49:19Z). Issue #16 is closed by the merge. The next step is the release of `dev` to `main`: a pull request that is merged as a merge commit. `main` is 2 commits behind `dev`.
+
 ### Blockers
 
 - None that blocks the pull request.
@@ -183,6 +185,19 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 20:52:00.000Z - Pull request #17 merged into dev, issue #16 closed
+
+The owner merged pull request #17 into `dev` as a squash merge. The merge commit is `86d43ea11478e9248f8a6ff894081e193878e18d`. The merge time is 2026-11-03T20:49:19Z. The merge closed issue #16 (`Closes #16`). The agent checked these facts with `gh pr view 17` (state `MERGED`) and `gh issue view 16` (state `CLOSED`).
+
+- **`main` is behind `dev`.** `git rev-list --left-right --count origin/main...origin/dev` gives `0 2`. `main` does not have two commits: `89f28c7` (feat-5 set to done) and `86d43ea` (this feature).
+- **Release to `main`.** The release of `dev` to `main` is a pull request that is merged as a merge commit (the ruleset of `main` allows only this). It is the first real run of the gates with `GITHUB_BASE_REF=main`. The orchestrator opens this pull request after this change is merged.
+- **Open items (still true).**
+  - The Python tools (specmgr, PyYAML) and the Maven plugin keep the limit of finding G2. This is out of scope. The owner can open one issue for each.
+  - Optional dependencies of pnpm: a wrong integrity value does not stop the install (see Blockers).
+  - cdxgen shows a warning about `NODE_PATH`. A possible later change is `env -u NODE_PATH` where `sbom.sh` starts cdxgen.
+  - By decision of the owner, these remote branches stay: `feat-16-cdxgen-lockfile`, `feat-5-foundation-monorepo-ci` and `docs/feat-5-set-done`.
+  - feat-6 must add `mvnw` with the pinned Maven version and its sha256.
 
 #### 2026-11-03 20:45:00.000Z - ACC-009 done: throwaway test pull request #18 (closed, not merged) and result of pull request #17
 
@@ -283,7 +298,9 @@ The owner gave no detail except "do it now, with a small FEAT backed by a GitHub
 
 ### Related PRs / Commits
 
-- [Issue #16](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/16): Gates: lock file for the SBOM tool cdxgen. The name of this feature uses the number of the issue.
+- [Issue #16](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/16): Gates: lock file for the SBOM tool cdxgen. The name of this feature uses the number of the issue. Status: closed by the merge of pull request #17 on 2026-11-03.
+- [Pull request #17](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/17) (merged into `dev` on 2026-11-03T20:49:19Z): feat(feat-16): lock file for the SBOM tool cdxgen. Squash merge, `Closes #16`.
+- Commit `86d43ea11478e9248f8a6ff894081e193878e18d` on `dev`: the squash merge of pull request #17.
 
 ### More Information
 
