@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T13:00:50.478+01:00'
+updated: '2026-11-03T14:05:09.199+01:00'
 version: 1.0.0
 ---
 
@@ -50,7 +50,7 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: The layout from REQ-001 is in the repository, and each folder has a short README. The `tools/` README tells where the install scripts are.
+- [x] ACC-001: The layout from REQ-001 is in the repository, and each folder has a short README. The `tools/` README tells where the install scripts are.
 
 - [ ] ACC-002: `just --list` shows the recipes for validation, license check, SBOM, commit check and check of the build commands. Each CI job starts only a `just` recipe (REQ-002, REQ-009).
 
@@ -62,7 +62,7 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - [ ] ACC-006: A pull request with a document that is not valid according to specmgr, or a commit message that is not correct, causes a failure in CI.
 
-- [ ] ACC-007: CODEOWNERS and NOTICE are in the repository. CODEOWNERS has an entry for each path of REQ-007 that exists.
+- [x] ACC-007: CODEOWNERS and NOTICE are in the repository. CODEOWNERS has an entry for each path of REQ-007 that exists.
 
 - [ ] ACC-008: The owner has set the branch protection with all the gates of this feature, one review, and the review of a code owner for the files in CODEOWNERS, or the plan shows the open item for the owner.
 
@@ -245,11 +245,11 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 120: Layout and Justfile
 
-- [ ] Task 120.100: Make the directories of the layout with a short README in each
+- [x] Task 120.100: Make the directories of the layout with a short README in each
 
-- [ ] Task 120.110: Write the `justfile` with the recipes for validation, license check, SBOM, commit check, check of the build commands and check for `sudo`
+- [x] Task 120.110: Write the `justfile` with the recipes for validation, license check, SBOM, commit check, check of the build commands and check for `sudo`
 
-- [ ] Task 120.120: Write NOTICE and CODEOWNERS with the paths of REQ-007 (dfch is the owner). The license list is at the path `tools/license/permitted-licenses.txt`, which is fixed in this plan, so the file can follow in Task 130.130
+- [x] Task 120.120: Write NOTICE and CODEOWNERS with the paths of REQ-007 (dfch is the owner). The license list is at the path `tools/license/permitted-licenses.txt`, which is fixed in this plan, so the file can follow in Task 130.130
 
 #### Phase 130: CI and Gates
 
@@ -285,7 +285,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. The next step is phase 120 (layout and `justfile`). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 110 is done (Tasks 110.100 to 110.130): `tools/versions.env` and the install scripts are written and were run on the machine of the author, and all five tools have the pinned versions (see Design Notes). The work is on the branch `feat-5-foundation-monorepo-ci`. Phase 120 is done (Tasks 120.100 to 120.120): the layout with READMEs, the `justfile`, NOTICE and `.github/CODEOWNERS` are written (ACC-001 and ACC-007 are ticked). Each gate recipe in the `justfile` stops with the message "NOT IMPLEMENTED" until its script exists. The next step is phase 130 (CI and gates). Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
@@ -296,10 +296,23 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 - Resolved on 2026-11-03: `just` (CC0-1.0 is in the class Permitted) and specmgr (`AGPL-3.0-or-later` is in the class Permitted) are not a blocker. pnpm and corepack (MIT) were not a blocker. The legal review of the CC0-1.0 entry is open.
 - Open item for the owner (not a blocker): the traceability gate and the security checks have no feature at this time. [Issue #8](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8) is for them. The owner makes a FEAT for it later.
 - Open item for the owner (not a blocker): the CODEOWNERS entry for the thresholds is added when the walking skeleton makes them.
+- Open item for the owner (not a blocker): NOTICE has no copyright line. Add one if the project needs it. The syntax of `.github/CODEOWNERS` can be checked only after a push to the default branch (`gh api repos/dfch/biz.dfch.SpecMgrDemo/codeowners/errors`).
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 13:04:44.000Z - Layout, justfile, NOTICE and CODEOWNERS (phase 120)
+
+The owner had no more questions, and the agent continued. The agent did this:
+
+1. Layout (Task 120.100): `backend/`, `frontend/`, `contracts/`, `model/`, `tools/gates/`, `tools/license/fixtures/` are new. A short README is in each layout folder, also in the folders that existed (`docs/`, `terminology/`, `.specmgr/`). The README of an empty folder says that it is empty and which feature fills it. The README of `tools/` tells where the install scripts are (ACC-001). The specmgr tools still list all features with no error.
+2. `justfile` (Task 120.110): the recipes are `validate`, `commit-check`, `sbom`, `license-check`, `check-workflows`, `check-pins`, `check-sudo` and `verify-tools`. `just --list` shows them. A private recipe `_gate` starts the script `tools/gates/<name>` and stops with "NOT IMPLEMENTED" and the number of the task if the script does not exist. The agent ran each recipe: all fail with exit code 1, and none passes because a script is missing. A test script showed that the arguments reach the script. `just verify-tools` works. The file obeys `just --fmt`. The folder `build/` (the SBOM files) is in `.gitignore`.
+3. Design choices of the agent in the `justfile`: the recipes `validate` and `commit-check` compare with the branch `origin/dev` (the variable `base`), and `license-check` depends on `sbom`. Tasks 130.110 to 130.145 must write the scripts with these arguments, or change the `justfile`.
+4. NOTICE (Task 120.120): it gives the license AGPL-3.0-only, the place of the license list and the place of the SBOM. It has no copyright line, because the text of a copyright line is for the owner.
+5. CODEOWNERS is `.github/CODEOWNERS` with the owner `@dfch` for `/docs/dec/`, `/.github/workflows/`, `/.github/CODEOWNERS`, `/justfile` and `/tools/`. `/.github/workflows/` does not exist yet. The agent could not check the file with GitHub, because the check works only for the default branch after a push.
+
+Not done: ACC-002 stays open, because no CI job exists yet. The `tools/versions.env` check for the workflow (Task 130.142) is not written.
 
 #### 2026-11-03 12:00:37.000Z - Install scripts written and run (phase 110), license expressions
 
