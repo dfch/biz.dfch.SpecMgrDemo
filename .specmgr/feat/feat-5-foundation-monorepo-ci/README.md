@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T12:07:42.542+01:00'
+updated: '2026-11-03T12:18:01.170+01:00'
 version: 1.0.0
 ---
 
@@ -144,17 +144,38 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 
 | Tool | Use | License | Result |
 |---|---|---|---|
-| JDK: Eclipse Temurin 21.0.13+9 (selected by the owner) | build and run | GPL-2.0-only WITH Classpath-exception-2.0. Source: `legal/java.base/LICENSE` of the download. It has GPL version 2 and the text of the "Classpath" exception. The sha256 of the download is the same as the value of Adoptium | Main license: permitted. Stop: the folder `legal/` has 36 notices of third-party parts (keyword scan, not a full read: for example Unicode, zlib, FreeType, IJG, libpng, W3C, CC0) and an Assembly exception in each of 69 modules. The DEC has no class for them. The owner decides (question 1) |
-| Maven 3.10.0 (candidate) | build | Apache-2.0. Source: `LICENSE` of the download. `lib/*.license` has Apache-2.0, BSD-style (asm, jansi, jline), MIT-style (slf4j), public domain (aopalliance), EPL-2.0 (sisu), and CDDL-1.1 (javax.annotation-api) | Main license: permitted. Stop: EPL-2.0 is in the class Review, and CDDL-1.1 has no class. The owner decides (question 1) |
-| Node 26.13.0 (candidate, LTS "Lithium"; 24.22.2 "Krypton" is also LTS) | build and run | MIT. Source: `LICENSE` of the download (read for 26.13.0 only). It lists 43 bundled components, with licenses that include Apache-2.0, BSD, ISC, Unicode, zlib, CC0 (HdrHistogram) and Artistic-2.0 (npm). It has GPLv3 text with the Autoconf exception in the ICU part | Main license: permitted. Stop: Artistic-2.0, Unicode and the other bundled licenses have no class. The owner decides (question 1). The choice between Node 24 and Node 26 is also open (question 2) |
+| JDK: Eclipse Temurin 21.0.13+9 (selected by the owner) | build and run | GPL-2.0-only WITH Classpath-exception-2.0. Source: `legal/java.base/LICENSE` of the download. It has GPL version 2 and the text of the "Classpath" exception. The sha256 of the download is the same as the value of Adoptium | Main license: permitted. Stop: the folder `legal/` has 36 notices of third-party parts, and an Assembly exception text in each of 69 modules. Several have no class in the DEC (rule B of the owner, see the inventory in Design Notes) |
+| Maven 3.10.0 (candidate) | build | Apache-2.0. Source: `LICENSE` of the download. `lib/*.license`: Apache-2.0, BSD-3-Clause (asm, jansi, jline), MIT (slf4j), public domain (aopalliance), EPL-2.0 (sisu), CDDL-1.1 (javax.annotation-api) | Main license: permitted. Stop: EPL-2.0 is in the class Review (a DEC about the deviation is necessary), and CDDL-1.1 and "public domain" have no class |
+| Node 26.13.0 (selected by the owner on 2026-11-03: LTS "Lithium") | build and run | MIT. Source: `LICENSE` of the download. It lists 43 bundled components (see the inventory in Design Notes) | Main license: permitted. Stop: the bundled licenses Unicode-3.0, Zlib, Artistic-2.0, BlueOak-1.0.0 and the GPL text with the Autoconf exception have no class (rule B of the owner) |
 | pnpm 12.16.1 (candidate) | build | MIT. Source: `LICENSE` of the repository at the tag v12.16.1. The npm package has no `LICENSE` file, only the field `license` in `package.json` and `THIRD-PARTY-NOTICES.md` (BSD-2-Clause, ISC) | Permitted |
 | corepack (part of Node) | build | MIT. Source: the corepack part of the `LICENSE` of Node 26.13.0 | Permitted |
-| just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Stop: CC0-1.0 has no class in the DEC. The owner decides (question 3) |
-| specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | The DEC has the class entry `AGPL-3.0`. The gate must match the complete expression, so `AGPL-3.0-or-later` can be "not known". It is a tool in CI and not a dependency. Open item (question 4) |
+| just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Permitted since 2026-11-03 11:17 (the DEC has `CC0-1.0`). The legal review of this entry is open |
+| specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | Permitted (the DEC has `AGPL-3.0-or-later` since 2026-11-03 11:17) |
 | GitHub Actions in the workflow (checkout and the setup actions, not selected) | CI | not checked | open |
 | Commit message checker (not selected) | gate | not checked | open |
 | SBOM tool (not selected) | gate | not checked | open |
 | License check tool (not selected) | gate | not checked | open |
+
+Inventory of the bundled licenses that have no class in the DEC (2026-11-03). The owner chose rule B: each bundled license needs a class in the DEC. "Proposal" is the view of the agent. The agent did not change the DEC for these rows, and the legal classes are for a person with competence in the law.
+
+| License (SPDX name where one exists) | Found in | Proposal |
+|---|---|---|
+| Zlib | Node (zlib), JDK (zlib) | Permitted |
+| Unicode-3.0 | Node (ICU) | Permitted |
+| Unicode-DFS-2016 | JDK (CLDR, Unicode Character Database, ICU4J) | Permitted |
+| BlueOak-1.0.0 | Node (minimatch) | Permitted |
+| Artistic-2.0 | Node (npm) | Permitted (the owner decides) |
+| Public domain with no SPDX name (aopalliance, SipHash, HdrHistogram) | Maven, Node, JDK | Owner decides. CC0-1.0 is in the DEC, and HdrHistogram also offers BSD-2-Clause |
+| CDDL-1.1 | Maven (javax.annotation-api) | Review (a DEC about the deviation) |
+| EPL-2.0 | Maven (sisu) | Review (the class in the DEC). A DEC about the deviation is necessary |
+| GPL-3.0-or-later WITH Autoconf-exception | Node (ICU, configuration scripts) | Owner decides. The text is for build files, not for the program |
+| GPL-3.0 with the GCC runtime library exception | JDK (libgcc, libstdc++) | Owner decides |
+| MPL-2.0 | JDK (Public Suffix List, data) | Review (the class in the DEC). A DEC about the deviation is necessary |
+| FreeType (FTL or GPL-2.0, a choice), IJG, Libpng, W3C Software Notice, Old MIT (HarfBuzz), Mesa (MIT style), PC/SC Lite (BSD style), jQuery and jQuery UI (MIT) | JDK | Owner decides, or "Permitted" for the licenses of the MIT and BSD kind |
+| Cryptix General License, Eastman Kodak Notice, OASIS PKCS #11 License, IAIK License, CUP Parser Generator License, Dynalink (BSD-3-Clause) | JDK | Owner decides. These have no SPDX name or an unusual text |
+| Assembly exception text (in each of 69 JDK modules) | JDK | Owner decides. The DEC row for the Classpath exception says that the Assembly exception is not in the row |
+
+The JDK, Maven and Node are build and run tools. None of them goes to users. The rule B list is long because of the JDK. The agent read every block of the Node license and every `lib/*.license` file of Maven. For the JDK, the agent read the first lines of each of the 36 notices, and not the full text.
 
 ### Related Decisions
 
@@ -235,18 +256,16 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 has started: the licenses of the JDK, Maven, Node, pnpm, corepack, just and specmgr are read (Tasks 100.100, 100.105 and 100.110 are done). The work stops at Task 100.130 for the decisions of the owner (see Blockers). Tasks 100.115 and 100.120 can continue, because they select other tools. The first change to files that are not documents has not been made. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 has started: the licenses of the JDK, Maven, Node, pnpm, corepack, just and specmgr are read (Tasks 100.100, 100.105 and 100.110 are done). The owner chose Node 26.13.0 (LTS) and rule B for bundled licenses. The work stops at Task 100.130 for the classes of the bundled licenses of the JDK, Maven and Node (see Blockers). Tasks 100.115 and 100.120 can continue, because they select other tools. The first change to files that are not documents has not been made. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
-- Stop (REQ-010): Tasks 100.100, 100.105 and 100.110 show licenses that have no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. No tool of the license table is in use until the owner decides. The details are in the license table:
-  - `just` has the license CC0-1.0.
-  - Maven has EPL-2.0 (class Review) and CDDL-1.1 in `lib/`.
-  - Node has Artistic-2.0 (npm), Unicode and other licenses in the bundled parts.
-  - The JDK has third-party notices in `legal/` (Unicode, zlib, FreeType, IJG, libpng, W3C and CC0) and an Assembly exception.
-  - specmgr has AGPL-3.0-or-later, and the DEC has `AGPL-3.0`.
-  - Task 100.130 is for these questions. The open questions are in the update of 2026-11-03 11:07.
+- Stop (REQ-010), for the JDK, Maven and Node only: the owner chose rule B (each bundled license needs a class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). The inventory in Design Notes lists the bundled licenses that have no class. These tools are not in use until the owner has decided. Open points:
+  - The owner gives a permission for one time to add rows to the DEC, and decides the classes marked "Owner decides" in the inventory.
+  - Maven has EPL-2.0 (class Review), and the JDK has MPL-2.0 (class Review). Each needs a DEC about the deviation. The agent can write a draft, and the owner accepts it.
+  - Task 100.130 is for these points.
+- Resolved on 2026-11-03: `just` (CC0-1.0 is in the class Permitted) and specmgr (`AGPL-3.0-or-later` is in the class Permitted) are not a blocker. pnpm and corepack (MIT) were not a blocker. The legal review of the CC0-1.0 entry is open.
 - Open item for the owner (not a blocker): the work of this plan and the earlier plans is in commits on `dev`, and DEC a56f231b-d063-4bef-bbc8-3deb4daff76e says that each change goes through a pull request. Documents on `dev` before the branch protection exists are a start exception that the DEC does not give. The owner must confirm it or make a rule.
 - Open item for the owner (not a blocker): the traceability gate and the security checks have no feature at this time. [Issue #8](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8) is for them. The owner makes a FEAT for it later.
 - Open item for the owner (not a blocker): the CODEOWNERS entry for the thresholds is added when the walking skeleton makes them.
@@ -254,6 +273,17 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 11:07:18.000Z - Licenses read for the JDK, Maven, Node, pnpm, corepack, just and specmgr
+
+The agent read the license file in each download (Tasks 100.100, 100.105, 100.110). The results are in the license table. The JDK has the expected main license with the Classpath exception. The DEC has no class for some other licenses. The work stops here. The owner must decide:
+
+1. Which rule applies to licenses in the bundled parts of a tool (the JDK `legal/` folder, Maven `lib/`, Node)? Option A: the DEC checks the main license of a tool that does not go to users, and the bundled licenses only if the tool goes to users. Option B: the DEC gets a class for each bundled license (for example Unicode, zlib, Artistic-2.0, CDDL-1.1, CC0-1.0). Option A is shorter. Option B is stricter.
+2. Which Node LTS release? Node 26 "Lithium" is in active LTS since 2026-10-28, with end of life on 2029-04-30. Node 24 "Krypton" is in maintenance LTS since 2026-10-20, with end of life on 2028-04-30, and it is installed on the machine. The agent read the license of Node 26.13.0 only.
+3. How does the DEC handle `just` (CC0-1.0)? Option A: add CC0-1.0 to the class Permitted (it also permits other libraries with CC0-1.0, and needs the same legal review as the Classpath row). Option B: a DEC about the deviation for `just` only.
+4. Does `AGPL-3.0` in the DEC include `AGPL-3.0-or-later` (the license of specmgr)? The gate matches the complete expression.
+
+Other facts from the check: Maven 4 is still a release candidate, so the candidate is Maven 3.10.0. The npm package of pnpm has no `LICENSE` file. The agent read the license in the repository at the tag v12.16.1. The agent has not pinned any version or checksum yet (Task 110.100).
 
 #### 2026-11-03 10:58:28.000Z - Open items of the review closed
 
