@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T18:21:48.116+01:00'
+updated: '2026-11-03T18:38:39.919+01:00'
 version: 1.0.0
 ---
 
@@ -72,7 +72,7 @@ These are the first classes of licenses. The owner must make sure that they are 
 
 | Class | Licenses | Rule |
 |---|---|---|
-| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0, LGPL-3.0, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
+| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0, LGPL-3.0-only, LGPL-3.0-or-later, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
 | Permitted | GPL-2.0-only WITH Classpath-exception-2.0 | Permitted. The gate must match the complete expression. The license GPL-2.0-only with no exception stays not permitted. |
 | Review | EPL-2.0, MPL-2.0 | A DEC about the deviation is necessary |
 | Not permitted | GPL-2.0-only, SSPL, BUSL, licenses with no right to commercial use, proprietary licenses | Not permitted |
@@ -84,6 +84,10 @@ All approved deviations are in one register DEC, with one dated section for each
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 17:38:32.000Z - LGPL-3.0-only, LGPL-3.0-or-later and GPL-2.0-or-later in the class Permitted
+
+The owner gave a permission for one time to make this change, and no other change (statement of the owner on 2026-11-03, in the chat: allow `LGPL-3.0-or-later` and `GPL-2.0-or-later`). The agent changed one row of the class Permitted in More Information. The short form `LGPL-3.0` is now `LGPL-3.0-only`, and `LGPL-3.0-or-later` and `GPL-2.0-or-later` are added. The gate reads the deprecated identifier `LGPL-3.0` as `LGPL-3.0-only`, so the meaning of the old entry does not change. The earlier entry said that the decision for LGPL was open. It is now closed. The reason is that a license with `-or-later` gives the user the choice of version 3 (or, for `GPL-2.0-or-later`, of version 2 or a later version), so it is not more restrictive than the `-only` entries that are already permitted, and dependencies of the frontend and the backend can have these licenses. The gate stopped on them (see the review of feat-5-foundation-monorepo-ci, finding D2). A person who has competence in the law must examine the new entries, in the same way as for the other rows. The license `GPL-2.0-only` with no exception stays not permitted by this change, and the row Not permitted and the row of the Classpath exception are not changed. The status and the text of the Decision Outcome are not changed.
 
 ### 2026-11-03 17:21:41.000Z - GPL-3.0-only and GPL-3.0-or-later in the class Permitted
 

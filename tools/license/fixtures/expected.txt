@@ -45,8 +45,12 @@
 35-gpl3-or-later.cdx.json | PASS | GPL-3.0-or-later is in the list (decision of the owner on 2026-11-03)
 36-gpl3-plus-form.cdx.json | PASS | the plus form GPL-3.0+ is read as GPL-3.0-or-later
 37-gpl3-deprecated-id.cdx.json | PASS | the deprecated identifier GPL-3.0 is read as GPL-3.0-only
-38-lgpl3-or-later-not-permitted.cdx.json | NOT PERMITTED | LGPL-3.0-or-later is not in the list (the decision for LGPL is open for the owner)
-39-gpl2-or-later-not-permitted.cdx.json | NOT PERMITTED | GPL-2.0-or-later is not in the list (the decision for GPL-2.0-or-later is open for the owner)
-40-error-not-json.cdx.json | ERROR | a file that is not JSON
-41-error-not-cyclonedx.cdx.json | ERROR | a JSON file that is not a CycloneDX SBOM
-42-error-no-components.cdx.json | ERROR | a CycloneDX SBOM with no `components` list
+38-lgpl3-or-later.cdx.json | PASS | LGPL-3.0-or-later is in the list (decision of the owner on 2026-11-03)
+39-gpl2-or-later.cdx.json | PASS | GPL-2.0-or-later is in the list (decision of the owner on 2026-11-03)
+40-lgpl3-plus-form.cdx.json | PASS | the plus form LGPL-3.0+ is read as LGPL-3.0-or-later
+41-gpl2-plus-form.cdx.json | PASS | the plus form GPL-2.0+ is read as GPL-2.0-or-later
+42-lgpl21-only-not-permitted.cdx.json | NOT PERMITTED | LGPL-2.1-only is not in the list (it is not part of the decision of the owner)
+43-lgpl3-only.cdx.json | PASS | LGPL-3.0-only is in the list (the same as the deprecated identifier LGPL-3.0)
+44-error-not-json.cdx.json | ERROR | a file that is not JSON
+45-error-not-cyclonedx.cdx.json | ERROR | a JSON file that is not a CycloneDX SBOM
+46-error-no-components.cdx.json | ERROR | a CycloneDX SBOM with no `components` list

@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: review
 type: feat
-updated: '2026-11-03T18:22:53.492+01:00'
+updated: '2026-11-03T18:38:59.593+01:00'
 version: 1.0.0
 ---
 
@@ -292,7 +292,8 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
 - Open item for the owner (not a blocker): a person who has competence in the law must examine the entries that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03: `CC0-1.0`, `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0`. The review of the Classpath row is done (dfch, 2026-11-03).
-- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `GPL-3.0-only` and `GPL-3.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:21 (after a permission of the owner for this change only). The decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later` is open for the owner. Both are not in the list, and the gate stops on them.
+- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `GPL-3.0-only` and `GPL-3.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:21 (after a permission of the owner for this change only). The decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later` was open at that time. It is done (see the update of 2026-11-03 17:38).
+- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `LGPL-3.0-only` (was the short form `LGPL-3.0`), `LGPL-3.0-or-later` and `GPL-2.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:38 (after a permission of the owner for this change only). `GPL-2.0-only` with no exception is not changed and stays not permitted. The owner is asked to confirm whether it must be permitted, because that reverses an explicit rule of the DEC and of ACC-009.
 - Resolved on 2026-11-03 14:28 (Task 130.130): the GitHub page of `cdxgen` shows v13.6.0, and npm has 12.9.0 as the latest release of `@cyclonedx/cdxgen`. From v13 the project publishes under a new npm name, `@cdxgen/cdxgen` (13.6.0, Apache-2.0 in the npm data). The old name stays on npm with 12.9.0 as its last release. The pin stays `@cyclonedx/cdxgen` 12.9.0, and no license of another package was read. A change to `@cdxgen/cdxgen` 13.x is a decision of the owner for a later feature (it needs a license check of the new package and its dependencies).
 - Open item for the owner (not a blocker): the plan has no check yet that the pinned SHA belongs to the tag of its comment. `just check-pins` compares both with `tools/license/allowed-actions.txt`, and the agent resolved the SHAs with `git ls-remote` on 2026-11-03 (Task 130.100). A change of a SHA needs a new check by a person.
 - No deviation DEC is necessary at this time. Under rule A, the EPL-2.0 in Maven and the MPL-2.0 in the JDK are not checked. If a deviation is necessary later, the owner wants one DEC for all deviations (see the update of 2026-11-03 11:22).
@@ -304,6 +305,17 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 17:38:43.000Z - LGPL-3.0-or-later and GPL-2.0-or-later permitted (decision of the owner)
+
+The owner decided in the chat on 2026-11-03 that `LGPL-3.0-or-later` and `GPL-2.0-or-later` are allowed. The owner also gave a permission for one time to change DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 for this and no other change. The reason is that the license gate stopped on these licenses (see the review of this feature, finding D2), and dependencies of the frontend and the backend can have them. A license with `-or-later` gives the user the choice of a version, so it is not more restrictive than the `-only` entries that are already permitted. The agent made these changes. The work is not committed and not pushed.
+
+1. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9: in the class Permitted of More Information, the short form `LGPL-3.0` is now `LGPL-3.0-only`, and `LGPL-3.0-or-later` and `GPL-2.0-or-later` are added. The DEC has a dated entry in Updates. The status (`accepted`), the text of the Decision Outcome, the row Not permitted (`GPL-2.0-only`) and the row of the Classpath exception are not changed.
+2. `tools/license/permitted-licenses.txt`: the line `LGPL-3.0` is `LGPL-3.0-only`, and the lines `LGPL-3.0-or-later` and `GPL-2.0-or-later` are added. The list has 20 entries (18 before) and has the same entries as the DEC. The header comment is corrected.
+3. Fixtures: `38-lgpl3-or-later` and `39-gpl2-or-later` (renamed, they were "not permitted") now pass. Four new files: `40-lgpl3-plus-form` (`LGPL-3.0+`, pass), `41-gpl2-plus-form` (`GPL-2.0+`, pass), `42-lgpl21-only-not-permitted` (`LGPL-2.1-only` stops, it is not part of the decision) and `43-lgpl3-only` (`LGPL-3.0-only`, pass). There was no free number below 40, so the three error fixtures are renumbered from 40-42 to 44-46 (no other document used the old numbers). The case `GPL-2.0-only` alone (fixture 04) is not changed and still stops. `just test-license-gate` now has 46 fixtures (42 before), and all 46 give the expected result. The counts "42 fixtures" and "18 entries" in the older entries are the counts of that time.
+4. `tools/license/README.md`: the note about deprecated identifiers and the GPL entries is updated.
+
+`GPL-2.0-only` alone is NOT changed by this decision. The owner asked for it too, but it reverses an explicit rule of the DEC and of ACC-009. The owner is asked to confirm it. A person who has competence in the law must examine the new entries (see Blockers).
 
 #### 2026-11-03 17:22:33.000Z - GPL-3.0-only and GPL-3.0-or-later permitted (decision of the owner)
 
