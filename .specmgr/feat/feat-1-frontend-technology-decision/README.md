@@ -4,7 +4,7 @@ created: '2026-10-01T08:56:50.337+02:00'
 id: feat-1-frontend-technology-decision
 status: planning
 type: feat
-updated: '2026-10-01T10:10:25.913+02:00'
+updated: '2026-11-02T14:46:34.200+01:00'
 version: 1.0.0
 ---
 
@@ -64,7 +64,7 @@ The empirical validation (feat-2-react-angular-visualization-spike) is now compl
 
 ### Related Decisions
 
-- None yet; a DEC will be linked here once authored.
+- DEC 1a29c825-6862-4fe9-8069-6566262d5c97: Use React for the Frontend (status draft; Task 300.100 closes when the owner accepts it).
 
 ### Task List
 
