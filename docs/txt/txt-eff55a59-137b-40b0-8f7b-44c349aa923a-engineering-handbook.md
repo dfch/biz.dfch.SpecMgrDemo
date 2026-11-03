@@ -70,7 +70,7 @@ This handbook is the index of the development policies and standards of this rep
 ## Open Items
 
 - The DEC about React has the status accepted. Task 300.100 of feature feat-1 is done.
-- The 16 other DEC documents have the status draft. The owner must accept them (see the list for the owner).
+- All other DEC documents have the status accepted. The STE gate and the script for the register are on hold (decision of the owner on 2026-11-03).
 - The user configuration of the asdste100 MCP must load the register files in `terminology/en/`.
 - The skeleton FEAT must set the versions, examine the licenses of the tools and set the thresholds from a measured baseline.
 - GitHub issue #4 is about the French heading table in specmgr.

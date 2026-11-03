@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T07:35:15.398+01:00'
+updated: '2026-11-03T07:51:12.054+01:00'
 version: 1.0.0
 ---
 
@@ -179,27 +179,31 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 
 - [x] Task 500.100: Validate all documents with specmgr
 
-- [ ] Task 500.110: The owner examines the documents and sets the status of the DEC documents to accepted
+- [x] Task 500.110: The owner examines the documents and sets the status of the DEC documents to accepted (done on 2026-11-03: all 17 DEC have the status accepted)
 
 - [x] Task 500.120: Write the documents again. Then the word check shows no rejected word and no unknown word
 
-- [ ] Task 500.130: A reviewer examines the STE rules that the tool does not examine
+- [ ] Task 500.130: A reviewer examines the STE rules that the tool does not examine (reviewer: dfch, worksheet TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f)
 
-- [ ] Task 500.140: The owner examines the records of the terminology register and accepts them
+- [ ] Task 500.140: The owner examines the records of the terminology register and accepts them (the owner keeps the records not accepted for now)
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-03**: 4 GOL, 1 PRB, 2 SOP, 6 RSK, 3 TXT (the handbook and 2 review aids) have the status draft. Of the 17 DEC, 1 has the status accepted (React, accepted by the owner on 2026-11-03) and 16 have the status draft. All documents have no error in the specmgr validation. A word check found no rejected word and no unknown word in the text, except the fixed headings of specmgr and the grammar terms of the STE worksheet (they are in the gap log). The terminology register has 330 noun records and 2 verb records. A person has not examined the records and the other STE rules at this time.
+**As of 2026-11-03**: 4 GOL, 1 PRB, 2 SOP, 6 RSK, 3 TXT (the handbook and 2 review aids) have the status draft. All 17 DEC have the status accepted (the owner accepted them on 2026-11-03). All documents have no error in the specmgr validation. A word check found no rejected word and no unknown word in the text, except the fixed headings of specmgr and the grammar terms of the STE worksheet (they are in the gap log). The terminology register has 330 noun records and 2 verb records. A person has not examined the records and the other STE rules at this time.
 
 ### Blockers
 
-- None for the review by the owner. The open items in the list for the owner (TXT 2e96237c-0bee-45ac-b44a-c7ffee105ab7) need decisions of the owner. The largest item is the conflict between the STE gate and the rule that the project has no script for the STE check.
+- None. The conflict between the STE gate and the rule that the project has no script for the STE check is on hold (decision of the owner on 2026-11-03). The review of ACC-007 by dfch is open.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - All DEC accepted, STE gate on hold, reviewer set
+
+The owner set the status of all 17 DEC documents to accepted (task 500.110 is done). The owner put two items on hold: the STE check as a gate in CI, and the script that validates the register. CI runs without them, and the owner makes a decision later. The DEC about verification, the DEC about the STE language and the DEC about the register each have a log entry for this. The owner keeps the register records not accepted (task 500.140 stays open). dfch is the reviewer of ACC-007 (task 500.130). The next FEATs are for the foundation, the contracts and the verification. They are planned and not started.
 
 #### 2026-11-03 00:00:00.000Z - React DEC accepted, review aids written
 

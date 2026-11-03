@@ -4,7 +4,7 @@ created: '2026-11-03T07:33:36.702+01:00'
 id: 852a2766-971a-4b1e-82c7-5d8a1539e77f
 status: draft
 type: txt
-updated: '2026-11-03T07:34:00.744+01:00'
+updated: '2026-11-03T07:51:04.218+01:00'
 version: 1.0.0
 ---
 
@@ -85,7 +85,7 @@ About 80 words are approved as one part of speech and rejected as a different pa
 
 The reviewer writes the result in this section. The reviewer then marks ACC-007 in the feature plan as done.
 
-- Reviewer:
+- Reviewer: dfch
 - Date:
 - Result:
 

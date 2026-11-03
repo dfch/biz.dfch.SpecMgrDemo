@@ -17,7 +17,7 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 | DEC | Status |
 |---|---|
 | Use React for the Frontend | accepted |
-| All other DEC documents (16) | draft |
+| All other DEC documents (16) | accepted (on 2026-11-03) |
 
 ## Summary of Each DEC
 
@@ -52,12 +52,12 @@ This document helps the owner to examine the DEC documents of feat-3-process-pol
 4. ArchUniTS. The maturity of the tool is not known. The skeleton FEAT must write the same rules and test them.
 5. Terminology register. The register has more than 300 records that an agent wrote. The owner must examine them and accept them (task 500.140).
 6. GitHub issue #4. The issue is about specmgr and not about this repository. The owner can move it.
-7. Gate for the STE check. See the conflict below.
+7. Gate for the STE check and script for the register. On hold (decision of the owner on 2026-11-03).
 
-## Conflict in the Policies
+## Items on Hold
 
-- The DEC about verification lists the STE check of changed documents as blocking gate 1. The DEC about the STE language tells authors not to use a different script for the STE check. A gate in CI must have an automatic tool. The owner must make a decision. The project can add a tool for CI, or the project can do the STE check in a review and not in a gate.
-- The DEC about the register has the same conflict. It has a rule for a script that validates the register.
+- The DEC about verification lists the STE check of changed documents as blocking gate 1. The DEC about the STE language tells authors not to use a different script for the STE check. The owner put this on hold. CI runs without the STE check, and authors do it with the asdste100 MCP.
+- The DEC about the register has the same item on hold. The project has no script that validates the register for now.
 
 ## Other Items
 
