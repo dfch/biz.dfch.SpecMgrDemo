@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: planning
 type: feat
-updated: '2026-11-03T12:22:50.955+01:00'
+updated: '2026-11-03T12:48:43.536+01:00'
 version: 1.0.0
 ---
 
@@ -22,7 +22,7 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - REQ-002: A `justfile` must be the one entry point for local work and for CI.
 
-- REQ-003: The versions of the JDK, Maven, Node, pnpm and just must be in one file, `tools/versions.env`. The JDK and Node must be LTS versions. The install scripts and the CI workflow must read the versions from this file.
+- REQ-003: The versions of the JDK, Maven, Node, pnpm and just must be in one file, `tools/versions.env`. The JDK and Node must be LTS versions. The install scripts must read the versions from this file. The CI workflow must have the same versions, and a check must show that they are the same (a GitHub Action cannot read this file without a `run:` step).
 
 - REQ-004: Each tool must have a license check before the project uses it.
 
@@ -46,15 +46,17 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - REQ-014: The owner must have a suggestion for a skill about the names of scripts in the format `TTT.MMM-NN-name.sh`.
 
+- REQ-015: Each GitHub Action in a workflow must be pinned to a full commit SHA. A comment next to the SHA must give the name of the action and the tag of the release.
+
 ### Acceptance Criteria
 
 - [ ] ACC-001: The layout from REQ-001 is in the repository, and each folder has a short README. The `tools/` README tells where the install scripts are.
 
 - [ ] ACC-002: `just --list` shows the recipes for validation, license check, SBOM, commit check and check of the build commands. Each CI job starts only a `just` recipe (REQ-002, REQ-009).
 
-- [ ] ACC-003: In each workflow, each `run:` step is exactly `just <recipe>`, and the recipe is in the `justfile`. The only exception is the bootstrap step that installs `just`, and it is in the list of exceptions of the gate. The gate stops the pull request if a `run:` step does not obey this rule. The `uses:` steps must be the actions that are in the license table.
+- [ ] ACC-003: In each workflow, each `run:` step is exactly `just <recipe>`, and the recipe is in the `justfile`. There is no exception: the action `extractions/setup-just` installs `just`, so no bootstrap `run:` step is necessary. The gate stops the pull request if a `run:` step does not obey this rule. The `uses:` steps must be the actions that are in the license table.
 
-- [ ] ACC-004: The file `tools/versions.env` has the pins. The install scripts and the CI workflow read the versions from it. In a new shell, after the scripts operate, `java -version` shows Eclipse Temurin 21 (not the JDK 11 of the system), and Maven, Node, pnpm and just show the pinned versions.
+- [ ] ACC-004: The file `tools/versions.env` has the pins. The install scripts read the versions from it. The versions in the CI workflow are the same as in the file, and the `just` recipe for the pin check shows this (ACC-013). In a new shell, after the scripts operate, `java -version` shows Eclipse Temurin 21 (not the JDK 11 of the system), and Maven, Node, pnpm and just show the pinned versions.
 
 - [ ] ACC-005: Each tool and each GitHub Action in the license table of this plan has the result of the check. A tool with a license that is not clear, or with no class in the DEC, is not in use.
 
@@ -64,13 +66,15 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 - [ ] ACC-008: The owner has set the branch protection with all the gates of this feature, one review, and the review of a code owner for the files in CODEOWNERS, or the plan shows the open item for the owner.
 
-- [ ] ACC-009: The license gate, on a fixture list of licenses, stops for a license that is not permitted, stops for a license that is not known, stops for `GPL-2.0-only` with no exception, and does not stop for `GPL-2.0-only WITH Classpath-exception-2.0` and the other permitted licenses (REQ-006).
+- [ ] ACC-009: The license gate, on a fixture list of licenses, stops for a license that is not permitted, stops for a license that is not known, stops for `GPL-2.0-only` with no exception, and does not stop for `GPL-2.0-only WITH Classpath-exception-2.0` and the other permitted licenses (REQ-006). For an expression with `OR`, the gate does not stop if at least one alternative is permitted (for example `MIT OR Apache-2.0`), and it stops if no alternative is permitted. For a license name that is not an SPDX identifier (for example `Apache License, Version 2.0` in an SBOM), the gate uses a table of names. A name that is not in the table is "not known", and the gate stops.
 
 - [ ] ACC-010: The `sbom` recipe operates and writes the SBOM file at the path in the `justfile` (REQ-006). The test of the content with real dependencies is open until feat-6 gives the manifests.
 
 - [ ] ACC-011: No script of this feature has the word `sudo` in a command, and the scripts operate for a user that has no sudo (REQ-008). A check in the `justfile` shows this.
 
 - [ ] ACC-012: The instructions for the branch protection and the suggestion for the skill are documents in the folder of this feature (REQ-013, REQ-014).
+
+- [ ] ACC-013: In each workflow, each `uses:` step has a full commit SHA (40 hexadecimal characters) and not a tag or a branch. A comment on the same line gives the name of the action and the tag of the release, for example `uses: actions/checkout@<sha> # actions/checkout v7.0.1`. A `just` recipe checks this form, and checks that the versions of the tools in the workflow are the same as in `tools/versions.env` (REQ-003, REQ-015).
 
 ### Scope
 
@@ -120,7 +124,13 @@ This feature makes the base of the toolchain. It gives the layout of the monorep
 
 The names of the install scripts have the format `TTT.MMM-NN-name.sh`. TTT.MMM is the number of the task in this plan. NN is the number of the step in the task. Each script has a header with the feature and the task, sets `set -euo pipefail`, can be operated again with no error, and does not need sudo. A `_common.sh` file has the shared functions. A README in the `bin` folder gives the sequence of the scripts. The style comes from the scripts of the sibling repository `biz.dfch.LlmOps` (folder `feat-0-screen-record/bin/`). This plan has the rules, so a missing sibling repository does not stop the work.
 
-The install scripts are for the machine of the author only. CI does not use them. CI gets the tools with pinned setup actions that read the versions from `tools/versions.env`. The one bootstrap step that installs `just` is the only `run:` step that is not `just <recipe>`.
+The install scripts are for the machine of the author only. CI does not use them. CI gets the tools with setup actions (see the table below). An action cannot read `tools/versions.env` without a `run:` step, and ACC-003 does not allow such a step. So the workflow has the versions as inputs of the actions, and a `just` recipe checks that they are the same as in `tools/versions.env` (decision of the owner on 2026-11-03: option A, one source of truth with a check). The action `extractions/setup-just` installs `just`, so the workflow has no bootstrap `run:` step.
+
+Each action is pinned to a full commit SHA with a comment on the same line that gives the name and the release tag (REQ-015). Example: `uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1`. The SHAs in the table below are the commits of the tags on 2026-11-03. Task 130.100 must resolve them again with `git ls-remote` before it writes them. The action `extractions/setup-just` calls `extractions/setup-crate`, so the workflow has this second action in use too, but only as a part of the first. The pin of the first action fixes the second one.
+
+For the Maven version, the Maven Wrapper (`mvnw`) is a choice for feat-6-contracts-openapi-pipeline, when `pom.xml` exists. The wrapper pins Maven in the repository, and a local run and a CI run then use the same Maven.
+
+Tools for the gates (decision of the owner on 2026-11-03). The commit message gate and the license gate are scripts of this project in `tools/gates/`, and need no tool of another vendor. The gate for the commit messages reads the format `type(feat-N): subject`. The license gate reads the SBOM in the CycloneDX format and the list `tools/license/permitted-licenses.txt`. The SBOM for Maven comes from `cyclonedx-maven-plugin` 2.9.3. The SBOM for pnpm comes from `@cyclonedx/cdxgen` 12.9.0 (the latest release on npm; the GitHub page of the project shows v13.6.0, which is not on npm under this name, so the agent pins 12.9.0). `@cyclonedx/cyclonedx-node-pnpm` is not in use because its repository is archived. `mojohaus/license-maven-plugin` is not in use because it covers Maven only. The specmgr gate needs `uv`, and the action `astral-sh/setup-uv` installs it.
 
 The version file has the version of each tool and the checksum of each download. The checksums come from the files that the vendor publishes with the release. The install script compares them with the checksum of the downloaded file. The file `tools/versions.env` is at repository level, because CI, feat-6 and feat-7 also read it.
 
@@ -142,7 +152,7 @@ The commit scope is the number of the feature, for example `feat(feat-5): ...` (
 
 Gates with no feature at this time: the traceability check (gate 2) and the security checks (part of gate 9) of DEC 361678a6-f941-473b-a058-1ba2bacf7d3d. GitHub issue #8 is for them, and the owner makes a FEAT for it later. When a gate exists, Task 130.150 and the instructions for the branch protection must have it.
 
-License table (the agent fills it in tasks 100.100 to 100.120, from the license file of each tool and not from memory):
+License table (the agent filled it in tasks 100.100 to 100.120, from the license file of each tool and not from memory. Under rule A, the licenses of the parts that a tool or an action bundles are not checked. The GitHub Actions of `actions/*` are JavaScript actions with their dependencies in `dist/`):
 
 | Tool | Use | License | Result |
 |---|---|---|---|
@@ -153,10 +163,19 @@ License table (the agent fills it in tasks 100.100 to 100.120, from the license 
 | corepack (part of Node) | build | MIT. Source: the corepack part of the `LICENSE` of Node 26.13.0 | Permitted |
 | just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Permitted since 2026-11-03 11:17 (the DEC has `CC0-1.0`). The legal review of this entry is open |
 | specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | Permitted (the DEC has `AGPL-3.0-or-later` since 2026-11-03 11:17) |
-| GitHub Actions in the workflow (checkout and the setup actions, not selected) | CI | not checked | open |
-| Commit message checker (not selected) | gate | not checked | open |
-| SBOM tool (not selected) | gate | not checked | open |
-| License check tool (not selected) | gate | not checked | open |
+| Action `actions/checkout` v7.0.1, SHA `3d3c42e5aac5ba805825da76410c181273ba90b1` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `actions/setup-java` v6.1.0, SHA `b843ebf9b913146b38da2eaa7aeddf76074ae1ad` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `actions/setup-node` v7.1.0, SHA `949feb2413d6458794dcd2491c4babbbce0c15c1` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `pnpm/action-setup` v6.1.0, SHA `ea17c68df8912ef543352723c149a84f56e3d413` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `actions/upload-artifact` v7.0.2, SHA `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | CI (SBOM file) | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `astral-sh/setup-uv` v10.3.3, SHA `68559e99cc807c1eb7e9238fd43a15bba460eec2` | CI (for specmgr) | MIT. Source: `LICENSE` at this commit | Permitted |
+| Action `extractions/setup-just` v4 (the same commit as v4.0.0), SHA `53165ef7e734c5c07cb06b3c8e7b647c5aa16db3` | CI | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the license part of the `README.md` ("either at your option") at this commit. The GitHub metadata shows only Apache-2.0 | Permitted (both alternatives are permitted) |
+| Action `extractions/setup-crate` v2.0.0, SHA `0551596312d4008a6dfbc4d3c38fa20eaef46d2d` (called by `setup-just`) | CI | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the `README.md` at this commit | Permitted |
+| uv (latest release on GitHub: 0.13.7; version for Task 110.100) | CI (for specmgr) | MIT OR Apache-2.0. Source: `LICENSE-MIT`, `LICENSE-APACHE` and the `README.md` at the release tag | Permitted |
+| Commit message gate (script of this project) | gate | AGPL-3.0-only (project code). No tool of another vendor | Permitted (no check necessary) |
+| License gate (script of this project) | gate | AGPL-3.0-only (project code). No tool of another vendor | Permitted (no check necessary) |
+| SBOM for Maven: `cyclonedx-maven-plugin` 2.9.3 | gate | Apache-2.0. Source: `LICENSE` in the repository at the tag commit `93e97e1c7e50b08cbba62549c2ed88c95202ed62`, and `<licenses>` in the POM. The jar has no license file. sha256 of the jar: `c452d5eebe28bc86bef2e7c72d129f04f60877bef843eac8120f01fb655be293` (the same as the value on Maven Central) | Permitted |
+| SBOM for pnpm: `@cyclonedx/cdxgen` 12.9.0 | gate | Apache-2.0. Source: `package/LICENSE` in the npm package. The integrity value of the package is `sha512-+LWBiyTgdSWdprdsA7xpNEhD9NV/Wo3TvqaVYQHjP3kEeNEZTV+08U8CYh+P2+2CHycwKFWHhtSREN+p/r6Sgw==`. The package has 29 dependencies, and under rule A they are not checked | Permitted |
 
 Inventory of the bundled licenses of the JDK, Maven and Node (2026-11-03). The owner first chose rule B (each bundled license needs a class) and then rule A (only the main license of a tool is checked). Under rule A the inventory is for information. It is the list that rule B needed, and it helps if a tool goes to users later. On 2026-11-03 11:22 the owner gave a permission to add the five rows that the agent proposed as Permitted (Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0), and the agent added them. The other rows are not in the DEC. "Proposal" is the view of the agent. The legal classes are for a person with competence in the law.
 
@@ -200,15 +219,15 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 - [x] Task 100.110: Read each license file of the Eclipse Temurin 21 download (the owner selected it), including the `legal/` folder. Confirm the main license `GPL-2.0-only WITH Classpath-exception-2.0`, and write the result in the license table
 
-- [ ] Task 100.115: Select the GitHub Actions for the checkout and for the setup of the tools, read their license files, and write the results in the license table
+- [x] Task 100.115: Select the GitHub Actions for the checkout and for the setup of the tools, read their license files, and write the results in the license table
 
-- [ ] Task 100.120: Select the tools for the commit message check, the license check and the SBOM, read their license files, and write the results in the license table
+- [x] Task 100.120: Select the tools for the commit message check, the license check and the SBOM, read their license files, and write the results in the license table
 
-- [ ] Task 100.130: Tell the owner about each license that has no class in the DEC about licenses (for example `just`), and wait for the decision of the owner
+- [x] Task 100.130: Tell the owner about each license that has no class in the DEC about licenses (for example `just`), and wait for the decision of the owner
 
 #### Phase 110: Install Scripts
 
-- [ ] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors) and the `_common.sh` file in the `bin` folder of this feature
+- [ ] Task 110.100: Write the version file `tools/versions.env` (versions and checksums from the files of the vendors, for the JDK, Maven, Node, pnpm, just, uv, `cyclonedx-maven-plugin` and `@cyclonedx/cdxgen`) and the `_common.sh` file in the `bin` folder of this feature
 
 - [ ] Task 110.105: Write the install script for Node. It checks the version, and does not use the Node of the machine without this check
 
@@ -228,7 +247,7 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 #### Phase 130: CI and Gates
 
-- [ ] Task 130.100: Write the GitHub Actions workflow. Each job starts one `just` recipe. The tools come from the pinned setup actions with the versions from `tools/versions.env`
+- [ ] Task 130.100: Write the GitHub Actions workflow. Each job starts one `just` recipe. The tools come from the setup actions of the license table. Each action is pinned to a full commit SHA with a comment (name and release tag, REQ-015). Resolve the SHAs again with `git ls-remote` before writing them. The versions are inputs of the actions, and they are the same as in `tools/versions.env`
 
 - [ ] Task 130.110: Write the gate for the specmgr validation of the changed documents
 
@@ -236,9 +255,11 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 - [ ] Task 130.130: Write the license gate with the list `tools/license/permitted-licenses.txt`, and the SBOM
 
-- [ ] Task 130.135: Test the license gate with the fixtures in `tools/license/fixtures/`: a license that is not permitted, a license that is not known, `GPL-2.0-only` with no exception, the complete expression with the Classpath exception, and a permitted license. Write the expected result of each
+- [ ] Task 130.135: Test the license gate with the fixtures in `tools/license/fixtures/`: a license that is not permitted, a license that is not known, `GPL-2.0-only` with no exception, the complete expression with the Classpath exception, a permitted license, an expression with `OR` and one permitted alternative (for example `MIT OR Apache-2.0`), an expression with `OR` and no permitted alternative, and a license name that is not an SPDX identifier (one in the table of names, one not in the table). Write the expected result of each
 
-- [ ] Task 130.140: Write the gate for the build commands: each `run:` step must be `just <recipe>` with a recipe in the `justfile`, with the list of exceptions (the bootstrap step of `just`)
+- [ ] Task 130.140: Write the gate for the build commands: each `run:` step must be `just <recipe>` with a recipe in the `justfile`. There is no list of exceptions
+
+- [ ] Task 130.142: Write the check for the pins, as a recipe in the `justfile`: each `uses:` step has a full commit SHA and a comment with the name and the release tag (ACC-013), and the versions of the tools in the workflow are the same as in `tools/versions.env`
 
 - [ ] Task 130.145: Write the check for `sudo` in the scripts and make it a recipe in the `justfile`
 
@@ -258,21 +279,33 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 
 ### Current Status
 
-**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 has started: the licenses of the JDK, Maven, Node, pnpm, corepack, just and specmgr are read (Tasks 100.100, 100.105 and 100.110 are done). The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). All the tools in the license table are permitted. Task 100.130 has no open item. The text of rule A is not yet in the DEC (see Blockers). Tasks 100.115 and 100.120 can continue, because they select other tools. The first change to files that are not documents has not been made. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
+**As of 2026-11-03**: The plan is written and refined (see the update of 2026-11-03 09:58). Phase 100 is done (Tasks 100.100 to 100.130): the licenses of all tools, actions and gate tools are read, and all of them are permitted. The owner chose Node 26.13.0 (LTS) and rule A for the licenses of tools (only the main license). Rule A is now in the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The gate tools are two scripts of this project (commit messages and licenses), `cyclonedx-maven-plugin` 2.9.3 and `@cyclonedx/cdxgen` 12.9.0 for the SBOM. The actions are pinned to full commit SHAs with a comment. Phase 100 has only documents. The next step is phase 110 (install scripts), and it changes files that are not documents. Branch: create `feat-5-foundation-monorepo-ci` from `dev` before the first change to files that are not documents.
 
 ### Blockers
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
-- Open item for the owner (not a blocker for phase 100): rule A (the license check of a tool covers its main license only) is the decision of the owner, but the text of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 does not yet say it. Its Consequences say that the rule includes build tools and tools in CI. The agent needs a permission for one time to change the DEC (a new paragraph in More Information, a change in the first bullet of Consequences, and an Updates entry). Until then, the plan follows rule A as a decision of the owner.
+- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03: `CC0-1.0`, `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0`. The review of the Classpath row is done (dfch, 2026-11-03).
+- Open item for the agent: the GitHub page of `cdxgen` shows v13.6.0, but npm has 12.9.0 as the latest release. Task 130.130 must check again which version is correct, and must not change the pin without a check of the license.
 - No deviation DEC is necessary at this time. Under rule A, the EPL-2.0 in Maven and the MPL-2.0 in the JDK are not checked. If a deviation is necessary later, the owner wants one DEC for all deviations (see the update of 2026-11-03 11:22).
 - Resolved on 2026-11-03: `just` (CC0-1.0 is in the class Permitted) and specmgr (`AGPL-3.0-or-later` is in the class Permitted) are not a blocker. pnpm and corepack (MIT) were not a blocker. The legal review of the CC0-1.0 entry is open.
-- Open item for the owner (not a blocker): the work of this plan and the earlier plans is in commits on `dev`, and DEC a56f231b-d063-4bef-bbc8-3deb4daff76e says that each change goes through a pull request. Documents on `dev` before the branch protection exists are a start exception that the DEC does not give. The owner must confirm it or make a rule.
 - Open item for the owner (not a blocker): the traceability gate and the security checks have no feature at this time. [Issue #8](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8) is for them. The owner makes a FEAT for it later.
 - Open item for the owner (not a blocker): the CODEOWNERS entry for the thresholds is added when the walking skeleton makes them.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 11:48:13.000Z - Actions and gate tools selected, DEC changed for rule A (Tasks 100.115, 100.120)
+
+The owner agreed to the suggestions of the agent and to the change of the DEC. The agent did this:
+
+1. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9: the first bullet in Consequences has rule A, the option in Considered Options says one register DEC for all deviations, and More Information has a paragraph about the register. The Decision Outcome and the class table are not changed. The DEC has an Updates entry.
+2. Task 100.115: the agent resolved each tag to a commit SHA with `git ls-remote` and read the `LICENSE` file at that commit. The actions are `actions/checkout`, `actions/setup-java`, `actions/setup-node`, `actions/upload-artifact`, `pnpm/action-setup`, `astral-sh/setup-uv` (all MIT) and `extractions/setup-just` with `extractions/setup-crate` (MIT OR Apache-2.0). `extractions/setup-just` installs `just`, so there is no bootstrap `run:` step, and ACC-003 has no exception. `setup-uv` is new in the plan, because the specmgr gate needs `uv`.
+3. Pin form (owner): a full commit SHA, and a comment on the same line with the name of the action and the release tag (REQ-015, ACC-013, Task 130.142).
+4. Task 100.120: the commit message gate and the license gate are scripts of this project. The SBOM tools are `cyclonedx-maven-plugin` 2.9.3 (Apache-2.0) and `@cyclonedx/cdxgen` 12.9.0 (Apache-2.0). The pin check recipe in the `justfile` shows that the versions in the workflow are the same as in `tools/versions.env` (option A).
+5. The license gate must handle `OR` expressions (permitted if one alternative is permitted) and names that are not SPDX identifiers (ACC-009, Task 130.135). `extractions/setup-just` and `uv` have `MIT OR Apache-2.0`, so the gate needs this rule.
+
+Not done: the agent did not install a tool and did not write a version file. The cdxgen page on GitHub and npm show different latest versions (see Blockers).
 
 #### 2026-11-03 11:22:16.000Z - Rule A for tools, five licenses added, one DEC for deviations
 
