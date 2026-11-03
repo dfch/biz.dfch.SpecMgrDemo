@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-03T06:59:14.366+01:00'
+updated: '2026-11-03T07:34:53.937+01:00'
 version: 1.0.0
 ---
 
@@ -57,15 +57,20 @@ This handbook is the index of the development policies and standards of this rep
 - RSK 5dfbf884-0ba4-4ecc-b97e-191aca335b98: Specmgr Has No French Heading Table and No SRS Type
 - RSK 3be3ffd7-62e9-4926-9996-a0806d093228: A Necessary Tool Can Break the Open Source License Rule
 
+## Review Aids
+
+- TXT 2e96237c-0bee-45ac-b44a-c7ffee105ab7: List of the DEC Documents for the Acceptance by the Owner
+- TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f: Worksheet for the STE Review
+
 ## Tools and Data
 
-- The asdste100 MCP gives the STE rules and words. It loads the register files as extra word lists.
+- The asdste100 MCP gives the STE rules and words. It loads the register files as more word lists.
 - `terminology/en/` has the terminology register (technical nouns and technical verbs) and the gap log.
 
 ## Open Items
 
-- All DEC documents have the status draft. The owner must accept them.
-- After the owner accepts the DEC about React, task 300.100 of feature feat-1 is done.
+- The DEC about React has the status accepted. Task 300.100 of feature feat-1 is done.
+- The 16 other DEC documents have the status draft. The owner must accept them (see the list for the owner).
 - The user configuration of the asdste100 MCP must load the register files in `terminology/en/`.
 - The skeleton FEAT must set the versions, examine the licenses of the tools and set the thresholds from a measured baseline.
 - GitHub issue #4 is about the French heading table in specmgr.
