@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T18:38:39.919+01:00'
+updated: '2026-11-03T22:17:37.880+01:00'
 version: 1.0.0
 ---
 
@@ -84,6 +84,10 @@ All approved deviations are in one register DEC, with one dated section for each
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 21:17:29.000Z - Review of the license DEC by the owner
+
+The owner gave a permission for one time to add this entry, and no other change (statement of the owner on 2026-11-03, in the chat: "I reviewed the DEC 84c37f7d. I authorize you to update the DEC"). The owner told the coding agent on 2026-11-03 that the owner reviewed this DEC. The reviewer is dfch, and the date of the review is 2026-11-03 (the agent has no other source for this fact). The review covers the entries of the class Permitted that the agent added on 2026-11-03 after a permission of the owner: `CC0-1.0` (11:17), `AGPL-3.0-only` and `AGPL-3.0-or-later` (11:17), `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0` (11:22), `GPL-3.0-only` and `GPL-3.0-or-later` (17:21), and `LGPL-3.0-only`, `LGPL-3.0-or-later` and `GPL-2.0-or-later` (17:38). It also covers the row `GPL-2.0-only WITH Classpath-exception-2.0`, which the owner reviewed before (see the entry of 09:56). The owner did not tell the agent of a change in the class table, and this entry does not change the table. The license `GPL-2.0-only` with no exception stays not permitted (decision of the owner on 2026-11-03). The status and the text of the Decision Outcome are not changed.
 
 ### 2026-11-03 17:38:32.000Z - LGPL-3.0-only, LGPL-3.0-or-later and GPL-2.0-or-later in the class Permitted
 

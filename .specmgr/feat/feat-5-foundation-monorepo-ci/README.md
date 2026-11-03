@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: done
 type: feat
-updated: '2026-11-03T20:41:16.863+01:00'
+updated: '2026-11-03T22:18:55.421+01:00'
 version: 1.0.0
 ---
 
@@ -165,7 +165,7 @@ License table (the agent filled it in tasks 100.100 to 100.120, from the license
 | Node 26.13.0 (selected by the owner on 2026-11-03: LTS "Lithium") | build and run | MIT. Source: `LICENSE` of the download. It lists 43 bundled components (see the inventory in Design Notes) | Permitted (main license, rule A of the owner). The bundled Unicode-3.0, Zlib, Artistic-2.0 and BlueOak-1.0.0 are also in the class Permitted since 2026-11-03 11:22. The other bundled licenses are not checked under rule A |
 | pnpm 12.16.1 (standalone release `pnpm-linux-x64.tar.gz`, sha256 `565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825`, the same as the digest on GitHub) | build | MIT. Source: `LICENSE` of the repository at the tag v12.16.1. The npm package has no `LICENSE` file, only the field `license` in `package.json` and `THIRD-PARTY-NOTICES.md` (BSD-2-Clause, ISC) | Permitted |
 | corepack | not in use | MIT (the corepack part of the `LICENSE` of Node 26.13.0). Node 26.13.0 does not ship corepack, and no script installs it | Not in use. The row is for information |
-| just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Permitted since 2026-11-03 11:17 (the DEC has `CC0-1.0`). The legal review of this entry is open |
+| just 1.59.0 (candidate) | task runner | CC0-1.0. Source: `LICENSE` of the download | Permitted since 2026-11-03 11:17 (the DEC has `CC0-1.0`). The owner reviewed the DEC, with this entry, on 2026-11-03 (statement of the owner) |
 | specmgr 0.38.0 | gate | AGPL-3.0-or-later. Source: `licenses/LICENSE` in the dist-info of the installed package | Permitted (the DEC has `AGPL-3.0-or-later` since 2026-11-03 11:17) |
 | Action `actions/checkout` v7.0.1, SHA `3d3c42e5aac5ba805825da76410c181273ba90b1` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
 | Action `actions/setup-java` v6.1.0, SHA `b843ebf9b913146b38da2eaa7aeddf76074ae1ad` | CI | MIT. Source: `LICENSE` at this commit | Permitted |
@@ -304,13 +304,13 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 - Resolved on 2026-11-03: the owner decided that `GPL-2.0-only` with no exception stays not permitted. ACC-009 is not changed. This answers the question in the item below about `GPL-2.0-only`.
 
 - None for the start of phase 100. The JDK vendor is selected (Eclipse Temurin 21) and the license class is permitted since 2026-11-03. The owner told the agent on 2026-11-03 that the review of the new license class is done. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry about this statement.
-- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03: `CC0-1.0`, `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0`. The review of the Classpath row is done (dfch, 2026-11-03).
-- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `GPL-3.0-only` and `GPL-3.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:21 (after a permission of the owner for this change only). The decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later` was open at that time. It is done (see the update of 2026-11-03 17:38).
-- Open item for the owner (not a blocker): a person who has competence in the law must examine the entries `LGPL-3.0-only` (was the short form `LGPL-3.0`), `LGPL-3.0-or-later` and `GPL-2.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:38 (after a permission of the owner for this change only). `GPL-2.0-only` with no exception is not changed and stays not permitted. The owner is asked to confirm whether it must be permitted, because that reverses an explicit rule of the DEC and of ACC-009.
+- Resolved on 2026-11-03 (statement of the owner; DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry of 21:17): the owner reviewed the DEC. The review covers the entries that the agent added to the class Permitted on 2026-11-03: `CC0-1.0`, `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0`. The review of the Classpath row was done before (dfch, 2026-11-03).
+- Resolved on 2026-11-03 (statement of the owner; the DEC has an entry of 21:17): the owner reviewed the DEC. The review covers the entries `GPL-3.0-only` and `GPL-3.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:21 (after a permission of the owner for this change only). The decision for `LGPL-3.0-or-later` and `GPL-2.0-or-later` was open at that time. It is done (see the update of 2026-11-03 17:38).
+- Resolved on 2026-11-03 (statement of the owner; the DEC has an entry of 21:17): the owner reviewed the DEC. The review covers the entries `LGPL-3.0-only` (was the short form `LGPL-3.0`), `LGPL-3.0-or-later` and `GPL-2.0-or-later` that the agent added to the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 on 2026-11-03 17:38 (after a permission of the owner for this change only). `GPL-2.0-only` with no exception is not changed and stays not permitted: the owner decided this on 2026-11-03 (see the Resolved item above, "the owner decided that `GPL-2.0-only` with no exception stays not permitted").
 - Resolved on 2026-11-03 14:28 (Task 130.130): the GitHub page of `cdxgen` shows v13.6.0, and npm has 12.9.0 as the latest release of `@cyclonedx/cdxgen`. From v13 the project publishes under a new npm name, `@cdxgen/cdxgen` (13.6.0, Apache-2.0 in the npm data). The old name stays on npm with 12.9.0 as its last release. The pin stays `@cyclonedx/cdxgen` 12.9.0, and no license of another package was read. A change to `@cdxgen/cdxgen` 13.x is a decision of the owner for a later feature (it needs a license check of the new package and its dependencies).
 - Open item for the owner (not a blocker): the plan has no check yet that the pinned SHA belongs to the tag of its comment. `just check-pins` compares both with `tools/license/allowed-actions.txt`, and the agent resolved the SHAs with `git ls-remote` on 2026-11-03 (Task 130.100). A change of a SHA needs a new check by a person.
 - No deviation DEC is necessary at this time. Under rule A, the EPL-2.0 in Maven and the MPL-2.0 in the JDK are not checked. If a deviation is necessary later, the owner wants one DEC for all deviations (see the update of 2026-11-03 11:22).
-- Resolved on 2026-11-03: `just` (CC0-1.0 is in the class Permitted) and specmgr (`AGPL-3.0-or-later` is in the class Permitted) are not a blocker. pnpm and corepack (MIT) were not a blocker. The legal review of the CC0-1.0 entry is open.
+- Resolved on 2026-11-03: `just` (CC0-1.0 is in the class Permitted) and specmgr (`AGPL-3.0-or-later` is in the class Permitted) are not a blocker. pnpm and corepack (MIT) were not a blocker. The owner reviewed the DEC, with the CC0-1.0 entry, on 2026-11-03 (statement of the owner; the DEC has an entry of 21:17).
 - Open item for the owner (not a blocker): the traceability gate and the security checks have no feature at this time. [Issue #8](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8) is for them. The owner makes a FEAT for it later.
 - Open item for the owner (not a blocker): the CODEOWNERS entry for the thresholds is added when the walking skeleton makes them.
 - Open item for the owner (not a blocker): NOTICE has no copyright line. Add one if the project needs it. The syntax of `.github/CODEOWNERS` can be checked only after a push to the default branch (`gh api repos/dfch/biz.dfch.SpecMgrDemo/codeowners/errors`).
@@ -318,6 +318,14 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 21:18:40.000Z - Release PR #20 merged, strict status checks off on `main`, DEC reviewed by the owner
+
+The agent checked these facts with `gh` on 2026-11-03 at 21:17 UTC.
+
+1. Release: PR #20 ("release: dev to main (feat-5, feat-16)", from `dev` to `main`) is MERGED (merged by dfch at 2026-11-03T20:59:57Z, merge commit 0584392f635e4e3b7a07883d37413f28e4178413).
+2. Ruleset `main` (id 26481206): `strict_required_status_checks_policy` is now `false`. The owner or the orchestrator set it (the agent does not know which). The reason is that a release with a merge commit makes a commit on `main` that `dev` does not have, and the strict policy would make each next release pull request wait for a merge of `main` back into `dev`. The seven required checks are not changed.
+3. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9: the owner told the agent on 2026-11-03 that the owner reviewed the DEC, and gave a permission for one time to record this. The DEC has an entry of 21:17. The text of the decision, the status and the class table are not changed. The items about the review of the license entries in Blockers and the license table are updated. `GPL-2.0-only` with no exception stays not permitted. The work is not committed and not pushed.
 
 #### 2026-11-03 19:41:00.000Z - PR #9 merged into `dev`, `main` made the same as `dev` (release case, option A)
 
