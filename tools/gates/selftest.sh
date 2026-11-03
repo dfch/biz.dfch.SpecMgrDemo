@@ -569,6 +569,192 @@ expect 1 "MAVEN_VERSION is not in tools/versions.env" "versions.env has no MAVEN
     env GATE_WORK_ROOT="${work}/mv-ok" "${GATES_DIR}/check-pins.sh" "${work}/versions-nomaven.env" "${work}/wf-real" "${real_allowed}"
 
 # ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the lock file of cdxgen in tools/sbom/ (finding G2, feat-16-cdxgen-lockfile, REQ-003, REQ-005)"
+real_tool="${REPO_ROOT}/tools/sbom"
+cdxgen_version="$(version_of CDXGEN_VERSION)"
+cdxgen_integrity="$(version_of CDXGEN_INTEGRITY)"
+other_version="0.0.1"
+other_integrity="sha512-$(printf 'A%.0s' {1..86})=="
+# run_sbom_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the cdxgen project
+run_sbom_pins() { env SBOM_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_tool <name>: a copy of package.json and pnpm-lock.yaml of the repository in a new folder (the folder is printed)
+mk_tool() {
+    local dir="${work}/sbomtool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_tool}/package.json" "${real_tool}/pnpm-lock.yaml" "${dir}/"
+    echo "${dir}"
+}
+# sbom_pin_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
+sbom_pin_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/${file}"
+    if cmp -s "${real_tool}/${file}" "${dir}/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_sbom_pins "${dir}"
+}
+# sbom_pin_append_case <name> <file> <text> <description> <text to append>: add text at the end of <file> in a copy
+sbom_pin_append_case() {
+    local name="$1" file="$2" text="$3" description="$4" dir
+    dir="$(mk_tool "${name}")"
+    printf '%b' "$5" >>"${dir}/${file}"
+    expect 1 "${text}" "${description}" run_sbom_pins "${dir}"
+}
+# versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/sbomver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/sbomver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_sbom_pins "${real_tool}" "${work}/sbomver-${name}.env"
+}
+first_package="/^packages:/,/resolution:/"
+
+expect 0 "SBOM tool pin: SBOM tool: ${real_tool}: @cyclonedx/cdxgen ${cdxgen_version}" "the real tools/sbom/ is the one of versions.env" run_sbom_pins "${real_tool}"
+expect 0 "RESULT: PASS" "the real tools/sbom/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# The three places, each alone (REQ-005): a change of one place stops the check
+versions_case onlyversions "CDXGEN_VERSION in tools/versions.env is ${other_version}" "one place only: versions.env has another CDXGEN_VERSION" \
+    "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=${other_version}#"
+versions_case onlyintegrity "but CDXGEN_INTEGRITY in tools/versions.env is ${other_integrity}" "one place only: versions.env has another CDXGEN_INTEGRITY" \
+    "s#^CDXGEN_INTEGRITY=.*#CDXGEN_INTEGRITY=${other_integrity}#"
+sbom_pin_case onlypackage package.json "but CDXGEN_VERSION in tools/versions.env is ${cdxgen_version}" "one place only: package.json has another version" \
+    "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${other_version}\"#"
+sbom_pin_case onlylock pnpm-lock.yaml "the importer has @cyclonedx/cdxgen \`version\` '${other_version}'" "one place only: the lock file has another version of cdxgen (importer)" \
+    "s#^\\(        version: \\)${cdxgen_version}\$#\\1${other_version}#"
+sbom_pin_case onlylockpackages pnpm-lock.yaml "\`packages\` must have exactly one @cyclonedx/cdxgen" "one place only: the lock file has another version of cdxgen (packages)" \
+    "0,/^  '@cyclonedx\\/cdxgen@${cdxgen_version}':/s##  '@cyclonedx/cdxgen@${other_version}':#"
+sbom_pin_case onlylockintegrity pnpm-lock.yaml "but CDXGEN_INTEGRITY in tools/versions.env is ${cdxgen_integrity}" "one place only: the lock file has another integrity value of cdxgen" \
+    "s#${cdxgen_integrity}#${other_integrity}#"
+# All three places with the same new value pass (this is the update procedure of tools/sbom/README.md; the lock file here is a copy with the value changed by sed)
+dir="$(mk_tool allthree)"
+sed -i -e "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${other_version}\"#" "${dir}/package.json"
+sed -i -e "s#@cyclonedx/cdxgen@${cdxgen_version}#@cyclonedx/cdxgen@${other_version}#" \
+    -e "s#^\\(        \\(specifier\\|version\\): \\)${cdxgen_version}\$#\\1${other_version}#" \
+    -e "s#${cdxgen_integrity}#${other_integrity}#" "${dir}/pnpm-lock.yaml"
+sed -e "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=${other_version}#" -e "s#^CDXGEN_INTEGRITY=.*#CDXGEN_INTEGRITY=${other_integrity}#" \
+    "${real_versions}" >"${work}/sbomver-allthree.env"
+expect 0 "RESULT: PASS" "all three places have the same new version and integrity value" run_sbom_pins "${dir}" "${work}/sbomver-allthree.env"
+
+# package.json: ranges and tags
+for range in "^${cdxgen_version}" "~${cdxgen_version}" ">=${cdxgen_version}" "${cdxgen_version}.x" "12.x" "*" "latest" "next" "${cdxgen_version} || 0.0.1" "npm:@cyclonedx/cdxgen@${cdxgen_version}" "file:../x" "git+https://example.invalid/x.git"; do
+    sbom_pin_case "range-${range//[^A-Za-z0-9]/_}" package.json "but CDXGEN_VERSION in tools/versions.env is ${cdxgen_version}" "package.json: the version is a range or a tag (${range})" \
+        "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${range}\"#"
+done
+# package.json: other dependencies and other keys
+sbom_pin_case extradep package.json "has the dependency left-pad" "package.json: one more dependency" \
+    "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\",\n    \"left-pad\": \"1.3.0\"#"
+sbom_pin_case otherdep package.json "has the dependency left-pad" "package.json: another dependency and not cdxgen" \
+    "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"left-pad\": \"1.3.0\"#"
+sbom_pin_case nodep package.json "has no dependency @cyclonedx/cdxgen" "package.json: no dependency" \
+    "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"##"
+sbom_pin_case nodeps package.json "has no \`dependencies\` object" "package.json: no dependencies key" \
+    "s#\"dependencies\"#\"x-dependencies\"#"
+for key in devDependencies optionalDependencies peerDependencies; do
+    sbom_pin_case "key-${key}" package.json "has the key \`${key}\`" "package.json: ${key}" \
+        "s#\"private\": true,#\"private\": true,\n  \"${key}\": {\"left-pad\": \"1.3.0\"},#"
+    sbom_pin_case "keyempty-${key}" package.json "has the key \`${key}\`" "package.json: an empty ${key}" \
+        "s#\"private\": true,#\"private\": true,\n  \"${key}\": {},#"
+done
+sbom_pin_case overrides package.json "has the key \`overrides\`" "package.json: overrides" \
+    "s#\"private\": true,#\"private\": true,\n  \"overrides\": {\"yargs\": \"1.0.0\"},#"
+sbom_pin_case pnpmoverrides package.json "has the key \`pnpm\`" "package.json: pnpm settings with overrides" \
+    "s#\"private\": true,#\"private\": true,\n  \"pnpm\": {\"overrides\": {\"yargs\": \"1.0.0\"}},#"
+sbom_pin_case resolutions package.json "has the key \`resolutions\`" "package.json: resolutions" \
+    "s#\"private\": true,#\"private\": true,\n  \"resolutions\": {\"yargs\": \"1.0.0\"},#"
+sbom_pin_case packagemanager package.json "has the key \`packageManager\`" "package.json: a packageManager field" \
+    "s#\"private\": true,#\"private\": true,\n  \"packageManager\": \"pnpm@${cdxgen_version}\",#"
+sbom_pin_case scripts package.json "has the key \`scripts\`" "package.json: scripts (a preinstall script of the project)" \
+    "s#\"private\": true,#\"private\": true,\n  \"scripts\": {\"preinstall\": \"true\"},#"
+sbom_pin_case dupkey package.json "there two times" "package.json: a key two times" \
+    "s#\"private\": true,#\"private\": true,\n  \"private\": false,#"
+sbom_pin_append_case jsonbad package.json "cannot be read as JSON" "package.json: not JSON" "{"
+dir="$(mk_tool jsonarray)" && echo '[]' >"${dir}/package.json"
+expect 1 "is not a JSON object" "package.json: a JSON array" run_sbom_pins "${dir}"
+
+# The lock file: the importer
+sbom_pin_case lockextradep pnpm-lock.yaml "must have exactly one dependency, @cyclonedx/cdxgen" "lock file: a second direct dependency of the importer" \
+    "s#^\\(        version: ${cdxgen_version}\\)\$#\\1\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+sbom_pin_case lockdevdep pnpm-lock.yaml "must have \`dependencies\` and nothing else" "lock file: devDependencies in the importer" \
+    "s#^\\(        version: ${cdxgen_version}\\)\$#\\1\n    devDependencies:\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+sbom_pin_case lockotherimporter pnpm-lock.yaml "must have exactly one importer \`.\`" "lock file: a second importer" \
+    "s#^packages:#  other:\n    dependencies: {}\n\npackages:#"
+sbom_pin_case lockspecifier pnpm-lock.yaml "the importer has @cyclonedx/cdxgen \`specifier\` '^${cdxgen_version}'" "lock file: the specifier is a range" \
+    "s#^\\(        specifier: \\)${cdxgen_version}\$#\\1^${cdxgen_version}#"
+sbom_pin_case lockversionimporter pnpm-lock.yaml "must be a text that starts with \`9.\`" "lock file: lockfileVersion 8.0" \
+    "s#^lockfileVersion: '9.0'#lockfileVersion: '8.0'#"
+sbom_pin_case lockversionfloat pnpm-lock.yaml "must be a text that starts with \`9.\`" "lock file: lockfileVersion 9.0 is a number and not a text" \
+    "s#^lockfileVersion: '9.0'#lockfileVersion: 9.0#"
+# The lock file: the packages
+sbom_pin_case lockwrongversion pnpm-lock.yaml "has an integrity value that is not sha256, sha384 or sha512" "lock file: a package with an integrity value of sha1" \
+    "${first_package}s#integrity: [^}]*}#integrity: sha1-AAAAAAAAAAAAAAAAAAAAAAAAAAA=}#"
+sbom_pin_case locknoint pnpm-lock.yaml "has no integrity value" "lock file: a package with no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {}#"
+sbom_pin_case locknores pnpm-lock.yaml "has no \`resolution\`" "lock file: a package with no resolution" \
+    "${first_package}s#^    resolution: .*#    deprecated: x#"
+sbom_pin_case locktarball pnpm-lock.yaml "has no integrity value" "lock file: a package with a tarball URL and no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {tarball: https://example.invalid/x.tgz}#"
+sbom_pin_case locktarballint pnpm-lock.yaml "has the \`resolution\` keys ['tarball']" "lock file: a package with an integrity value and a tarball URL" \
+    "${first_package}s#resolution: {\\([^}]*\\)}#resolution: {\\1, tarball: https://example.invalid/x.tgz}#"
+sbom_pin_case lockgit pnpm-lock.yaml "has no integrity value" "lock file: a package from git" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {commit: 0123456789abcdef0123456789abcdef01234567, repo: https://example.invalid/x.git, type: git}#"
+sbom_pin_case lockdir pnpm-lock.yaml "has no integrity value" "lock file: a package from a folder" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {directory: ../x, type: directory}#"
+sbom_pin_case lockurlkey pnpm-lock.yaml "is not \`<name>@<exact version>\`" "lock file: a package with a URL and no version in the key" \
+    "${first_package}s#^  '\\([^']*\\)@[0-9][^']*':\$#  '\\1@https://example.invalid/x.tgz':#"
+sbom_pin_case lockrangekey pnpm-lock.yaml "is not \`<name>@<exact version>\`" "lock file: a package with a range in the key" \
+    "${first_package}s#^  '\\([^']*\\)@[0-9][^']*':\$#  '\\1@^1.0.0':#"
+sbom_pin_case locknopackages pnpm-lock.yaml "has no \`packages\`" "lock file: no packages" "/^packages:/,\$d"
+sbom_pin_case locksnapshot pnpm-lock.yaml "which is not in \`packages\`" "lock file: a snapshot of a package that is not in packages" \
+    "s#^snapshots:#&\n  'left-pad@1.3.0': {}#"
+# The lock file: other keys and the form of the file
+sbom_pin_append_case lockoverrides pnpm-lock.yaml "has the top-level key \`overrides\`" "lock file: overrides" "\noverrides:\n  yargs: 1.0.0\n"
+sbom_pin_append_case lockpatched pnpm-lock.yaml "has the top-level key \`patchedDependencies\`" "lock file: patchedDependencies" "\npatchedDependencies: {}\n"
+sbom_pin_append_case locksecond pnpm-lock.yaml "has 2 YAML documents" "lock file: a second YAML document (a packageManager field makes one)" "\n---\nlockfileVersion: '9.0'\n"
+sbom_pin_append_case lockduplicate pnpm-lock.yaml "there two times" "lock file: a key two times" "\nsnapshots: {}\n"
+sbom_pin_append_case lockbroken pnpm-lock.yaml "cannot be read as YAML" "lock file: not YAML" "\n  bad: [\n"
+sbom_pin_case locklist pnpm-lock.yaml "is not a YAML mapping" "lock file: a YAML list" "1s#.*#- a#;2,\$d"
+dir="$(mk_tool lockempty)" && : >"${dir}/pnpm-lock.yaml"
+expect 1 "has 0 YAML documents" "lock file: an empty file" run_sbom_pins "${dir}"
+
+# The folder
+expect 1 "the folder ${work}/no-such-sbom-tool (the lock file of cdxgen) does not exist" "no folder tools/sbom/" run_sbom_pins "${work}/no-such-sbom-tool"
+mkdir -p "${work}/sbomtool-empty"
+expect 1 "sbomtool-empty/package.json does not exist" "an empty folder: no package.json" run_sbom_pins "${work}/sbomtool-empty"
+expect 1 "sbomtool-empty/pnpm-lock.yaml does not exist" "an empty folder: no lock file" run_sbom_pins "${work}/sbomtool-empty"
+dir="$(mk_tool nopackage)" && rm "${dir}/package.json"
+expect 1 "sbomtool-nopackage/package.json does not exist" "no package.json (the lock file is there)" run_sbom_pins "${dir}"
+dir="$(mk_tool nolock)" && rm "${dir}/pnpm-lock.yaml"
+expect 1 "sbomtool-nolock/pnpm-lock.yaml does not exist" "no lock file (package.json is there)" run_sbom_pins "${dir}"
+for extra in .npmrc pnpm-workspace.yaml .pnpmfile.cjs pnpmfile.cjs yarn.lock package-lock.json .gitignore; do
+    dir="$(mk_tool "extra-${extra//./_}")" && echo "x" >"${dir}/${extra}"
+    expect 1 "/${extra} is not allowed" "the folder has the file ${extra}" run_sbom_pins "${dir}"
+done
+dir="$(mk_tool extradir)" && mkdir -p "${dir}/sub"
+expect 1 "/sub is not allowed" "the folder has a sub-folder" run_sbom_pins "${dir}"
+dir="$(mk_tool readme)" && echo "# x" >"${dir}/README.md" && mkdir -p "${dir}/node_modules/x"
+expect 0 "RESULT: PASS" "README.md and node_modules are allowed in the folder" run_sbom_pins "${dir}"
+
+# versions.env
+sed -e "s#^CDXGEN_INTEGRITY=.*#CDXGEN_INTEGRITY=sha512-abc#" "${real_versions}" >"${work}/sbomver-integrityform.env"
+expect 1 "it must be a sha512 integrity value of npm" "versions.env: the form of CDXGEN_INTEGRITY is checked" run_sbom_pins "${real_tool}" "${work}/sbomver-integrityform.env"
+for range in "^${cdxgen_version}" "latest" "12"; do
+    sed -e "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=${range}#" "${real_versions}" >"${work}/sbomver-range.env"
+    expect 1 "it must be an exact version (no range, no tag)" "versions.env: CDXGEN_VERSION is not an exact version (${range})" run_sbom_pins "${real_tool}" "${work}/sbomver-range.env"
+done
+grep -v '^CDXGEN_VERSION=' "${real_versions}" >"${work}/sbomver-nover.env"
+expect 1 "CDXGEN_VERSION is not in tools/versions.env" "versions.env has no CDXGEN_VERSION" run_sbom_pins "${real_tool}" "${work}/sbomver-nover.env"
+grep -v '^CDXGEN_INTEGRITY=' "${real_versions}" >"${work}/sbomver-noint.env"
+expect 1 "CDXGEN_INTEGRITY is not in tools/versions.env" "versions.env has no CDXGEN_INTEGRITY" run_sbom_pins "${real_tool}" "${work}/sbomver-noint.env"
+
+# ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
 fix="${GATES_DIR}/fixtures"
 sudo_case() {
@@ -1015,12 +1201,13 @@ else
     echo "FAIL a failed install: the install has cdxgen"
     failed=$((failed + 1))
 fi
-expect 1 "has the version '12.8.0', but CDXGEN_VERSION in ${stub_versions} is '$(version_of CDXGEN_VERSION)'" \
-    "the installed cdxgen has another version than CDXGEN_VERSION (lock file with another version)" sbom_run "${root}" STUB_CDXGEN_VERSION=12.8.0
-expect 1 "cdxgen did not start" "another version of cdxgen: it does not start" sbom_run "${root}" STUB_CDXGEN_VERSION=12.8.0
+# 0.0.1 and 0.0.2 are no real versions of cdxgen, so a new CDXGEN_VERSION in versions.env never makes these cases pass by chance
+expect 1 "has the version '0.0.1', but CDXGEN_VERSION in ${stub_versions} is '$(version_of CDXGEN_VERSION)'" \
+    "the installed cdxgen has another version than CDXGEN_VERSION (lock file with another version)" sbom_run "${root}" STUB_CDXGEN_VERSION=0.0.1
+expect 1 "cdxgen did not start" "another version of cdxgen: it does not start" sbom_run "${root}" STUB_CDXGEN_VERSION=0.0.1
 no_frontend_sbom "${root}" "another version of cdxgen"
-sed -e "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=12.10.0#" "${stub_versions}" >"${work}/versions-badnpm.env"
-expect 1 "has the version '$(version_of CDXGEN_VERSION)', but CDXGEN_VERSION in ${work}/versions-badnpm.env is '12.10.0'" \
+sed -e "s#^CDXGEN_VERSION=.*#CDXGEN_VERSION=0.0.2#" "${stub_versions}" >"${work}/versions-badnpm.env"
+expect 1 "has the version '$(version_of CDXGEN_VERSION)', but CDXGEN_VERSION in ${work}/versions-badnpm.env is '0.0.2'" \
     "versions.env has another CDXGEN_VERSION than the install" sbom_run "${root}" VERSIONS_FILE="${work}/versions-badnpm.env"
 no_frontend_sbom "${root}" "another CDXGEN_VERSION in versions.env"
 mkdir -p "${root}/build/sbom" && echo '{}' >"${root}/build/sbom/frontend.cdx.json"
@@ -1044,12 +1231,12 @@ section "sbom.sh: the lock file of cdxgen in tools/sbom/ is not an unscanned man
 tools_lock='lockfileVersion: 9'
 root="$(new_tree e1-tools-sbom)"
 put "${root}" frontend/package.json '{}'
-put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"12.9.0"}}'
+put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"1.0.0"}}'
 put "${root}" tools/sbom/pnpm-lock.yaml "${tools_lock}"
 expect 0 "Wrote ${root}/build/sbom/frontend.cdx.json" "tools/sbom/package.json and tools/sbom/pnpm-lock.yaml with frontend/package.json do not stop the script" sbom_run "${root}"
 expect 0 "PASS" "the two files of tools/sbom/: the script passes" sbom_run "${root}"
 root="$(new_tree e1-tools-sbom-alone)"
-put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"12.9.0"}}'
+put "${root}" tools/sbom/package.json '{"dependencies":{"@cyclonedx/cdxgen":"1.0.0"}}'
 put "${root}" tools/sbom/pnpm-lock.yaml "${tools_lock}"
 expect 0 "Nothing to scan" "the two files of tools/sbom/ alone: nothing to scan, and no stop" sbom_run "${root}"
 pnpm_calls 0 "the two files of tools/sbom/ alone: no install"

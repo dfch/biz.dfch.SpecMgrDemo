@@ -50,7 +50,10 @@
 #        no SBOM file) if the install fails (for example if the lock file and package.json differ, or a
 #        package has another integrity value), if the lock file or package.json is missing, or if the
 #        installed cdxgen has another version than CDXGEN_VERSION. The script does not use the commands
-#        dlx and view of pnpm. `just check-pins` ties the lock file to tools/versions.env.
+#        dlx and view of pnpm. `just check-pins` ties package.json and the lock file to CDXGEN_VERSION and
+#        CDXGEN_INTEGRITY of tools/versions.env (check_pins.py, check_sbom_tool). Limit: a wrong integrity
+#        value of an OPTIONAL dependency of cdxgen does not stop the install: pnpm logs the error, does not
+#        install that package (it does not run), and returns exit code 0. A required package stops it.
 #        If no Node manifest is scanned, the script does not install (no network is necessary).
 #
 # The versions and the checksums are in tools/versions.env (VERSIONS_FILE sets another file, for the

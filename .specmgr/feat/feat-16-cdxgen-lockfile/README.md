@@ -4,7 +4,7 @@ created: '2026-11-03T21:02:30.390+01:00'
 id: feat-16-cdxgen-lockfile
 status: planning
 type: feat
-updated: '2026-11-03T21:02:30.390+01:00'
+updated: '2026-11-03T21:35:00.923+01:00'
 version: 1.0.0
 ---
 
@@ -42,13 +42,13 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 - [x] ACC-003: `sbom.sh` stops with exit code 1 and writes no SBOM file in each of these cases, tested with the real pnpm and by hand: the version in `tools/sbom/package.json` is not the version in the lock file; a package integrity value in the lock file is wrong; the installed cdxgen has another version than `CDXGEN_VERSION`. `just test-gates` has the cases with a stub (REQ-002).
 
-- [ ] ACC-004: `just check-pins` returns exit code 0 now. It returns exit code 1 for each of these cases in `just test-gates`: another version in `package.json`; a version range in `package.json`; another dependency in `package.json`; another version of cdxgen in the lock file; another integrity value in the lock file; another `CDXGEN_VERSION` or `CDXGEN_INTEGRITY` in `versions.env`; a package without an integrity value in the lock file; no `tools/sbom/package.json` and no lock file (REQ-003, REQ-005).
+- [x] ACC-004: `just check-pins` returns exit code 0 now. It returns exit code 1 for each of these cases in `just test-gates`: another version in `package.json`; a version range in `package.json`; another dependency in `package.json`; another version of cdxgen in the lock file; another integrity value in the lock file; another `CDXGEN_VERSION` or `CDXGEN_INTEGRITY` in `versions.env`; a package without an integrity value in the lock file; no `tools/sbom/package.json` and no lock file (REQ-003, REQ-005).
 
 - [x] ACC-005: `just test-gates` has these E1 cases. Positive: `tools/sbom/package.json` and `tools/sbom/pnpm-lock.yaml` with a `frontend/package.json` do not stop `sbom.sh`. Negative (exit code 1 with the path of the file): `tools/other/package.json`, `tools/sbom/pnpm-workspace.yaml`, `tools/sbom/sub/package.json` and a `package.json` in the root (REQ-004).
 
-- [ ] ACC-006: The procedure in `tools/sbom/README.md` ran once in a copy of the repository (delete the lock file, `pnpm install --lockfile-only`, then the three places have the same version and integrity value), and `just check-pins` returns exit code 0 after it (REQ-005).
+- [x] ACC-006: The procedure in `tools/sbom/README.md` ran once in a copy of the repository (delete the lock file, `pnpm install --lockfile-only`, then the three places have the same version and integrity value), and `just check-pins` returns exit code 0 after it (REQ-005).
 
-- [ ] ACC-007: `.github/CODEOWNERS` and `tools/gates/required-setup.txt` are not changed, and the line `/tools/` of CODEOWNERS covers the new files. `just check-workflows` and `just check-pins` return exit code 0 (REQ-006).
+- [x] ACC-007: `.github/CODEOWNERS` and `tools/gates/required-setup.txt` are not changed, and the line `/tools/` of CODEOWNERS covers the new files. `just check-workflows` and `just check-pins` return exit code 0 (REQ-006).
 
 - [ ] ACC-008: These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, and `just --fmt --unstable --check`. The pull request has all seven checks green.
 
@@ -156,13 +156,13 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 #### Phase 110: Pin Check, Documents and Pull Request
 
-- [ ] Task 110.100: Add the check of `tools/sbom/` to `tools/gates/check_pins.py` (facts 1 to 5 of Design Notes), keep the header of the script correct, give the existing `check-pins.sh` cases a project root with a good `tools/sbom/`, and add the cases of ACC-004 to `selftest.sh` (ACC-004)
+- [x] Task 110.100: Add the check of `tools/sbom/` to `tools/gates/check_pins.py` (facts 1 to 5 of Design Notes), keep the header of the script correct, give the existing `check-pins.sh` cases a project root with a good `tools/sbom/`, and add the cases of ACC-004 to `selftest.sh` (ACC-004)
 
-- [ ] Task 110.110: Write `tools/sbom/README.md` (purpose, the install command, the update procedure in one commit, the pinned pnpm and `lockfileVersion`, no `packageManager` field, rule A). Run the procedure once in a copy of the repository (ACC-006)
+- [x] Task 110.110: Write `tools/sbom/README.md` (purpose, the install command, the update procedure in one commit, the pinned pnpm and `lockfileVersion`, no `packageManager` field, rule A). Run the procedure once in a copy of the repository (ACC-006)
 
-- [ ] Task 110.120: Change the texts that say "29 dependencies are not checked" or `pnpm view`: the header of `tools/versions.env`, `tools/README.md`, `tools/gates/README.md` (table of G2, list of E1, the pin check, the limits). The limits of specmgr, PyYAML and the Maven plugin stay (ACC-007)
+- [x] Task 110.120: Change the texts that say "29 dependencies are not checked" or `pnpm view`: the header of `tools/versions.env`, `tools/README.md`, `tools/gates/README.md` (table of G2, list of E1, the pin check, the limits). The limits of specmgr, PyYAML and the Maven plugin stay (ACC-007)
 
-- [ ] Task 110.130: Run the whole gate: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, `just --fmt --unstable --check`, `ruff check` and `ruff format --check` for the Python files. Confirm that `.github/CODEOWNERS` and `required-setup.txt` are not changed (ACC-007, ACC-008)
+- [x] Task 110.130: Run the whole gate: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check`, `just --fmt --unstable --check`, `ruff check` and `ruff format --check` for the Python files. Confirm that `.github/CODEOWNERS` and `required-setup.txt` are not changed (ACC-007, ACC-008)
 
 - [ ] Task 110.140: Write the record in this plan (Progress), open the pull request with `Closes #16` (commit type `build`, scope `feat-16`), let all seven checks pass, and run the throwaway test pull request of ACC-009 (close it, do not merge it). The owner merges the pull request (ACC-008, ACC-009)
 
@@ -170,15 +170,30 @@ This feature adds a small pnpm project for cdxgen only, in `tools/sbom/`. It has
 
 ### Current Status
 
-**As of 2026-11-03**: Phase 100 is done and not committed. `tools/sbom/` has `package.json`, `pnpm-lock.yaml` (written by pnpm 12.16.1, 199 packages, each with an integrity value) and a first `README.md`. `sbom.sh` installs cdxgen from the lock file and starts `node_modules/.bin/cdxgen`. The E1 check skips the two files of `tools/sbom/`. `just test-gates` has 335 cases and all are ok. ACC-001, ACC-002, ACC-003 and ACC-005 are checked. Phase 110 is open: the pin check in `check_pins.py` (ACC-004), the full procedure in `tools/sbom/README.md` (ACC-006), the other texts, and the pull request (ACC-007 to ACC-009). The branch is `feat-16-cdxgen-lockfile`. No decision of the owner is open.
+**As of 2026-11-03 20:34**: Phase 100 is committed. Tasks 110.100 to 110.130 of Phase 110 are done and not committed. `check_pins.py` has the pin check of `tools/sbom/` (`check_sbom_tool`), `tools/sbom/README.md` has the full update procedure (the agent ran it in a copy of the repository, see the update of this time), and the texts of `tools/versions.env`, `tools/README.md`, `tools/gates/README.md`, `sbom.sh` and `check_pins.py` are correct. `just test-gates` has 418 cases and all are ok (335 before). The whole gate is green, also with `GITHUB_BASE_REF=dev`. ACC-001 to ACC-007 are checked. Open: Task 110.140 (the record, the pull request with `Closes #16`, the seven checks, and the throwaway pull request of ACC-009), so ACC-008 and ACC-009 are open. The branch is `feat-16-cdxgen-lockfile`. No decision of the owner is open.
 
 ### Blockers
 
-- None.
+- None that blocks the pull request.
+
+- Open item, for information (not a blocker): a wrong integrity value of an optional dependency of cdxgen does not stop the install. The agent checked it again with the real pnpm 12.16.1 on 2026-11-03 20:34: pnpm logs `optional dependency that could not be fetched` and `ERR_PNPM_TARBALL_INTEGRITY`, installs 186 packages and not the one with the wrong value, and returns exit code 0. A required package with a wrong value stops the install. The package that is not installed does not run. `just check-pins` cannot see this case. The limit is in `tools/versions.env`, `tools/sbom/README.md`, `sbom.sh` and `tools/gates/README.md`.
+
+- Open item, for information (not a blocker): the Python tools of the gates (specmgr, PyYAML) and the dependencies of `cyclonedx-maven-plugin` still have the limit of finding G2 (only the direct artifact has a checksum). This is out of scope of this feature. The owner can open a separate issue for each of them.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 20:34:30.000Z - Phase 110 (Tasks 110.100 to 110.130) done: pin check, procedure, texts and gate
+
+The agent did Tasks 110.100 to 110.130. Nothing is committed. Task 110.140 (the pull request) is open.
+
+- **Pin check (Task 110.100, ACC-004).** `check_pins.py` has a new function `check_sbom_tool` and a new argument `<sbom-tool-dir>`. `check-pins.sh` gives it `SBOM_TOOL_DIR`, and the default is `tools/sbom` of the repository (as in `sbom.sh`). The check is always on and fails closed. It stops for: a missing folder, `package.json` or lock file; another file in the folder (`.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`, a sub-folder); `CDXGEN_VERSION` that is not an exact version or `CDXGEN_INTEGRITY` that is not a `sha512-` value, or a missing key; `package.json` with another version, a range or a tag, another or a second dependency, or any key other than `name`, `private`, `description` and `dependencies`; a lock file that is not exactly one YAML document, has a key two times, has a `lockfileVersion` that is not a text that starts with `9.`, has another top-level key than `lockfileVersion`, `settings`, `importers`, `packages` and `snapshots`, has not exactly one importer `.` with exactly one direct dependency cdxgen (`specifier` and `version` = `CDXGEN_VERSION`), has another cdxgen version or another integrity value for cdxgen than `versions.env`, or has a package with no integrity value, with an integrity value that is not sha256, sha384 or sha512, with a `resolution` key other than `integrity` (tarball, git, folder), or with a key that is not `<name>@<exact version>`; a `snapshots` entry with no package. A file that PyYAML cannot read also stops it. `selftest.sh` has 83 new cases (all in the section "check-pins.sh: the lock file of cdxgen"): the three places each alone (`versions.env` version, `versions.env` integrity, `package.json`, the lock file importer, the lock file package, the lock file integrity), all three places with the same new value (pass), 12 ranges and tags, the extra dependencies and keys, and the cases of the lock file, the folder and `versions.env`. The existing `check-pins.sh` cases need no change: they use the real `tools/sbom/`.
+- **Procedure (Task 110.110, ACC-006).** `tools/sbom/README.md` has the full procedure in 7 steps (read the license under rule A, use the pinned tools, `versions.env` with `pnpm view @cyclonedx/cdxgen@<v> dist.integrity`, `package.json`, a new lock file with `rm pnpm-lock.yaml && pnpm install --lockfile-only`, `just check-pins` and `just test-gates`, one commit), the table of the three places, the install, the limit for optional dependencies and the table of what `just check-pins` stops. The agent ran the procedure in a throwaway copy of the repository (`/tmp/opencode/procrun`, not the repository). Same version 12.9.0: the new lock file is the same as the old one byte for byte (`cmp`), and `just check-pins` returns exit code 0. Version 12.8.0 (it is on npm, license Apache-2.0 from `package/LICENSE` and `package.json`, `dist.integrity` `sha512-l8QYX3bfYxfKCkwMwp4F8MM0IpuOMV+tmzJiCa6ffIhiSVmTuTqQzrGIaJ6Tt7HJioIP88iiq3RW5Ax6yZZjAw==`): only `versions.env` changed gives exit code 1 with 4 problems (`package.json`, importer `specifier`, importer `version`, package entry); `versions.env` and `package.json` changed gives exit code 1 with 3 problems (the three lock file lines); all three changed (lock file written by pnpm 12.16.1, 192 packages, each with an integrity value, no `tarball`, `repo` or `directory`) gives exit code 0. In that copy `just test-gates` gave 418 ok and 0 failed, the frozen install in a clean copy of the three files gave exit code 0 and `cdxgen --version` showed 12.8.0, and `sbom.sh` with a test frontend wrote `frontend.cdx.json` (log: install in `tools/sbom/`, version 12.8.0). The run found an error in the tests of Phase 100: the cases "another version of cdxgen" used `12.8.0` and `12.10.0` as the "wrong" version, so a real update to 12.8.0 made 3 cases fail. The cases now use `0.0.1` and `0.0.2` (no real versions). The repository is not changed by the test.
+- **Texts (Task 110.120, ACC-007).** Changed: the header of `tools/versions.env` (cdxgen is checked with all its dependencies; the Python tools and the Maven plugin are not; the limit for optional dependencies; a comment at the keys that the three places must be the same), `tools/README.md` (the row `sbom/`), `tools/gates/README.md` (the row of `check-pins`, the G2 intro and table, a new part "The pin check of the cdxgen project", the list of files and the limits), the header of `sbom.sh` (the limit for optional dependencies, the pin check) and the header of `check_pins.py`. No text says "29 dependencies are not checked" or `pnpm view` for cdxgen any more (the lock file has 199 packages, 187 installed on linux-x64). The plan of feat-5 is not changed.
+- **Optional dependency (checked again).** With the real pnpm 12.16.1, the lock file with a wrong integrity value for `@appthreat/atom-common@1.1.0` (an optional dependency): `[WARN] @appthreat/atom-common@1.1.0 is an optional dependency that could not be fetched. Excluding it from installation.`, then `ERR_PNPM_TARBALL_INTEGRITY` with the wanted and the actual value, `Packages: +186` (187 resolved), exit code 0, `node_modules/.bin/cdxgen` exists, and the package is not installed. A required package with a wrong value stops the install (Phase 100: `yargs`).
+- **Gate (Task 110.130, ACC-007).** Exit code 0 for: `just --fmt --unstable --check`, `just test-gates` (418 ok, 0 failed), `just test-license-gate` (46 ok, 0 failed), `just validate`, `just commit-check` (2 commits correct), `just license-check` (0 components), `just check-workflows` (7 run steps), `just check-pins` (23 `uses:` steps and the cdxgen lock file), `just check-sudo` (21 files) and `just sbom`. The same recipes with `GITHUB_BASE_REF=dev`: exit code 0. `ruff check` and `ruff format --check` with line length 120 for `tools/gates/*.py`: pass. `bash -n` for `tools/gates/*.sh`: pass. `.github/CODEOWNERS`, `.github/workflows/ci.yml` and `tools/gates/required-setup.txt` are the same as in `origin/dev` (`git diff origin/dev` shows no change). The line `/tools/ @dfch` of CODEOWNERS covers `tools/sbom/`.
+- Files changed (not committed): `tools/gates/check_pins.py`, `tools/gates/check-pins.sh`, `tools/gates/selftest.sh`, `tools/gates/sbom.sh` (comments only), `tools/gates/README.md`, `tools/sbom/README.md`, `tools/README.md`, `tools/versions.env` (comments only) and this plan.
 
 #### 2026-11-03 20:15:33.000Z - Phase 100 done: tools/sbom and the install in sbom.sh
 
@@ -200,6 +215,16 @@ The agent wrote this plan for GitHub issue #16. It read the issue, `sbom.sh`, `c
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 20:34:30.000Z - Decisions of Phase 110
+
+1. The folder for the pin check is `SBOM_TOOL_DIR` of `check-pins.sh`, and the default is `tools/sbom` of the repository (`REPO_ROOT`), not of `GATE_WORK_ROOT`. Reason: the same rule as in `sbom.sh` (the tool belongs to the gates and not to the scanned project). The existing Maven cases (they use an empty `GATE_WORK_ROOT`) then need no copy of `tools/sbom/`, and they still run the real check.
+2. The check uses an allow-list for the keys of `package.json` (`name`, `private`, `description`, `dependencies`) and for the top-level keys of the lock file, and for the files in `tools/sbom/`. Reason: fail closed. A deny-list would miss a key that pnpm reads and that nobody knew (for example `pnpm`, `overrides`, `resolutions`, `scripts`, `.npmrc`). A new legal key means a change of the check, which the owner reviews through CODEOWNERS.
+3. A key two times in `package.json` or in the lock file stops the check (own JSON and YAML loaders). Reason: PyYAML and the standard JSON reader keep the last value without a message, so a second entry could hide the first one.
+4. A package integrity value must be sha256, sha384 or sha512 (sha1 stops the check), and a `resolution` must have `integrity` and nothing else. The cdxgen value must be a `sha512-` value of 88 characters. Reason: fail closed for a weaker hash and for a package from another place than the registry (REQ-003).
+5. The text of an unreadable or wrong lock file gives exit code 1 (a problem with a message) and not exit code 2, so that each wrong input of `tools/sbom/` has the same result (STOP) as the ACC-004 cases. Exit code 2 stays for a wrong `versions.env` or workflow.
+6. Tests of Phase 100 that used `12.8.0` and `12.10.0` as a wrong version of cdxgen use `0.0.1` and `0.0.2` now. Reason: the procedure run in the copy showed that a real update to 12.8.0 made them fail.
+7. The procedure in `tools/sbom/README.md` starts with the license (rule A, the license file of the release and not only the field), because a new version is new code.
 
 #### 2026-11-03 20:15:33.000Z - Decisions of Phase 100
 
@@ -234,3 +259,5 @@ The owner gave no detail except "do it now, with a small FEAT backed by a GitHub
 ### More Information
 
 Origin: finding G2 of the review of feat-5-foundation-monorepo-ci (see its Design Notes, Blockers, the update of 2026-11-03 18:28 and Decisions Made). The owner decided on 2026-11-03 to do this now.
+
+Note (2026-11-03): this feature closes the cdxgen part of finding G2: the lock file pins cdxgen and its 198 other packages with an integrity value, and `just check-pins` ties it to `tools/versions.env`. Only a wrong integrity value of an optional dependency does not stop the install (see Blockers). The Python tools and the Maven plugin still have the limit of G2. The plan of feat-5 is not changed.
