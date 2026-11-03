@@ -108,6 +108,62 @@ git_in switch -q good
 expect 0 "No commit in" "no commit after the base" env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" good
 expect 1 "does not exist" "a base that does not exist" env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" no-such-base
 
+# The base of a pull request to `main` is origin/main, and the base of a pull request to `dev` is origin/dev
+# (the branches of the clone of actions/checkout). The release case: the range origin/main..HEAD has each
+# commit of `dev` that is not in `main`, also the old ones. The gate does not hide an old commit that is not
+# correct (feat-5, the follow-up change for the ruleset of main).
+git_in update-ref refs/remotes/origin/main base
+git_in update-ref refs/remotes/origin/dev base
+git_in switch -q good
+expect 0 "2 commit message(s) correct" "base origin/main: two good commits" env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/main
+expect 0 "2 commit message(s) correct" "base origin/dev: two good commits" env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/dev
+git_in switch -q bad
+expect 1 "FAIL" "base origin/main: a bad commit stops the gate" env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/main
+# release: origin/main is the older branch, `dev` has an old commit with another scope and a new commit after it
+git_in switch -q -c release-dev base
+git_in commit -q --allow-empty -m "docs(dec): an old commit with a scope that is not feat-N"
+git_in commit -q --allow-empty -m "feat(feat-5): a new commit"
+expect 1 "FAIL" "release case: an old commit in origin/main..HEAD with another scope stops the gate (it is not hidden)" \
+    env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/main
+expect 1 "1 of 2 commit message(s) not correct" "release case: the count of the commits of the range" \
+    env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/main
+git_in update-ref refs/remotes/origin/main release-dev~1
+expect 0 "1 commit message(s) correct" "release case: when main has the old commit, only the new commit is in the range" \
+    env GATE_WORK_ROOT="${repo}" "${GATES_DIR}/commit-check.sh" origin/main
+git_in switch -q good
+
+# ---------------------------------------------------------------------------------------------
+section "justfile: the base of the gates follows GITHUB_BASE_REF"
+# base_case <description> <expected base> <command...>: the output of `just --evaluate base` must be exactly the
+# expected value. (The tests must not depend on the variable of the runner, so each case sets or removes it.)
+base_case() {
+    local description="$1" want="$2" got
+    shift 2
+    got="$("$@" 2>&1)" || true
+    if [[ "${got}" == "${want}" ]]; then
+        echo "ok   ${description}"
+        passed=$((passed + 1))
+    else
+        echo "FAIL ${description}: expected '${want}', got '${got}'"
+        failed=$((failed + 1))
+    fi
+}
+base_case "base: GITHUB_BASE_REF is not set: origin/dev" "origin/dev" env -u GITHUB_BASE_REF just --justfile "${real_justfile}" --evaluate base
+base_case "base: GITHUB_BASE_REF is empty (an event that is not a pull request): origin/dev" "origin/dev" \
+    env GITHUB_BASE_REF= just --justfile "${real_justfile}" --evaluate base
+base_case "base: GITHUB_BASE_REF=dev: origin/dev" "origin/dev" env GITHUB_BASE_REF=dev just --justfile "${real_justfile}" --evaluate base
+base_case "base: GITHUB_BASE_REF=main: origin/main" "origin/main" env GITHUB_BASE_REF=main just --justfile "${real_justfile}" --evaluate base
+base_case "base: GITHUB_BASE_REF=release/1: origin/release/1" "origin/release/1" \
+    env GITHUB_BASE_REF=release/1 just --justfile "${real_justfile}" --evaluate base
+# The recipes validate and commit-check give the base to their gate script (the dry run prints the command).
+dry_run() { env "$1" just --justfile "${real_justfile}" --dry-run "$2"; }
+expect 0 '130.120 "origin/main"' "commit-check with GITHUB_BASE_REF=main compares with origin/main" dry_run GITHUB_BASE_REF=main commit-check
+expect 0 '130.110 "origin/main"' "validate with GITHUB_BASE_REF=main compares with origin/main" dry_run GITHUB_BASE_REF=main validate
+expect 0 '130.120 "origin/dev"' "commit-check with GITHUB_BASE_REF=dev compares with origin/dev" dry_run GITHUB_BASE_REF=dev commit-check
+expect 0 '130.110 "origin/dev"' "validate with GITHUB_BASE_REF=dev compares with origin/dev" dry_run GITHUB_BASE_REF=dev validate
+expect 0 '130.120 "origin/dev"' "commit-check with no GITHUB_BASE_REF compares with origin/dev" dry_run -uGITHUB_BASE_REF commit-check
+expect 0 '130.110 "origin/dev"' "validate with no GITHUB_BASE_REF compares with origin/dev" dry_run -uGITHUB_BASE_REF validate
+
 # ---------------------------------------------------------------------------------------------
 section "check-workflows.sh (Task 130.140)"
 real_required="${GATES_DIR}/required-setup.txt"
@@ -121,6 +177,7 @@ on:
   pull_request:
     branches:
       - dev
+      - main
 permissions:
   contents: read
 jobs:
@@ -244,14 +301,20 @@ wf_case ifremoved 0 "RESULT: PASS" "artifact step: no if (the gate does not need
 wf_case targettrigger 1 "\`on:\` is" "trigger: pull_request_target" 's|^  pull_request:$|  pull_request_target:|'
 wf_case pushtrigger 1 "\`on:\` is" "trigger: push in addition" 's|^  pull_request:$|  push:\n    branches:\n      - dev\n  pull_request:|'
 wf_case dispatch 1 "\`on:\` is" "trigger: workflow_dispatch in addition" 's|^  pull_request:$|  workflow_dispatch:\n  pull_request:|'
-wf_case branchmain 1 "\`on:\` is" "trigger: the branch is main and not dev" 's|^      - dev$|      - main|'
-wf_case branchmore 1 "\`on:\` is" "trigger: the branches are dev and main" 's|^      - dev$|&\n      - main|'
-wf_case pathsignore 1 "\`on:\` is" "trigger: paths-ignore" 's|^      - dev$|&\n    paths-ignore:\n      - "tools/**"|'
-wf_case typesonly 1 "\`on:\` is" "trigger: types" 's|^      - dev$|&\n    types: [labeled]|'
-wf_case nobranches 1 "\`on:\` is" "trigger: pull_request with no branches (all branches)" '/^    branches:$/,/^      - dev$/d'
-wf_case plainon 1 "\`on:\` is" "trigger: on: pull_request (a text)" '/^on:$/,/^      - dev$/c\on: pull_request'
-wf_case liston 1 "\`on:\` is" "trigger: on: [pull_request] (a list)" '/^on:$/,/^      - dev$/c\on: [pull_request]'
-wf_case notrigger 1 "exactly one \`on:\` key" "trigger: no on key" '/^on:$/,/^      - dev$/d'
+wf_case branchonlydev 1 "\`on:\` is" "trigger: the branches are dev only (main is missing)" '/^      - main$/d'
+wf_case branchonlymain 1 "\`on:\` is" "trigger: the branches are main only (dev is missing)" '/^      - dev$/d'
+wf_case branchmore 1 "\`on:\` is" "trigger: the branches are dev, main and another one" 's|^      - main$|&\n      - other|'
+wf_case branchmaster 1 "\`on:\` is" "trigger: the branch master and not main" 's|^      - main$|      - master|'
+wf_case branchorder 1 "\`on:\` is" "trigger: the branches main and dev (the list is compared exactly, in this order)" \
+    's|^      - dev$|      - TMP|;s|^      - main$|      - dev|;s|^      - TMP$|      - main|'
+wf_case branchpattern 1 "\`on:\` is" "trigger: a branch pattern (all branches)" 's|^      - main$|      - "**"|'
+wf_case pathsignore 1 "\`on:\` is" "trigger: paths-ignore" 's|^      - main$|&\n    paths-ignore:\n      - "tools/**"|'
+wf_case typesonly 1 "\`on:\` is" "trigger: types" 's|^      - main$|&\n    types: [labeled]|'
+wf_case branchesignore 1 "\`on:\` is" "trigger: branches-ignore" 's|^      - main$|&\n    branches-ignore:\n      - feat-x|'
+wf_case nobranches 1 "\`on:\` is" "trigger: pull_request with no branches (all branches)" '/^    branches:$/,/^      - main$/d'
+wf_case plainon 1 "\`on:\` is" "trigger: on: pull_request (a text)" '/^on:$/,/^      - main$/c\on: pull_request'
+wf_case liston 1 "\`on:\` is" "trigger: on: [pull_request] (a list)" '/^on:$/,/^      - main$/c\on: [pull_request]'
+wf_case notrigger 1 "exactly one \`on:\` key" "trigger: no on key" '/^on:$/,/^      - main$/d'
 # the permissions
 wf_case writeall 1 "\`permissions:\` of the workflow is" "permissions: write-all" '/^permissions:$/,/^  contents: read$/c\permissions: write-all'
 wf_case readall 1 "\`permissions:\` of the workflow is" "permissions: read-all" '/^permissions:$/,/^  contents: read$/c\permissions: read-all'
@@ -900,12 +963,17 @@ mkdir -p "${docs}/docs/dec"
 cp "${valid_doc}" "${docs}/docs/dec/"
 dgit add -A && dgit commit -q -m "a valid document"
 expect 0 "linted=1 failed=0" "a valid document" run_docs base
+dgit update-ref refs/remotes/origin/main base
+dgit update-ref refs/remotes/origin/dev base
+expect 0 "linted=1 failed=0" "a valid document, base origin/main" run_docs origin/main
+expect 0 "linted=1 failed=0" "a valid document, base origin/dev" run_docs origin/dev
 
 dgit switch -q -c invalid valid
 mkdir -p "${docs}/docs/dec"
 printf '# Not a decision\n' >"${docs}/${bad_name}"
 dgit add -A && dgit commit -q -m "an invalid document"
 expect 1 "failed=1" "an invalid document in a commit" run_docs base
+expect 1 "failed=1" "an invalid document in a commit, base origin/main" run_docs origin/main
 
 dgit switch -q valid
 printf '# Not a decision\n' >"${docs}/docs/dec/$(basename "${valid_doc}")"

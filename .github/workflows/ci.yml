@@ -7,8 +7,11 @@
 #   - The versions in the inputs of the setup actions are the same as in tools/versions.env.
 #     An action cannot read that file, so `just check-pins` compares them (ACC-013).
 #   - `extractions/setup-just` installs `just`, so no step needs a bootstrap `run:`.
-#   - The checkout has `fetch-depth: 0`, so the branch origin/dev is in the clone and the gates
-#     can compare with it.
+#   - The workflow runs for pull requests to `dev` and to `main` (the two protected branches). The
+#     checkout has `fetch-depth: 0`, so all branches are in the clone (origin/dev and origin/main).
+#     The `justfile` takes the branch to compare with from GITHUB_BASE_REF (the target branch of
+#     the pull request, a default variable of the runner). The workflow sets no `env:` (the gate
+#     check-workflows forbids it).
 #   - Each job has the name of the gate. Use these names for the required checks of the branch
 #     protection (branch-protection.md in the folder of the feature).
 
@@ -18,6 +21,7 @@ on:
   pull_request:
     branches:
       - dev
+      - main
 
 permissions:
   contents: read

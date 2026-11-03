@@ -11,8 +11,12 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 # The folder for the SBOM files (ACC-010). The folder is not in git.
 sbom_dir := "build/sbom"
 
-# The branch that a pull request goes to. The gates compare with it.
-base := "origin/dev"
+# The branch that the gates compare with: the branch that a pull request goes to. In GitHub Actions,
+# GITHUB_BASE_REF (a default variable of the runner, set for a pull request only) is that branch,
+# so a pull request to `main` is compared with origin/main and a pull request to `dev` with origin/dev.
+# GITHUB_BASE_REF is empty for other events, and it is not set on a developer machine: then the base
+# is origin/dev. A developer can set it for a test (for example GITHUB_BASE_REF=main just commit-check).
+base := if env("GITHUB_BASE_REF", "") == "" { "origin/dev" } else { "origin/" + env("GITHUB_BASE_REF") }
 
 # Show the recipes.
 default:

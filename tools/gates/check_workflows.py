@@ -16,9 +16,9 @@ The script reads the YAML of each workflow (PyYAML). It stops for each of these:
 
   The rest of the workflow (the finding E2: before, a job with `if: false`, an `env:` with `PATH=...`
   or a changed trigger passed the gate)
-  * the trigger is not ALLOWED_TRIGGERS (`pull_request` with the branches `dev`, and no other
-    key such as `paths`, `types` or `branches-ignore`). To add `main` later, change the list of
-    branches in ALLOWED_TRIGGERS: this is the one place.
+  * the trigger is not ALLOWED_TRIGGERS (`pull_request` with the branches `dev` and `main`, in this
+    order, and no other key such as `paths`, `types` or `branches-ignore`). To change the branches,
+    change the list in ALLOWED_TRIGGERS: this is the one place.
   * `permissions:` of the workflow is missing or is not `contents: read`, or the `permissions:` of
     a job is not `contents: read`.
   * a key that is not in WORKFLOW_KEYS, JOB_KEYS, RUN_STEP_KEYS or USES_STEP_KEYS. So `env`,
@@ -46,9 +46,11 @@ from _workflow import GateError, iter_jobs, iter_steps, load_workflows
 
 RUN_PATTERN = re.compile(r"just [a-z][a-z0-9_-]*")
 
-# The trigger of each workflow. The value of `on:` must be exactly this. To run the gates for pull
-# requests to `main` too, add "main" to the list of branches (one line).
-ALLOWED_TRIGGERS: dict[str, Any] = {"pull_request": {"branches": ["dev"]}}
+# The trigger of each workflow. The value of `on:` must be exactly this: the gates run for pull
+# requests to `dev` and to `main` (the branches with a ruleset), in this order, and for nothing else.
+# To add or remove a branch, change the list of branches (one line). The `justfile` takes the branch
+# to compare with from GITHUB_BASE_REF, so it needs no change.
+ALLOWED_TRIGGERS: dict[str, Any] = {"pull_request": {"branches": ["dev", "main"]}}
 # The permissions of the workflow, and of a job that has `permissions:`.
 ALLOWED_PERMISSIONS: dict[str, str] = {"contents": "read"}
 # The keys that each level may have. Each other key stops the gate.

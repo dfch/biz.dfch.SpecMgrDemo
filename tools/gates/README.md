@@ -14,6 +14,12 @@ The scripts of the gates (feat-5-foundation-monorepo-ci). Each script has a reci
 | `just test-license-gate` | `test-license-gate.sh` | 130.135 | Tests the license gate with the fixtures in `tools/license/fixtures/` |
 | `just test-gates` | `selftest.sh` | 130.100 to 130.145 | Tests all gates with good and bad input. It also runs `test-license-gate` |
 
+## The base of the comparison
+
+`just validate` and `just commit-check` compare with the branch that the pull request goes to. The variable `base` at the top of the `justfile` gives it: `origin/` and the value of `GITHUB_BASE_REF` if that variable is set and not empty, and `origin/dev` if not. In GitHub Actions, `GITHUB_BASE_REF` is a default variable of the runner (the target branch of the pull request), so the workflow needs no `env:` (the gate `check-workflows` does not allow it). `actions/checkout` with `fetch-depth: 0` fetches all branches, so `origin/dev` and `origin/main` are in the clone. On your machine, `GITHUB_BASE_REF=main just commit-check` compares with `origin/main`. Check the value with `just --evaluate base`.
+
+Release case: for a pull request from `dev` to `main`, the range `origin/main..HEAD` has each commit of `dev` that is not in `main`, also old commits. The gate does not skip a commit that is not correct. Merge a release with a merge commit (not squash and not rebase), so that the next release range has only the new commits. See `branch-protection.md` in the folder of feat-5 and the plan.
+
 Each script returns the exit code 0 if the gate passes. It returns another code if the gate stops. The scripts that read a workflow or an SBOM return 2 if a file is wrong and the gate cannot decide.
 
 ## Tools
@@ -46,10 +52,10 @@ Before the change, `sbom.sh` scanned only `pom.xml`, `backend/pom.xml`, `fronten
 
 Before the change the gate read only the `run:` text, so a job with `if: false`, an `env:` with `PATH=...`, another trigger or `permissions: write-all` passed. Now `check_workflows.py` stops for each of these. The data is at the top of the script (`ALLOWED_TRIGGERS`, `ALLOWED_PERMISSIONS`, `WORKFLOW_KEYS`, `JOB_KEYS`, `RUN_STEP_KEYS`, `USES_STEP_KEYS`, `ALLOWED_IF`) and in `required-setup.txt`:
 
-- The trigger is not exactly `pull_request` with the branches `dev` and no other key (`paths`, `types`, `branches-ignore`). To add `main`, change the list in `ALLOWED_TRIGGERS` (one line).
+- The trigger is not exactly `pull_request` with the branches `dev` and `main` (in this order) and no other key (`paths`, `types`, `branches-ignore`). To change the branches, change the list in `ALLOWED_TRIGGERS` (one line). The `justfile` takes the base from `GITHUB_BASE_REF`, so it needs no change.
 - `permissions:` of the workflow is not exactly `contents: read`, or a job has other `permissions:`.
 - A key that is not allowed: `env`, `defaults`, `concurrency` (workflow); `if`, `continue-on-error`, `container`, `services`, `strategy`, `needs`, `env`, `outputs`, `defaults` (job); `shell`, `env`, `working-directory`, `continue-on-error`, `if` (step). The only `if:` is `${{ !cancelled() }}` on `actions/upload-artifact` in the job `license-check`.
-- The `name:` of a job is not its identifier, a job has not exactly one `run:` step, or the identifier is not the recipe of that step (the jobs are the required status checks of the ruleset on `dev`).
+- The `name:` of a job is not its identifier, a job has not exactly one `run:` step, or the identifier is not the recipe of that step (the jobs are the required status checks of the rulesets on `dev` and `main`).
 - `required-setup.txt` (a data file, covered by CODEOWNERS through `/tools/`) lists each job of each workflow file and the actions (by name) that the job must have. A missing job, a job or a workflow file that is not in the file, and a job that lacks an action or has an extra one stop the gate. To add a job or an action, change this file first.
 
 ### G1: Maven in CI (`sbom.sh`, `check-pins.sh`)

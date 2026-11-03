@@ -3,7 +3,7 @@
 #
 # tools/gates/check-workflows.sh reads this file. The gate stops if:
 #   - a workflow file or a job of a workflow is not in this file, or a job of this file is missing
-#     (the jobs are the required status checks of the ruleset on `dev`, see branch-protection.md);
+#     (the jobs are the required status checks of the rulesets on `dev` and `main`, see branch-protection.md);
 #   - the `name:` of a job is not its identifier, or the identifier is not the `just` recipe that the job starts;
 #   - the `uses:` steps of a job are not exactly the actions of its line (a job with a missing setup
 #     action, or with an extra action, stops the gate). The actions are listed by name. The pins (SHA, tag
