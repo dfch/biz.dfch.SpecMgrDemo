@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T06:59:13.362+01:00'
+updated: '2026-11-03T07:23:59.412+01:00'
 version: 1.0.0
 ---
 
@@ -198,6 +198,25 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - Handoff at the end of the session
+
+State: all work of this FEAT is in 6 commits on the current branch. Nothing is pushed. All documents keep their status (DEC, GOL, PRB, SOP, RSK and TXT are `draft`, this FEAT is `planning`). The asdste100 MCP now loads both register files (`technical-nouns.jsonl` and `technical-verbs.jsonl`), and a lookup test was successful.
+
+Open items for the next agent or the owner:
+
+1. The owner must examine the DEC documents and accept them. An agent must not accept a DEC (see the DEC about limits for coding agents).
+2. Task 300.100 of feat-1 is open until the owner accepts the DEC about React.
+3. The register records `MAY` and `SHOULD` in `technical-verbs.jsonl` are duplicates of the RFC 2119 word list. Remove them when the register is refined.
+4. A reviewer must examine the STE rules that a word lookup does not show (tenses, passive voice, sentence length). A word check cannot find a technical noun that is used as a verb. About 300 words are approved as one part of speech and rejected as another (for example `code`, `test`, `use`, `work`). A person must examine them.
+5. The license classes in the DEC about licenses are a first draft. The owner or a person with legal competence must examine them. The AGPL clause about networks needs a decision of the owner. The license of each planned tool (for example CodeQL, PIT, Stryker) is not verified.
+6. The ArchUniTS maturity is not verified.
+7. GitHub issue #4 is about the French heading table. The issue is in this repository, but the table belongs to specmgr. The owner can move it.
+8. The file names of the documents are the same as the titles at this time. If a title changes, rename the file.
+
+Next FEATs (not created): structure of the monorepo, contract pipeline, architecture, verification and the walking skeleton (web application for menu selection in a company canteen). The skeleton FEAT must set the versions, examine the licenses and set each threshold from a measured baseline.
+
+Rules for the next agent: use the asdste100 MCP for STE words and rules. Do not write a separate STE script. Write documents in ASD-STE100 English. Do not change a status. Make separate commits.
 
 #### 2026-11-02 00:00:00.000Z - Terminology register and new text in STE
 
