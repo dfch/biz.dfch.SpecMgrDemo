@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T08:22:47.807+01:00'
+updated: '2026-11-03T10:33:32.150+01:00'
 version: 1.0.0
 ---
 
@@ -202,6 +202,12 @@ STE check: the asdste100 MCP gives the rules and the words of ASD-STE100. It loa
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-03 00:00:00.000Z - Handoff: next features planned, license class added
+
+State at the end of the session: all 17 DEC have the status accepted. The license DEC has one more permitted class (`GPL-2.0-only WITH Classpath-exception-2.0`), added by the agent with a permission of the owner for one time. The prototypes of feat-2 are in the folder of feat-2. The plans of feat-5, feat-6 and feat-7 are written and not started (issues #5, #6, #7). The owner selected Eclipse Temurin 21 as the JDK. Nothing is pushed.
+
+Open in this feature: task 500.130 (ACC-007, reviewer dfch, worksheet TXT 852a2766-971a-4b1e-82c7-5d8a1539e77f) and task 500.140 (register records, the owner keeps them not accepted). A person with competence in the law must examine the license classes. The next work is in feat-5-foundation-monorepo-ci, see its handoff entry.
 
 #### 2026-11-03 00:00:00.000Z - All DEC accepted, STE gate on hold, reviewer set
 
