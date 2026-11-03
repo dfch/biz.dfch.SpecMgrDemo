@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T12:17:28.129+01:00'
+updated: '2026-11-03T12:22:22.640+01:00'
 version: 1.0.0
 ---
 
@@ -72,7 +72,7 @@ These are the first classes of licenses. The owner must make sure that they are 
 
 | Class | Licenses | Rule |
 |---|---|---|
-| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, LGPL-3.0, GPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
+| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0, LGPL-3.0, GPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
 | Permitted | GPL-2.0-only WITH Classpath-exception-2.0 | Permitted. The gate must match the complete expression. The license GPL-2.0-only with no exception stays not permitted. |
 | Review | EPL-2.0, MPL-2.0 | A DEC about the deviation is necessary |
 | Not permitted | GPL-2.0-only, SSPL, BUSL, licenses with no right to commercial use, proprietary licenses | Not permitted |
@@ -82,6 +82,10 @@ Some tools for security scans can have terms that are not open source, for examp
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-03 11:22:16.000Z - Five licenses added to the class Permitted
+
+The owner gave a permission for one time to make this change, and no other change. The agent added `Zlib`, `Unicode-3.0`, `Unicode-DFS-2016`, `BlueOak-1.0.0` and `Artistic-2.0` to the row of the class Permitted in More Information. The reason is that libraries can have them, and the license files of Node (zlib, ICU, minimatch, npm) and of the JDK (zlib, CLDR, ICU4J) have them. A person who has competence in the law must examine the new entries, in the same way as for the Classpath row. The text of the decision is not changed.
 
 ### 2026-11-03 11:17:19.000Z - CC0-1.0 added and AGPL identifiers made exact
 
