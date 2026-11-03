@@ -4,7 +4,7 @@ created: '2026-11-02T14:37:17.816+01:00'
 id: feat-3-process-policy-baseline
 status: planning
 type: feat
-updated: '2026-11-03T10:34:58.787+01:00'
+updated: '2026-11-03T10:36:34.240+01:00'
 version: 1.0.0
 ---
 
@@ -264,7 +264,7 @@ The feature is written from the planning session. The scope is policy documents 
 
 #### 2026-11-03 00:00:00.000Z - Keep the word check script as a reference
 
-The owner told the agent to move the script for the word check into the folder of this feature. It is `bin/500.120-01-ste-word-check.py`. This changes the text of ACC-006 and of the DEC about the STE language ("the project does not keep the script", "no separate script"). The script is a reference only. It is not a gate, CI does not start it, and the STE gate stays on hold (decision of the owner on 2026-11-03). The paths in the script are fixed for the machine of the author. It does not examine grammar. The owner makes a new decision if the script becomes a gate or a tool for the project.
+The owner told the agent to move the script for the word check into the folder of this feature. It is `bin/500.120-01-ste-word-check.py`. Two more scripts are there: `500.120-02-ste-passive-and-long-sentences.py` and `500.120-03-ste-part-of-speech-conflicts.py`. The first script has the flag `--plans` for the feature plans. This changes the text of ACC-006 and of the DEC about the STE language ("the project does not keep the script", "no separate script"). The script is a reference only. It is not a gate, CI does not start it, and the STE gate stays on hold (decision of the owner on 2026-11-03). The paths in the script are fixed for the machine of the author. It does not examine grammar. The owner makes a new decision if the script becomes a gate or a tool for the project.
 
 #### 2026-11-02 00:00:00.000Z - Keep the register in the repository and write the meanings
 
