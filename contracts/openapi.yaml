@@ -1,0 +1,110 @@
+# The OpenAPI file: the only source for the interfaces of the project (feat-6-contracts-openapi-pipeline,
+# REQ-001, DEC f92e35a1-77a2-4749-917f-bf9b644e8ddd). A change of an interface starts here. See README.md.
+#
+# The linter (just lint) obeys the rules in tools/lint/ruleset.yaml:
+#   - each response 4xx and 5xx has the media type application/problem+json and the schema Problem (REQ-006);
+#   - Problem has the members `code` and `traceId`, and no text in a language (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698);
+#   - `code` is a $ref to the one list ErrorCode (lower snake case, unique values);
+#   - each operation has the identifier of its REQ document in `x-specmgr-req` (REQ-008, DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342).
+openapi: 3.1.0
+info:
+  title: SpecMgr Demo API
+  # The version of the interface. It follows Semantic Versioning 2.0.0 and goes up for each accepted
+  # breaking change (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4). While the first number is 0, the second number goes up.
+  version: 0.1.0
+  description: The interfaces between the backend and the frontend of the SpecMgr Demo application.
+# The URL is relative to the host of the file. This is the default of OpenAPI. The rule oas3-api-servers wants it written.
+servers:
+  - url: /
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      summary: Get the status of the system
+      description: Gives the state of the system and the time of the check.
+      # The identifier of the REQ document "The System Gives Its Status" (docs/req/).
+      x-specmgr-req: 1ca335d7-969a-443e-9392-165fdeea99a0
+      responses:
+        "200":
+          description: The system gives its status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "429":
+          $ref: "#/components/responses/ProblemResponse"
+        "500":
+          $ref: "#/components/responses/ProblemResponse"
+        "503":
+          $ref: "#/components/responses/ProblemResponse"
+components:
+  responses:
+    # The one response for each status 4xx and 5xx. It has one media type and the schema Problem.
+    ProblemResponse:
+      description: An error. The body obeys RFC 9457 (Problem Details).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Status:
+      type: object
+      description: The status of the system.
+      required:
+        - state
+        - checkedAt
+      properties:
+        state:
+          type: string
+          description: The condition of the system.
+          enum:
+            - up
+            - degraded
+        checkedAt:
+          type: string
+          format: date-time
+          description: The time of the check.
+    # RFC 9457 Problem Details. The schema has no text in a language. The backend sends the error code, and
+    # the frontend shows the text for each error code from its catalog (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698).
+    # `title` and `detail` are the members of RFC 9457. They are for logs and for developers (English), and a
+    # client must not show them to a user.
+    Problem:
+      type: object
+      description: An error, as RFC 9457 (Problem Details) describes it.
+      required:
+        - code
+        - traceId
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: A URI that names the type of the error.
+        title:
+          type: string
+          description: A short summary of the type of the error, for logs and developers.
+        status:
+          type: integer
+          description: The HTTP status code of the response.
+        detail:
+          type: string
+          description: A note about this error, for logs and developers.
+        instance:
+          type: string
+          format: uri-reference
+          description: A URI that names this occurrence of the error.
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        traceId:
+          type: string
+          description: The trace identifier of OpenTelemetry (32 lower case hexadecimal characters). It links the response to the trace of the request.
+          pattern: "^[0-9a-f]{32}$"
+    # The one list of error codes. The generators make the list for Java and for TypeScript from it.
+    ErrorCode:
+      type: string
+      description: The code of an error. The frontend shows the text for each code.
+      enum:
+        - not_found
+        - validation_failed
+        - rate_limited
+        - internal_error
+        - service_unavailable

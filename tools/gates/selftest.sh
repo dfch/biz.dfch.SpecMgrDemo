@@ -755,6 +755,159 @@ grep -v '^CDXGEN_INTEGRITY=' "${real_versions}" >"${work}/sbomver-noint.env"
 expect 1 "CDXGEN_INTEGRITY is not in tools/versions.env" "versions.env has no CDXGEN_INTEGRITY" run_sbom_pins "${real_tool}" "${work}/sbomver-noint.env"
 
 # ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the lock file of Spectral in tools/spectral/ (feat-6-contracts-openapi-pipeline, Task 110.110, REQ-009)"
+# The same check as for cdxgen (check_pnpm_tool), with SPECTRAL_VERSION, SPECTRAL_INTEGRITY and the package
+# @stoplight/spectral-cli. The messages start with `Lint tool:`.
+real_lint="${REPO_ROOT}/tools/spectral"
+spectral_version="$(version_of SPECTRAL_VERSION)"
+spectral_integrity="$(version_of SPECTRAL_INTEGRITY)"
+# run_lint_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the Spectral project
+run_lint_pins() { env LINT_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_lint_tool <name>: a copy of package.json and pnpm-lock.yaml of the repository in a new folder (the folder is printed)
+mk_lint_tool() {
+    local dir="${work}/linttool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_lint}/package.json" "${real_lint}/pnpm-lock.yaml" "${dir}/"
+    echo "${dir}"
+}
+# lint_pin_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
+lint_pin_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_lint_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/${file}"
+    if cmp -s "${real_lint}/${file}" "${dir}/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_lint_pins "${dir}"
+}
+# lint_pin_append_case <name> <file> <text> <description> <text to append>: add text at the end of <file> in a copy
+lint_pin_append_case() {
+    local name="$1" file="$2" text="$3" description="$4" dir
+    dir="$(mk_lint_tool "${name}")"
+    printf '%b' "$5" >>"${dir}/${file}"
+    expect 1 "${text}" "${description}" run_lint_pins "${dir}"
+}
+# lint_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+lint_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/lintver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/lintver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_lint_pins "${real_lint}" "${work}/lintver-${name}.env"
+}
+spectral_package="@stoplight/spectral-cli"
+
+expect 0 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "the real tools/spectral/ is the one of versions.env" run_lint_pins "${real_lint}"
+expect 0 "RESULT: PASS" "the real tools/spectral/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# The three places, each alone: a change of one place stops the check
+lint_versions_case onlyversions "SPECTRAL_VERSION in tools/versions.env is ${other_version}" "Spectral, one place only: versions.env has another SPECTRAL_VERSION" \
+    "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${other_version}#"
+lint_versions_case onlyintegrity "but SPECTRAL_INTEGRITY in tools/versions.env is ${other_integrity}" "Spectral, one place only: versions.env has another SPECTRAL_INTEGRITY" \
+    "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=${other_integrity}#"
+lint_pin_case onlypackage package.json "but SPECTRAL_VERSION in tools/versions.env is ${spectral_version}" "Spectral, one place only: package.json has another version" \
+    "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#"
+lint_pin_case onlylock pnpm-lock.yaml "the importer has ${spectral_package} \`version\` '${other_version}'" "Spectral, one place only: the lock file has another version (importer)" \
+    "s#^\\(        version: \\)${spectral_version}\$#\\1${other_version}#"
+lint_pin_case onlylockpackages pnpm-lock.yaml "\`packages\` must have exactly one ${spectral_package}" "Spectral, one place only: the lock file has another version (packages)" \
+    "0,/^  '@stoplight\\/spectral-cli@${spectral_version}':/s##  '${spectral_package}@${other_version}':#"
+lint_pin_case onlylockintegrity pnpm-lock.yaml "but SPECTRAL_INTEGRITY in tools/versions.env is ${spectral_integrity}" "Spectral, one place only: the lock file has another integrity value" \
+    "s#${spectral_integrity}#${other_integrity}#"
+# All three places with the same new value pass (the procedure of tools/spectral/README.md)
+dir="$(mk_lint_tool allthree)"
+sed -i -e "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#" "${dir}/package.json"
+sed -i -e "s#${spectral_package}@${spectral_version}#${spectral_package}@${other_version}#" \
+    -e "s#^\\(        \\(specifier\\|version\\): \\)${spectral_version}\$#\\1${other_version}#" \
+    -e "s#${spectral_integrity}#${other_integrity}#" "${dir}/pnpm-lock.yaml"
+sed -e "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${other_version}#" -e "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=${other_integrity}#" \
+    "${real_versions}" >"${work}/lintver-allthree.env"
+expect 0 "RESULT: PASS" "Spectral: all three places have the same new version and integrity value" run_lint_pins "${dir}" "${work}/lintver-allthree.env"
+
+# package.json: ranges and tags
+for range in "^${spectral_version}" "~${spectral_version}" ">=${spectral_version}" "${spectral_version}.x" "6.x" "*" "latest" "next" "npm:${spectral_package}@${spectral_version}" "file:../x" "git+https://example.invalid/x.git"; do
+    lint_pin_case "range-${range//[^A-Za-z0-9]/_}" package.json "but SPECTRAL_VERSION in tools/versions.env is ${spectral_version}" "Spectral, package.json: the version is a range or a tag (${range})" \
+        "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${range}\"#"
+done
+# package.json: other dependencies and other keys
+lint_pin_case extradep package.json "has the dependency left-pad" "Spectral, package.json: one more dependency" \
+    "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${spectral_version}\",\n    \"left-pad\": \"1.3.0\"#"
+lint_pin_case otherdep package.json "has the dependency @cyclonedx/cdxgen" "Spectral, package.json: another dependency (the one of cdxgen) and not Spectral" \
+    "s#\"${spectral_package}\"#\"@cyclonedx/cdxgen\"#"
+lint_pin_case nodeps package.json "has no \`dependencies\` object" "Spectral, package.json: no dependencies key" \
+    "s#\"dependencies\"#\"x-dependencies\"#"
+for key in devDependencies optionalDependencies peerDependencies overrides resolutions pnpm packageManager scripts; do
+    lint_pin_case "key-${key}" package.json "has the key \`${key}\`" "Spectral, package.json: ${key}" \
+        "s#\"private\": true,#\"private\": true,\n  \"${key}\": {},#"
+done
+lint_pin_case dupkey package.json "there two times" "Spectral, package.json: a key two times" \
+    "s#\"private\": true,#\"private\": true,\n  \"private\": false,#"
+lint_pin_append_case jsonbad package.json "cannot be read as JSON" "Spectral, package.json: not JSON" "{"
+
+# The lock file
+lint_pin_case lockextradep pnpm-lock.yaml "must have exactly one dependency, ${spectral_package}" "Spectral, lock file: a second direct dependency of the importer" \
+    "s#^\\(        version: ${spectral_version}\\)\$#\\1\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+lint_pin_case lockdevdep pnpm-lock.yaml "must have \`dependencies\` and nothing else" "Spectral, lock file: devDependencies in the importer" \
+    "s#^\\(        version: ${spectral_version}\\)\$#\\1\n    devDependencies:\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+lint_pin_case lockspecifier pnpm-lock.yaml "the importer has ${spectral_package} \`specifier\` '^${spectral_version}'" "Spectral, lock file: the specifier is a range" \
+    "s#^\\(        specifier: \\)${spectral_version}\$#\\1^${spectral_version}#"
+lint_pin_case lockversion pnpm-lock.yaml "must be a text that starts with \`9.\`" "Spectral, lock file: lockfileVersion 8.0" \
+    "s#^lockfileVersion: '9.0'#lockfileVersion: '8.0'#"
+lint_pin_case locknoint pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package with no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {}#"
+lint_pin_case locksha1 pnpm-lock.yaml "has an integrity value that is not sha256, sha384 or sha512" "Spectral, lock file: a package with an integrity value of sha1" \
+    "${first_package}s#integrity: [^}]*}#integrity: sha1-AAAAAAAAAAAAAAAAAAAAAAAAAAA=}#"
+lint_pin_case locktarball pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package with a tarball URL and no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {tarball: https://example.invalid/x.tgz}#"
+lint_pin_case locktarballint pnpm-lock.yaml "has the \`resolution\` keys ['tarball']" "Spectral, lock file: a package with an integrity value and a tarball URL" \
+    "${first_package}s#resolution: {\\([^}]*\\)}#resolution: {\\1, tarball: https://example.invalid/x.tgz}#"
+lint_pin_case lockgit pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package from git" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {commit: 0123456789abcdef0123456789abcdef01234567, repo: https://example.invalid/x.git, type: git}#"
+lint_pin_case lockurlkey pnpm-lock.yaml "is not \`<name>@<exact version>\`" "Spectral, lock file: a package with a URL and no version in the key" \
+    "${first_package}s#^  '\\([^']*\\)@[0-9][^']*':\$#  '\\1@https://example.invalid/x.tgz':#"
+lint_pin_case locksnapshot pnpm-lock.yaml "which is not in \`packages\`" "Spectral, lock file: a snapshot of a package that is not in packages" \
+    "s#^snapshots:#&\n  'left-pad@1.3.0': {}#"
+lint_pin_append_case lockoverrides pnpm-lock.yaml "has the top-level key \`overrides\`" "Spectral, lock file: overrides" "\noverrides:\n  yargs: 1.0.0\n"
+lint_pin_append_case locksecond pnpm-lock.yaml "has 2 YAML documents" "Spectral, lock file: a second YAML document (a packageManager field makes one)" "\n---\nlockfileVersion: '9.0'\n"
+lint_pin_append_case lockbroken pnpm-lock.yaml "cannot be read as YAML" "Spectral, lock file: not YAML" "\n  bad: [\n"
+
+# The folder
+expect 1 "the folder ${work}/no-such-lint-tool (the lock file of Spectral) does not exist" "no folder tools/spectral/" run_lint_pins "${work}/no-such-lint-tool"
+mkdir -p "${work}/linttool-empty"
+expect 1 "linttool-empty/package.json does not exist" "Spectral, an empty folder: no package.json" run_lint_pins "${work}/linttool-empty"
+dir="$(mk_lint_tool nolock)" && rm "${dir}/pnpm-lock.yaml"
+expect 1 "linttool-nolock/pnpm-lock.yaml does not exist" "Spectral: no lock file (package.json is there)" run_lint_pins "${dir}"
+for extra in .npmrc pnpm-workspace.yaml .pnpmfile.cjs yarn.lock package-lock.json ruleset.yaml; do
+    dir="$(mk_lint_tool "extra-${extra//./_}")" && echo "x" >"${dir}/${extra}"
+    expect 1 "/${extra} is not allowed" "Spectral: the folder has the file ${extra}" run_lint_pins "${dir}"
+done
+dir="$(mk_lint_tool readme)" && echo "# x" >"${dir}/README.md" && mkdir -p "${dir}/node_modules/x"
+expect 0 "RESULT: PASS" "Spectral: README.md and node_modules are allowed in the folder" run_lint_pins "${dir}"
+
+# versions.env
+sed -e "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=sha512-abc#" "${real_versions}" >"${work}/lintver-integrityform.env"
+expect 1 "it must be a sha512 integrity value of npm" "Spectral, versions.env: the form of SPECTRAL_INTEGRITY is checked" run_lint_pins "${real_lint}" "${work}/lintver-integrityform.env"
+for range in "^${spectral_version}" "latest" "6"; do
+    sed -e "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${range}#" "${real_versions}" >"${work}/lintver-range.env"
+    expect 1 "it must be an exact version (no range, no tag)" "Spectral, versions.env: SPECTRAL_VERSION is not an exact version (${range})" run_lint_pins "${real_lint}" "${work}/lintver-range.env"
+done
+grep -v '^SPECTRAL_VERSION=' "${real_versions}" >"${work}/lintver-nover.env"
+expect 1 "SPECTRAL_VERSION is not in tools/versions.env" "Spectral, versions.env has no SPECTRAL_VERSION" run_lint_pins "${real_lint}" "${work}/lintver-nover.env"
+grep -v '^SPECTRAL_INTEGRITY=' "${real_versions}" >"${work}/lintver-noint.env"
+expect 1 "SPECTRAL_INTEGRITY is not in tools/versions.env" "Spectral, versions.env has no SPECTRAL_INTEGRITY" run_lint_pins "${real_lint}" "${work}/lintver-noint.env"
+# The two checks are separate: a bad lock file of Spectral does not make the check of cdxgen stop, and the other way round
+dir="$(mk_lint_tool separate)"
+sed -i -e "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#" "${dir}/package.json"
+expect 1 "SBOM tool pin: SBOM tool: ${real_tool}: @cyclonedx/cdxgen ${cdxgen_version}" "a bad lock file of Spectral: the check of cdxgen still passes (and says so)" run_lint_pins "${dir}"
+expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "a bad lock file of cdxgen: the check of Spectral still passes (and says so)" \
+    env SBOM_TOOL_DIR="${work}/no-such-sbom-tool" LINT_TOOL_DIR="${real_lint}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
 fix="${GATES_DIR}/fixtures"
 sudo_case() {
@@ -1295,6 +1448,35 @@ sbom_run "${root}" >/dev/null 2>&1 || true
 no_frontend_sbom "${root}" "a package.json in tools/sbom/sub/ stops the script before cdxgen"
 pnpm_calls 0 "a manifest outside the set: the script stops before the install"
 
+
+section "sbom.sh: the lock file of Spectral in tools/spectral/ is not an unscanned manifest (finding E1, feat-6-contracts-openapi-pipeline, Task 110.110)"
+root="$(new_tree e1-tools-spectral)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/spectral/package.json '{"dependencies":{"@stoplight/spectral-cli":"1.0.0"}}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Wrote ${root}/build/sbom/frontend.cdx.json" "tools/spectral/package.json and tools/spectral/pnpm-lock.yaml with frontend/package.json do not stop the script" sbom_run "${root}"
+expect 0 "PASS" "the two files of tools/spectral/: the script passes" sbom_run "${root}"
+root="$(new_tree e1-tools-spectral-alone)"
+put "${root}" tools/spectral/package.json '{"dependencies":{"@stoplight/spectral-cli":"1.0.0"}}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Nothing to scan" "the two files of tools/spectral/ alone: nothing to scan, and no stop" sbom_run "${root}"
+pnpm_calls 0 "the two files of tools/spectral/ alone: no install"
+root="$(new_tree e1-tools-spectral-modules)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/spectral/package.json '{}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+put "${root}" tools/spectral/node_modules/pkg/package.json '{}'
+expect 0 "Wrote" "node_modules in tools/spectral/ is not entered" sbom_run "${root}"
+tools_spectral_files=(tools/spectral/package.json:'{}' tools/spectral/pnpm-lock.yaml:"${tools_lock}" frontend/package.json:'{}')
+unscanned_case toolsspectralworkspace tools/spectral/pnpm-workspace.yaml 'packages: []' "${tools_spectral_files[@]}"
+unscanned_case toolsspectralsub tools/spectral/sub/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case toolsspectralsublock tools/spectral/sub/pnpm-lock.yaml "${tools_lock}" "${tools_spectral_files[@]}"
+unscanned_case toolsspectralpom tools/spectral/pom.xml "${pom_xml}" "${tools_spectral_files[@]}"
+unscanned_case toolslint tools/lint/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case toolslintlock tools/lint/pnpm-lock.yaml "${tools_lock}" "${tools_spectral_files[@]}"
+unscanned_case toolsspectralnested tools/spectral/nested/deep/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case rootwithtoolsspectral package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case contractswithtoolsspectral contracts/package.json '{}' "${tools_spectral_files[@]}"
 
 # ---------------------------------------------------------------------------------------------
 section "validate-docs.sh (Task 130.110)"

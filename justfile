@@ -2,6 +2,8 @@
 # CI jobs start one recipe from this file, and nothing else (ACC-003).
 #
 # feat-5-foundation-monorepo-ci, Task 120.110.
+# The number after the script name is the number of the task that wrote the gate: 130.xxx are the tasks of
+# feat-5-foundation-monorepo-ci, and 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate).
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
 # because a script is missing.
@@ -54,8 +56,16 @@ check-sudo:
 test-license-gate:
     @{{ just_executable() }} _gate test-license-gate.sh 130.135
 
-# Test: all gates with good and bad input (the license gate and its fixtures too).
-test-gates: test-license-gate
+# Gate: the linter Spectral examines contracts/openapi.yaml with the rules in tools/lint/ruleset.yaml (REQ-002, REQ-006, REQ-008).
+lint:
+    @{{ just_executable() }} _gate lint.sh 110.115 contracts/openapi.yaml tools/lint/ruleset.yaml
+
+# Test: the lint gate with the real Spectral and the bad OpenAPI files in tools/lint/fixtures/ (ACC-007).
+test-lint-gate:
+    @{{ just_executable() }} _gate test-lint-gate.sh 110.115
+
+# Test: all gates with good and bad input (the license gate and the lint gate with their fixtures too).
+test-gates: test-license-gate test-lint-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Check the install on this machine: each tool has the pinned version.
@@ -69,7 +79,7 @@ _gate script task *args:
     set -euo pipefail
     path="tools/gates/{{ script }}"
     if [[ ! -x "${path}" ]]; then
-        echo "NOT IMPLEMENTED: ${path} does not exist. Task {{ task }} of feat-5-foundation-monorepo-ci writes it." >&2
+        echo "NOT IMPLEMENTED: ${path} does not exist. The task {{ task }} of the plan of the feature that added this recipe writes it." >&2
         exit 1
     fi
     exec "${path}" {{ args }}

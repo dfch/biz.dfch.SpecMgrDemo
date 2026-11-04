@@ -1,0 +1,277 @@
+# The rules of the OpenAPI linter Spectral (feat-6-contracts-openapi-pipeline, Task 110.115).
+#
+# REQ-006: Problem Details (RFC 9457) with the media type application/problem+json, one list of error codes,
+#          the trace identifier, and no text in a language.
+# REQ-008: each operation has the identifier of its REQ document (a UUID) in `x-specmgr-req`.
+# DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4: `info.version` is a Semantic Versioning 2.0.0 version.
+#
+# `just lint` starts Spectral with this file and with contracts/openapi.yaml (tools/gates/lint.sh). The folder
+# tools/lint/fixtures/ has one bad OpenAPI file for each rule, and `just test-lint-gate` checks that each one
+# fails with the rule that the file expects (tools/lint/README.md). A change of this file needs the review of
+# a code owner (CODEOWNERS covers /tools/).
+#
+# Three points of Spectral that the rules must handle:
+#   - A rule that checks a `$ref` needs `resolved: false`. Without it, Spectral replaces the `$ref` with its
+#     target, and the rule cannot see WHICH schema a response uses.
+#   - A `given` path that matches nothing is not an error. So a rule on a part that must exist (the schema
+#     Problem, the list ErrorCode) has a second rule that stops if the part is not there.
+#   - The function `pattern` does not report a field that is missing. So the rule for `x-specmgr-req` is two
+#     rules: one for a missing or empty value (`truthy`) and one for the form of the value (`schema`).
+#
+# The rules of `spectral:oas` check that the file is a correct OpenAPI file (valid references, valid schemas,
+# a unique operationId, no unused component). A warning is a failure too (`--fail-severity warn` in lint.sh).
+# Four rules of the group need a decision about the organization and not about the interface, so they are off.
+extends:
+  - [spectral:oas, recommended]
+
+rules:
+  info-contact: off
+  openapi-tags: off
+  operation-tags: off
+  tag-description: off
+
+  # ---------------------------------------------------------------------------------------------------
+  # REQ-006: each response 4xx and 5xx
+  # ---------------------------------------------------------------------------------------------------
+
+  # A response with a status 4xx, 5xx or `default` must be the shared response ProblemResponse, or it must have
+  # exactly one media type, application/problem+json, with the schema `#/components/schemas/Problem`. This
+  # stops another media type, another schema, two media types, and a response with no content. The range
+  # keys 4XX and 5XX and the key `default` are in the rule: a `default` response is an error response too.
+  problem-response-media-type-and-schema:
+    description: Each response 4xx and 5xx must use application/problem+json with the schema Problem.
+    message: >-
+      Each response 4xx and 5xx (also 4XX, 5XX and default) must be $ref '#/components/responses/ProblemResponse',
+      or it must have exactly one media type, application/problem+json, with the schema $ref
+      '#/components/schemas/Problem' (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          oneOf:
+            - type: object
+              required: ["$ref"]
+              properties:
+                "$ref": { const: "#/components/responses/ProblemResponse" }
+            - type: object
+              required: [content]
+              properties:
+                content:
+                  type: object
+                  required: ["application/problem+json"]
+                  additionalProperties: false
+                  properties:
+                    "application/problem+json":
+                      type: object
+                      required: [schema]
+                      properties:
+                        schema:
+                          type: object
+                          required: ["$ref"]
+                          properties:
+                            "$ref": { const: "#/components/schemas/Problem" }
+
+  # The shared response must follow the same rule.
+  problem-response-component:
+    description: The shared response ProblemResponse must use application/problem+json with the schema Problem.
+    message: >-
+      The response ProblemResponse must have exactly one media type, application/problem+json, with the schema
+      $ref '#/components/schemas/Problem' (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.responses.ProblemResponse"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: object
+              required: ["application/problem+json"]
+              additionalProperties: false
+              properties:
+                "application/problem+json":
+                  type: object
+                  required: [schema]
+                  properties:
+                    schema:
+                      type: object
+                      required: ["$ref"]
+                      properties:
+                        "$ref": { const: "#/components/schemas/Problem" }
+
+  # ---------------------------------------------------------------------------------------------------
+  # REQ-006: the schema Problem and the list ErrorCode
+  # ---------------------------------------------------------------------------------------------------
+
+  # The parts that must be there. (A rule with a `given` path that matches nothing does not fail.)
+  problem-schema-exists:
+    description: The schema Problem must exist.
+    message: The schema '#/components/schemas/Problem' must exist (REQ-006)
+    severity: error
+    given: "$.components"
+    then:
+      field: schemas.Problem
+      function: truthy
+
+  error-code-schema-exists:
+    description: The schema ErrorCode (the one list of error codes) must exist.
+    message: The schema '#/components/schemas/ErrorCode' (the one list of error codes) must exist (REQ-006)
+    severity: error
+    given: "$.components"
+    then:
+      field: schemas.ErrorCode
+      function: truthy
+
+  # `code` is in the schema, and it is a required member.
+  problem-code-required:
+    description: The schema Problem must have the required member `code`.
+    message: The schema Problem must have the member `code`, and `code` must be in its list `required` (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.schemas.Problem"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [required, properties]
+          properties:
+            required:
+              type: array
+              contains: { const: code }
+            properties:
+              type: object
+              required: [code]
+
+  # The trace identifier (OpenTelemetry, DEC e3eadec0-a6ea-4efe-8e6d-fd19287122fa) is in the schema, and it is a
+  # required member.
+  problem-trace-id-required:
+    description: The schema Problem must have the required member `traceId`.
+    message: The schema Problem must have the member `traceId`, and `traceId` must be in its list `required` (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.schemas.Problem"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [required, properties]
+          properties:
+            required:
+              type: array
+              contains: { const: traceId }
+            properties:
+              type: object
+              required: [traceId]
+
+  # `code` uses the one list. An inline enum would be a second list, and the generators would make two types.
+  problem-code-uses-shared-list:
+    description: Problem.code must be a $ref to the one list ErrorCode.
+    message: The member `code` of Problem must be $ref '#/components/schemas/ErrorCode', and not an inline list (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.schemas.Problem.properties.code"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: ["$ref"]
+          properties:
+            "$ref": { const: "#/components/schemas/ErrorCode" }
+
+  # No text in a language (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698). The schema has the seven members of this
+  # list, and no other member (for example `message`, `localizedMessage` or `text`). `title` and `detail` are the
+  # members of RFC 9457 for logs and developers. A new member needs a change of this rule and the review of the owner.
+  problem-members:
+    description: The schema Problem has the members of the list, and no member with a text in a language.
+    message: >-
+      The schema Problem must have the members type, title, status, detail, instance, code and traceId, and no other
+      member. It must have no text in a language, for example `message`. The frontend shows the text for each error
+      code (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698, REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.schemas.Problem.properties"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [type, title, status, detail, instance, code, traceId]
+          propertyNames:
+            enum: [type, title, status, detail, instance, code, traceId]
+
+  # The list ErrorCode: a string enum with unique values in lower snake case.
+  error-code-list:
+    description: ErrorCode must be a string enum with unique values in lower snake case.
+    message: >-
+      The schema ErrorCode must have `type: string` and a list `enum` with at least one value. The values must be
+      unique, and each value must be in lower snake case (the pattern ^[a-z][a-z0-9_]*$) (REQ-006)
+    severity: error
+    resolved: false
+    given: "$.components.schemas.ErrorCode"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: [type, enum]
+          properties:
+            type: { const: string }
+            enum:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items: { type: string, pattern: "^[a-z][a-z0-9_]*$" }
+
+  # ---------------------------------------------------------------------------------------------------
+  # REQ-008: x-specmgr-req on each operation, for each HTTP method
+  # ---------------------------------------------------------------------------------------------------
+
+  operation-req-present:
+    description: Each operation must have the extension x-specmgr-req with a value.
+    message: The operation must have the extension `x-specmgr-req` with the identifier of its REQ document (REQ-008)
+    severity: error
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      field: x-specmgr-req
+      function: truthy
+
+  operation-req-uuid:
+    description: The value of x-specmgr-req must be a UUID.
+    message: The value of `x-specmgr-req` must be a text that is a UUID (the identifier of a REQ document) (REQ-008)
+    severity: error
+    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    then:
+      field: x-specmgr-req
+      function: schema
+      functionOptions:
+        schema:
+          type: string
+          pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+
+  # ---------------------------------------------------------------------------------------------------
+  # DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4: the version of the interface
+  # ---------------------------------------------------------------------------------------------------
+
+  info-version-semver:
+    description: info.version must be a Semantic Versioning 2.0.0 version.
+    message: >-
+      `info.version` is the version of the interface, and it must be a Semantic Versioning 2.0.0 version, for example
+      0.1.0 (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4)
+    severity: error
+    given: "$.info"
+    then:
+      field: version
+      function: schema
+      functionOptions:
+        schema:
+          type: string
+          pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"

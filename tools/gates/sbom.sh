@@ -33,6 +33,10 @@
 #        cdxgen (rule A: cdxgen does not go to users), and the script does not scan them. The exclusion is
 #        for these two paths and not for the folder: tools/sbom/pnpm-workspace.yaml, a package.json in a
 #        sub-folder of tools/sbom/, and each manifest in another folder of tools/ still stop the script.
+#        The same is for the linter (feat-6-contracts-openapi-pipeline, Task 110.110): the two files
+#        tools/spectral/package.json and tools/spectral/pnpm-lock.yaml are the lock file of Spectral (rule A),
+#        and the script does not scan them. The tree of Spectral has packages with the license Unlicense, which
+#        is not in the DEC, so it must not be in the SBOM. just check-pins checks the lock file.
 #   E1b  If a scanned package.json has an entry in dependencies, devDependencies, optionalDependencies or
 #        peerDependencies (or a scanned pom.xml has a <dependency> in <dependencies>) and the SBOM that the
 #        tool made has no component, the script stops. sbom_check.py does this check (it reads
@@ -119,7 +123,7 @@ while IFS= read -r path; do
 done < <(manifest_files .)
 if [[ ${#unscanned[@]} -gt 0 ]]; then
     printf '[sbom.sh] STOP: %s is not scanned by sbom.sh\n' "${unscanned[@]}" >&2
-    die "${#unscanned[@]} manifest(s) are outside the set that this script scans, so their licenses would not be checked. Scanned: pom.xml or backend/pom.xml (and the poms below backend/), frontend/package.json, frontend/pnpm-lock.yaml and frontend/pnpm-workspace.yaml (and, with a workspace and a lock file, the package.json files below frontend/). Move the manifest, or change this script (and its tests) first. Not scanned: tools/sbom/package.json and tools/sbom/pnpm-lock.yaml (the lock file of cdxgen). Not entered: .git, node_modules, build, target, .specmgr, tools/license/fixtures, tools/gates/fixtures."
+    die "${#unscanned[@]} manifest(s) are outside the set that this script scans, so their licenses would not be checked. Scanned: pom.xml or backend/pom.xml (and the poms below backend/), frontend/package.json, frontend/pnpm-lock.yaml and frontend/pnpm-workspace.yaml (and, with a workspace and a lock file, the package.json files below frontend/). Move the manifest, or change this script (and its tests) first. Not scanned: tools/sbom/package.json and tools/sbom/pnpm-lock.yaml (the lock file of cdxgen), and tools/spectral/package.json and tools/spectral/pnpm-lock.yaml (the lock file of Spectral). Not entered: .git, node_modules, build, target, .specmgr, tools/license/fixtures, tools/gates/fixtures."
 fi
 
 mkdir -p "${out_dir}"

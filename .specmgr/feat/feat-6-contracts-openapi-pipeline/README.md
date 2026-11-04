@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T19:34:28.969+01:00'
+updated: '2026-11-04T20:02:13.874+01:00'
 version: 1.0.0
 ---
 
@@ -52,9 +52,9 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: `contracts/` has an OpenAPI file with the operation `GET /status`, the schema for Problem Details with the `code` list and the trace identifier, and the extension `x-specmgr-req` with the UUID of a real REQ document in `docs/req/` (REQ-001, REQ-006, REQ-008).
+- [x] ACC-001: `contracts/` has an OpenAPI file with the operation `GET /status`, the schema for Problem Details with the `code` list and the trace identifier, and the extension `x-specmgr-req` with the UUID of a real REQ document in `docs/req/` (REQ-001, REQ-006, REQ-008).
 
-- [ ] ACC-002: `just` has recipes for lint, the check for breaking changes, code generation and the check of generated code, and CI starts only these recipes (REQ-002, REQ-003, REQ-004, REQ-005).
+- [ ] ACC-002: `just` has recipes for lint, the check for breaking changes, code generation and the check of generated code, and CI starts only these recipes (REQ-002, REQ-003, REQ-004, REQ-005). Phase 110 did the recipe `lint` (and `test-lint-gate`). Not yet done: the recipes for the check for breaking changes, for code generation and for the check of generated code, and the CI jobs for all of them.
 
 - [ ] ACC-003: A change of the OpenAPI file that removes a property of a response causes a failure of the gate for breaking changes. The same change with an entry in the ignore file and a higher version number does not cause a failure. The same change with an entry and the same version number causes a failure. A pull request that adds the OpenAPI file for the first time does not cause a failure (REQ-003, REQ-012).
 
@@ -64,15 +64,15 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [x] ACC-006: Each tool and each library of the license table has the result Permitted, or a DEC of the owner for the result Review. No row has the result "open" (REQ-007).
 
-- [ ] ACC-007: Each of these cases causes a failure of the lint gate: a response 4xx or 5xx that does not use `application/problem+json` with the Problem Details schema, a Problem Details schema with no `code` or no trace identifier, an operation with no `x-specmgr-req`, and an operation with a value that is not a UUID (REQ-002, REQ-006, REQ-008).
+- [x] ACC-007: Each of these cases causes a failure of the lint gate: a response 4xx or 5xx that does not use `application/problem+json` with the Problem Details schema, a Problem Details schema with no `code` or no trace identifier, an operation with no `x-specmgr-req`, and an operation with a value that is not a UUID (REQ-002, REQ-006, REQ-008).
 
 - [ ] ACC-008: The `code` list in the generated Java code and in the generated Zod schemas has the same values as the list in the OpenAPI file. A test compares them (REQ-006).
 
-- [ ] ACC-009: The README of `contracts/` says that a change starts in the OpenAPI file. Each generated folder has a mark that tells "generated, do not change", and the gate of ACC-004 stops a change by hand (REQ-001).
+- [ ] ACC-009: The README of `contracts/` says that a change starts in the OpenAPI file. Each generated folder has a mark that tells "generated, do not change", and the gate of ACC-004 stops a change by hand (REQ-001). Phase 110 did the first part: `contracts/README.md` says that a change starts in the OpenAPI file, and it says where the generated code goes and that nobody changes it by hand. Not yet done: the mark "generated, do not change" in each generated folder (phase 120, the folders do not exist yet) and the gate of ACC-004 (phase 130).
 
 - [x] ACC-010: `backend/mvnw` is executable (git mode 100755), and `backend/.mvn/wrapper/maven-wrapper.properties` has the Maven version of `tools/versions.env` and a `distributionSha256Sum` that was verified with a source other than the properties file. `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `backend/pom.xml` (REQ-010).
 
-- [ ] ACC-011: Each tool of this feature has a version in `tools/versions.env` and a lock file or a checksum. `just check-pins` returns exit code 0 now, and returns exit code 1 in `just test-gates` for a changed version and for a changed checksum of each tool (REQ-009).
+- [ ] ACC-011: Each tool of this feature has a version in `tools/versions.env` and a lock file or a checksum. `just check-pins` returns exit code 0 now, and returns exit code 1 in `just test-gates` for a changed version and for a changed checksum of each tool (REQ-009). Phase 110 did Spectral: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` are in `tools/versions.env`, the lock file is `tools/spectral/pnpm-lock.yaml`, and `just test-gates` has the cases for a changed version and a changed integrity value (in `versions.env`, in `package.json` and in the lock file). Not yet done: oasdiff (phase 115), the plugin jar of openapi-generator (phase 120, ACC-012) and Kubb (phase 120).
 
 - [ ] ACC-012: The sha256 of the jar of the generator plugin is in `tools/versions.env`, and a gate compares it with the jar in the local Maven repository. `tools/gates/README.md` says that the dependencies of the Maven plugins are not checked. GitHub issue #23 has a comment with this limit, and it stays open for a full pinning of the Maven plugins (REQ-009).
 
@@ -169,7 +169,7 @@ License table (the agent fills it from the license file of each tool and not fro
 
 | Item | Use | License | Result |
 |---|---|---|---|
-| Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter | Apache-2.0 | Permitted |
+| Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter. Pinned in the phase 110: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` in `tools/versions.env` (the integrity value is the one of the registry, and the sha256 of the tarball `fdff6161...39bf` is the one of the phase 100), and the lock file `tools/spectral/pnpm-lock.yaml` (242 packages, installed with `pnpm install --frozen-lockfile --ignore-scripts`). Rule A applies, so the tree of Spectral is not in the SBOM (finding F3) | Apache-2.0 | Permitted |
 | oasdiff 1.35.0 | breaking changes | Apache-2.0 | Permitted |
 | openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool) | Apache-2.0 | Permitted |
 | Kubb (`kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0) | client schemas | MIT (all three packages) | Permitted |
@@ -451,6 +451,39 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 - The rule for `x-specmgr-req` needs BOTH a `truthy` check and a `pattern` check with a UUID expression, because the function `pattern` does not report a missing field.
 - The rules that check a `$ref` need `resolved: false`, because Spectral replaces the `$ref` with its target if the option is not set.
 
+#### Result of the Phase 110 (OpenAPI Source and Lint)
+
+The agent did the work on 2026-11-04 with the pinned tools of `~/.config/biz.dfch.SpecMgrDemo/env.sh` (Node 26.13.0, pnpm 12.16.1, just 1.59.0). The scratch folder was `/tmp/opencode/p110/` (outside of the repository, nothing from it is in git).
+
+**Files**
+
+| Path | Content |
+|---|---|
+| `contracts/openapi.yaml` | OpenAPI 3.1.0, `info.version` 0.1.0, the operation `GET /status` (`operationId` `getStatus`) with `x-specmgr-req: 1ca335d7-969a-443e-9392-165fdeea99a0`, the responses 200 (schema `Status`: `state` (`up` or `degraded`) and `checkedAt`) and 429, 500 and 503 (all `$ref` to `components/responses/ProblemResponse`, which has the one media type `application/problem+json` with `$ref` to `Problem`). `Problem` has `type`, `title`, `status`, `detail`, `instance`, `code` (`$ref` to `ErrorCode`) and `traceId` (OpenTelemetry, 32 hexadecimal characters), and `code` and `traceId` are required. `ErrorCode` has `not_found`, `validation_failed`, `rate_limited`, `internal_error` and `service_unavailable` |
+| `docs/req/req-1ca335d7-...-the-system-gives-its-status.md` | REQ `1ca335d7-969a-443e-9392-165fdeea99a0` "The System Gives Its Status", status draft, level MUST, tag `iso29148:syrs`, links to DEC f92e35a1, f21920d2, 51b00b5f and e3eadec0 and to GOL b94e2758. `just validate` lints it |
+| `contracts/README.md` | A change starts in the OpenAPI file, the generated folders, no change by hand, `just lint`, the Problem Details rule, the `x-specmgr-req` rule, the link to DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 |
+| `tools/spectral/` | `package.json`, `pnpm-lock.yaml` and `README.md`: the pnpm project of Spectral, as `tools/sbom/` is for cdxgen |
+| `tools/lint/` | `ruleset.yaml`, `README.md` and `fixtures/` (49 OpenAPI files and `expected.txt`) |
+| `tools/gates/lint.sh`, `tools/gates/test-lint-gate.sh` | The lint gate and its test. The recipes are `lint` and `test-lint-gate` (`test-gates` starts `test-lint-gate`) |
+| `tools/versions.env` | `SPECTRAL_VERSION=6.17.0` and `SPECTRAL_INTEGRITY=sha512-9OTH...ZbL5UA==` |
+| `tools/gates/check_pins.py`, `check-pins.sh`, `_lib.sh`, `sbom.sh`, `selftest.sh` | The pin check of cdxgen is now the function `check_pnpm_tool` with the data `CDXGEN` and `SPECTRAL` (the messages of cdxgen are the same). `check_pins.py` has a new argument (`<lint-tool-dir>`, in `check-pins.sh` the variable `LINT_TOOL_DIR`). `manifest_files` and the messages of `sbom.sh` know the two files of `tools/spectral/`. `selftest.sh` has 79 new cases (540 ok, before 461) |
+
+**Rules of the linter** (the file `tools/lint/ruleset.yaml` has the causes): `problem-response-media-type-and-schema`, `problem-response-component`, `problem-schema-exists`, `error-code-schema-exists`, `problem-code-required`, `problem-trace-id-required`, `problem-code-uses-shared-list`, `problem-members`, `error-code-list`, `operation-req-present`, `operation-req-uuid` and `info-version-semver`, and the rules of `spectral:oas` (recommended, with four rules off: `info-contact`, `openapi-tags`, `operation-tags` and `tag-description`). The gate uses `--fail-severity warn`.
+
+**Evidence**
+
+- `just lint`: exit code 0 (`No results with a severity of 'warn' or higher found!`). The first run of the rules on the first version of the file gave one warning, `oas3-api-servers`. The file now has `servers: [{url: /}]`, which is the default of OpenAPI written out.
+- `just test-lint-gate`: 59 ok, 0 failed (the real file, 49 fixtures, nine cases of the script). Each bad fixture fails with exactly the rules of its line in `tools/lint/fixtures/expected.txt`. The five cases of ACC-007 were also run with copies of the real file (a response with `application/json`, no `code`, no `traceId`, no `x-specmgr-req`, a value that is not a UUID): each gave exit code 1 with the rule of the case.
+- `just check-pins`, `just sbom`, `just license-check` (0 components, PASS), `just test-license-gate` (47 ok), `just test-gates` (540 ok), `just check-workflows`, `just check-sudo`, `just validate` (linted=6), `just commit-check` and `just --fmt --unstable --check` return exit code 0.
+
+**Findings and limits**
+
+- L1, a rule on a part that is not there. A Spectral rule with a `given` path that matches nothing does not fail. So the rules for `Problem` and `ErrorCode` have a second rule that stops if the schema is not there (`problem-schema-exists`, `error-code-schema-exists`), and the fixtures 19 and 20 test it.
+- L2, a missing `x-specmgr-req` has two findings. The function `schema` also runs for a field that is not there, so `operation-req-present` and `operation-req-uuid` both report it. This is accepted, and `expected.txt` has both rules.
+- L3, `title` and `detail` of `Problem`. RFC 9457 has these two members as text for a person, and the fixed values of the task 090.120 list them. REQ-006 says that the schema has no text in a language. The agent kept the seven members of the fixed values, wrote in the file and in `contracts/README.md` that `title` and `detail` are for logs and for developers (English) and that a client must not show them to a user, and made the rule `problem-members` stop each other member (for example `message`). The owner decides if `title` and `detail` stay (see the open point in the Updates).
+- L4, the tests of the lint gate need Node, pnpm and the network, so the CI job `test-gates` needs two more actions (see the task 130.110).
+- The check that the UUID is the identifier of a real REQ is not in the linter (GitHub issue #8). Steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519 (the VCR and the entry in a SYSRS) are not done for the REQ, because the task 110.105 asks only for the REQ.
+
 **Behavior of oasdiff for the phase 115 (tested with 1.35.0)**
 
 - A new enum value in a property of a RESPONSE is an `error` (a breaking change): the exit code is 1 with `--fail-on ERR`. The removal of a value is only `info`. The agent also tested a file of custom levels (`--severity-levels`, with the line `response-property-enum-value-removed err`) that makes a removal an error. The owner keeps the default levels, so a removal is not a breaking change.
@@ -575,13 +608,13 @@ The agent chose these values. The owner can change them at the review.
 
 #### Phase 110: OpenAPI Source and Lint
 
-- [ ] Task 110.100: Write the OpenAPI file with the operation `GET /status`, the Problem Details schema (the `code` list, the trace identifier, no text of a language), the response 4xx and 5xx with `application/problem+json`, and the extension `x-specmgr-req` (ACC-001, ACC-009)
+- [x] Task 110.100: Write the OpenAPI file with the operation `GET /status`, the Problem Details schema (the `code` list, the trace identifier, no text of a language), the response 4xx and 5xx with `application/problem+json`, and the extension `x-specmgr-req` (ACC-001, ACC-009). Done on 2026-11-04: `contracts/openapi.yaml` (see the section "Result of the Phase 110" in the Design Notes)
 
-- [ ] Task 110.105: Make the first REQ document with specmgr for the operation `GET /status` (this makes the folder `docs/req/`). The document has the status draft. Put its UUID in the extension. Write a README in `contracts/` (ACC-001, ACC-009)
+- [x] Task 110.105: Make the first REQ document with specmgr for the operation `GET /status` (this makes the folder `docs/req/`). The document has the status draft. Put its UUID in the extension. Write a README in `contracts/` (ACC-001, ACC-009). Done on 2026-11-04: REQ `1ca335d7-969a-443e-9392-165fdeea99a0` "The System Gives Its Status" (status draft), and `contracts/README.md`
 
-- [ ] Task 110.110: Add the selected linter: pin it (`tools/versions.env`, own pnpm project with a lock file under `tools/`), change `sbom.sh`, `check_pins.py` and their tests for the new manifest, and add it to the license table (ACC-011)
+- [x] Task 110.110: Add the selected linter: pin it (`tools/versions.env`, own pnpm project with a lock file under `tools/`), change `sbom.sh`, `check_pins.py` and their tests for the new manifest, and add it to the license table (ACC-011). Done on 2026-11-04: the pnpm project is `tools/spectral/`, and `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` are in `tools/versions.env`
 
-- [ ] Task 110.115: Write the rules of the linter (REQ-006 and REQ-008) in a path below `tools/`, add the `just` recipe `lint`, and add the negative cases of ACC-007. The start is the tested ruleset in `/tmp/opencode/r/spectral/ruleset.yaml` (see the Design Notes, "Rules of the linter") (ACC-002, ACC-007)
+- [x] Task 110.115: Write the rules of the linter (REQ-006 and REQ-008) in a path below `tools/`, add the `just` recipe `lint`, and add the negative cases of ACC-007. The start is the tested ruleset in `/tmp/opencode/r/spectral/ruleset.yaml` (see the Design Notes, "Rules of the linter") (ACC-002, ACC-007). Done on 2026-11-04: the rules and the fixtures are in `tools/lint/`, and the recipes are `lint` and `test-lint-gate`
 
 #### Phase 115: Check for Breaking Changes
 
@@ -611,7 +644,7 @@ The agent chose these values. The owner can change them at the review.
 
 - [ ] Task 130.105: Add the CI job that compiles the Maven module and the pnpm module with the generated code (ACC-005)
 
-- [ ] Task 130.110: Add the lint gate, the gate for breaking changes, the gate for generated code, the compile job and the job for the API documentation (REQ-015) to the CI workflow and to `tools/gates/required-setup.txt`. The name of each job is the name of its recipe (ACC-015)
+- [ ] Task 130.110: Add the lint gate, the gate for breaking changes, the gate for generated code, the compile job and the job for the API documentation (REQ-015) to the CI workflow and to `tools/gates/required-setup.txt`. The name of each job is the name of its recipe (ACC-015). Note from the phase 110: `just test-gates` now starts `just test-lint-gate`, and this test needs Node, pnpm and the network (it installs Spectral from the lock file). The CI job `test-gates` has only `actions/checkout`, `extractions/setup-just` and `astral-sh/setup-uv` today, so this task must add `actions/setup-node` and `pnpm/action-setup` (with the versions of `tools/versions.env`) to the job `test-gates` and change its line in `tools/gates/required-setup.txt`. The job `lint` needs the same two actions. Until then, the job `test-gates` of CI fails, and `just test-gates` passes on a machine that has the pinned Node and pnpm
 
 - [ ] Task 130.120: Test each gate with a change that must cause a failure. Add the cases to `just test-gates`, write the results in this plan, and keep one throwaway pull request in real CI as proof (ACC-004, ACC-007, ACC-015)
 
@@ -635,22 +668,22 @@ The agent chose these values. The owner can change them at the review.
 
 ### Current Status
 
-**As of 2026-11-04**: The phase 090 (Tool Selection) is done. The tasks 090.100, 090.110 and 090.120 are done, and ACC-017 is met. The owner selected Spectral 6.17.0, oasdiff 1.35.0, openapi-generator 7.27.0 and Kubb, and fixed the path, the version (OpenAPI 3.1.0), the folders and the options (see the section Decisions Made and the Design Notes). The owner also added the API documentation (REQ-015, ACC-018, task 120.130). feat-5-foundation-monorepo-ci is done, so the dependency is satisfied.
-
-**As of 2026-11-04 (phase 100)**: The tasks 100.100 and 100.110 are done. The agent read the license file of each item and filled the license table. All items have the result Permitted, except one: `jakarta.annotation-api` has the result Review (an open question for the owner, finding F1 in "License Checks (Tasks 100.100 and 100.110)"). The task 100.120 was open, because it waited for the decision of the owner.
-
-**As of 2026-11-04 (phase 100 done)**: The phase 100 (License Checks) is done. The owner decided finding F1: the generated code uses `org.apache.tomcat:tomcat-annotations-api` 10.1.61 (Apache-2.0, Permitted) in place of `jakarta.annotation-api`. The agent read the artifact again. The tasks 100.100, 100.110 and 100.120 are done, and ACC-006 is met: each row of the license table has the result Permitted (the row of `jakarta.annotation-api` is "Replaced", and the row for the implementation of Jakarta Bean Validation is "Not necessary", so neither item is used), and no row has the result "open". The DEC and `tools/license/` are not changed. The task 120.100 has a note for the Maven module. The next phase is the phase 105 (Maven Wrapper and the shell of the backend module).
-
-**As of 2026-11-04 (phase 105 done)**: The phase 105 (Maven Wrapper and the shell of the backend module) is done. The tasks 105.100 and 105.110 are done, and ACC-010 is met. `backend/` has `pom.xml` (no dependency), `mvnw` (git mode 100755) and `.mvn/wrapper/maven-wrapper.properties` (Maven 3.10.0, no jar). The `distributionSha256Sum` was verified with the `.sha512` files of Maven Central and of Apache, and with `tools/gates/README.md` (see "First Real Run (Phase 105)" in the Design Notes). `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `pom.xml`, and the other recipes of ACC-015 that the phase touches also return exit code 0. The first real run found one gap: the real plugin writes no `components` key for a project with no dependency, and the license gate stopped for it. The agent fixed `sbom_check.py` and added tests. The changes are not committed. The next phase is the phase 110 (OpenAPI source and lint).
+**As of 2026-11-04 (phase 110 done)**: The phases 090 (tool selection), 100 (license checks), 105 (Maven Wrapper) and 110 (OpenAPI source and lint) are done. ACC-001, ACC-006, ACC-007, ACC-010 and ACC-017 are met. `contracts/openapi.yaml` (OpenAPI 3.1.0) has `GET /status`, the Problem Details schema with the list `ErrorCode` and `traceId`, and the UUID of the draft REQ `1ca335d7-969a-443e-9392-165fdeea99a0` in `x-specmgr-req`. Spectral 6.17.0 is pinned (`tools/spectral/`, `tools/versions.env`, `just check-pins`), its rules and 49 bad files are in `tools/lint/`, and `just lint` and `just test-lint-gate` return exit code 0. The other recipes of ACC-015 that the phase touches also return exit code 0. Not yet done: the CI jobs (phase 130), the marks in the generated folders (phase 120), the check for breaking changes (phase 115) and ACC-002, ACC-009 and ACC-011 in full (see each criterion). The changes are not committed. The next phase is the phase 115 (check for breaking changes).
 
 ### Blockers
 
-- None. The open question of the phase 100 (`jakarta.annotation-api`) is closed: the owner decided on 2026-11-04 to use `tomcat-annotations-api` 10.1.61.
+- None for the phase 115. The open question of the phase 100 (`jakarta.annotation-api`) is closed: the owner decided on 2026-11-04 to use `tomcat-annotations-api` 10.1.61.
+- One question for the owner (finding L3, phase 110): the fixed values of the task 090.120 give `Problem` the members `title` and `detail` (RFC 9457), which are text for a person, and REQ-006 says that the schema has no text in a language. The agent kept the seven members and wrote that `title` and `detail` are for logs and developers. If the owner wants no text member at all, the file, the rule `problem-members`, the fixtures and the REQ change.
+- One point for the phase 130: `just test-gates` now needs Node and pnpm (it starts `just test-lint-gate`), so the CI job `test-gates` needs two more actions and a new line in `tools/gates/required-setup.txt` (see the task 130.110). The agent did not change the CI files in the phase 110.
 - One point is set by the agent and the owner can change it at the review: the recipe `generate` starts Kubb with a programmatic runner and not with the command `kubb generate`. The details of the mechanism for the source root of the Java code and of the mark "generated, do not change" for the Java code are open for the phase 120.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 19:05:00.000Z - Phase 110 done: OpenAPI file, first REQ, Spectral and the lint gate
+
+The agent did the tasks 110.100, 110.105, 110.110 and 110.115. `contracts/openapi.yaml` is an OpenAPI 3.1.0 file (`info.version` 0.1.0) with `GET /status` (200 with `Status`, and 429, 500 and 503 as the shared `ProblemResponse` with `application/problem+json` and `Problem`), the schema `Problem` (`type`, `title`, `status`, `detail`, `instance`, `code`, `traceId`; `code` and `traceId` are required) and the list `ErrorCode` (`not_found`, `validation_failed`, `rate_limited`, `internal_error`, `service_unavailable`). The agent made the REQ `1ca335d7-969a-443e-9392-165fdeea99a0` "The System Gives Its Status" with the specmgr tools (status draft, SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519 steps 1 to 3 and 6), which made `docs/req/`, and put its UUID in `x-specmgr-req`. `contracts/README.md` and `docs/README.md` are changed. Spectral 6.17.0 is a pnpm project in `tools/spectral/` with a lock file (242 packages), `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` are in `tools/versions.env` (the integrity value is the same as the sha512 of the tarball, and the sha256 of the tarball is the one of the phase 100). `check_pins.py` checks the lock file with the same function as for cdxgen, and `sbom.sh` and `manifest_files` do not scan the two manifest files. The rules are in `tools/lint/ruleset.yaml` with 49 fixtures. The recipes `lint` and `test-lint-gate` are new, and `test-gates` starts `test-lint-gate`. `just test-gates` has 79 new cases (540 ok), and `just test-lint-gate` has 59 ok. ACC-001 and ACC-007 are ticked. ACC-002, ACC-009 and ACC-011 are not ticked, because only a part is true (each criterion says what stays). The details and the findings L1 to L4 are in "Result of the Phase 110" in the Design Notes. Two open points: the members `title` and `detail` of `Problem` (see the Blockers), and the CI job `test-gates`, which needs Node and pnpm (task 130.110). The agent did not change the CI files, the VCR and SYSRS of the REQ are not made, and the changes are not committed.
 
 #### 2026-11-04 18:40:00.000Z - Phase 105 done: Maven Wrapper, shell of the backend module, first real run
 
@@ -683,6 +716,18 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 19:05:00.000Z - Phase 110: points that the agent set (the owner can change them at the review)
+
+- Folders: `tools/spectral/` is the pnpm project of Spectral (the lock file, `package.json` and `README.md` only, as `tools/sbom/` is for cdxgen, so a ruleset in this folder would stop `just check-pins`). The rules and the fixtures are in `tools/lint/`. Both folders are below `tools/`, so CODEOWNERS covers them.
+- Pin: the keys in `tools/versions.env` are `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` (as `CDXGEN_VERSION` and `CDXGEN_INTEGRITY`). The pin check of cdxgen is now one function (`check_pnpm_tool`) with the data for cdxgen and for Spectral, so both checks have the same rules. The messages of Spectral start with `Lint tool:`.
+- Gate numbers: the number after the script name in the `justfile` is the number of the task that wrote the gate. The gates of feat-5 keep `130.xxx`. `lint` and `test-lint-gate` have `110.115`, the task of this feature. The message "NOT IMPLEMENTED" of `_gate` no longer names feat-5.
+- Lint gate: `just lint` runs `tools/gates/lint.sh contracts/openapi.yaml tools/lint/ruleset.yaml`. The gate installs Spectral with `pnpm install --frozen-lockfile --ignore-scripts`, compares the installed version with `SPECTRAL_VERSION`, and starts Spectral with `--fail-severity warn`, so a warning is a failure too. The group `spectral:oas` (recommended) is part of the rules, with `info-contact`, `openapi-tags`, `operation-tags` and `tag-description` off (they need a decision about the organization). The file has `servers: [{url: /}]` for the rule `oas3-api-servers`.
+- Rules that the agent added to the tested start: the rule that a response `4XX`, `5XX` and `default` follows the same rule as `4xx` and `5xx` (a `default` response is an error response too), a response with no content fails, `Problem` has exactly the seven members (no `message`, no other text member), `code` and `traceId` have a rule each, the schemas `Problem` and `ErrorCode` must exist, `x-specmgr-req` has two rules (a missing or empty value, and the form of a UUID) for each HTTP method, the values of `ErrorCode` have the pattern `^[a-z][a-z0-9_]*$` (no hyphen), and `info.version` is a Semantic Versioning 2.0.0 version (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 says this, and the phase 115 needs it).
+- Tests: the real Spectral tests each rule with the fixtures in `tools/lint/fixtures/`. A fixture must fail with exactly the rules of its line in `expected.txt`. The test is the recipe `test-lint-gate`, and `test-gates` starts it (as it starts `test-license-gate`). The cases of the script (a missing file, a lock file that does not fit, another version) are in the same test. `selftest.sh` has the cases of the pin check and of `sbom.sh` for Spectral.
+- Values of the OpenAPI file: `info.version` 0.1.0, the responses 429, 500 and 503 for `GET /status`, the schema `Status` with `state` (`up` or `degraded`) and `checkedAt`, and `traceId` with the pattern of 32 lower case hexadecimal characters (the form of the trace identifier of OpenTelemetry). `title` and `detail` stay in `Problem` as the fixed values say, with a note that they are for logs and developers (finding L3, the owner decides).
+- The REQ: the level MUST, the priority 50, the tag `iso29148:syrs`, the characteristics Functional Suitability and Reliability. The agent made only the REQ (the task 110.105). The VCR and the entry in a SYSRS (steps 4 and 5 of the SOP) stay open.
+- The agent did not change the CI workflow and `tools/gates/required-setup.txt` (the plan puts them in the phase 130). `check-workflows` has no test that every recipe has a job, so it passes. The note about the CI job `test-gates` is in the task 130.110.
 
 #### 2026-11-04 18:40:00.000Z - Phase 105: points that the agent set (the owner can change them at the review)
 
