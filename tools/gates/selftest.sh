@@ -1360,7 +1360,7 @@ expect 1 "Hash mismatch for \`license-expression" "license-check.sh: a wrong has
     run_license "$(changed_lock le-hash license-expression.lock break_hashes license-expression)"
 expect 1 "Hash mismatch for \`boolean-py" "license-check.sh: a wrong hash of boolean.py (a dependency)" \
     run_license "$(changed_lock bool-hash license-expression.lock break_hashes boolean-py)"
-expect 1 "must be pinned upfront with" "license-check.sh: boolean.py is not in the lock file (a dependency that is missing)" \
+expect 1 "uv did not install" "license-check.sh: boolean.py is not in the lock file (a dependency that is missing)" \
     run_license "$(changed_lock bool-drop license-expression.lock drop_package boolean-py)"
 expect 1 "must have a hash" "license-check.sh: boolean.py has no hash (a dependency with no hash)" \
     run_license "$(changed_lock bool-nohash license-expression.lock no_hash boolean-py)"
@@ -1404,7 +1404,7 @@ expect 1 "Hash mismatch for \`attrs" "validate-docs.sh: a wrong hash of a depend
     run_docs_locks "$(changed_lock sm-dep-hash specmgr.lock break_hashes attrs)"
 expect 1 "must have a hash" "validate-docs.sh: a dependency of specmgr (attrs) has no hash" \
     run_docs_locks "$(changed_lock sm-dep-nohash specmgr.lock no_hash attrs)"
-expect 1 "must be pinned upfront with" "validate-docs.sh: a dependency of specmgr (attrs) is not in the lock file" \
+expect 1 "uv did not install" "validate-docs.sh: a dependency of specmgr (attrs) is not in the lock file" \
     run_docs_locks "$(changed_lock sm-dep-drop specmgr.lock drop_package attrs)"
 sed -e 's#^SPECMGR_VERSION=.*#SPECMGR_VERSION=0.38.1#' "${real_versions}" >"${work}/g2-specmgr-version.env"
 expect 0 "linted=1 failed=0" "validate-docs.sh: the install is from the lock file, so another SPECMGR_VERSION in versions.env does not change it (check-pins stops it)" \
