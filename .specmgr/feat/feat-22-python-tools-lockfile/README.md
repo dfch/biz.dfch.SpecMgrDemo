@@ -4,7 +4,7 @@ created: '2026-11-04T06:22:50.630+01:00'
 id: feat-22-python-tools-lockfile
 status: planning
 type: feat
-updated: '2026-11-04T06:35:12.616+01:00'
+updated: '2026-11-04T06:55:54.244+01:00'
 version: 1.0.0
 ---
 
@@ -50,9 +50,9 @@ This feature adds one lock file for each tool in `tools/python/`. A lock file ha
 
 - [x] ACC-007: `PSF-2.0` is in the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 and in `tools/license/permitted-licenses.txt`. The license table of this plan has the row of Python 3.13. `just test-license-gate` has a fixture for `PSF-2.0` (REQ-007).
 
-- [ ] ACC-008: These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check` and `just --fmt --unstable --check`. The pull request has all seven checks green (REQ-006).
+- [x] ACC-008: These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check` and `just --fmt --unstable --check`. The pull request has all seven checks green (REQ-006).
 
-- [ ] ACC-009: A throwaway test pull request (closed, not merged) that changes one hash of a dependency in `tools/python/specmgr.lock` fails the job `validate` in real CI, with the message of uv about the hash. The same CI run with the real lock file passes (REQ-002).
+- [x] ACC-009: A throwaway test pull request (closed, not merged) that changes one hash of a dependency in `tools/python/specmgr.lock` fails the job `validate` in real CI, with the message of uv about the hash. The same CI run with the real lock file passes (REQ-002).
 
 ### Scope
 
@@ -158,15 +158,15 @@ License table (the agent filled it from the license file of the build and not fr
 
 - [x] Task 130.100: Change the texts in `tools/versions.env`, `tools/README.md` and `tools/gates/README.md` (G2 table and the open limits) (ACC-006)
 
-- [ ] Task 130.110: Run the procedure of `tools/python/README.md` in a copy of the repository, and run all recipes of ACC-008 (ACC-005, ACC-008)
+- [x] Task 130.110: Run the procedure of `tools/python/README.md` in a copy of the repository, and run all recipes of ACC-008 (ACC-005, ACC-008)
 
-- [ ] Task 130.120: Open the pull request to `dev` and wait for the seven checks. Make the throwaway test pull request of ACC-009, close it and delete its branch (ACC-008, ACC-009)
+- [x] Task 130.120: Open the pull request to `dev` and wait for the seven checks. Make the throwaway test pull request of ACC-009, close it and delete its branch (ACC-008, ACC-009)
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-04 05:33**: The plan is written. Phases 100 to 120 and Task 130.100 are done, and ACC-001 to ACC-007 are checked (see the update of 05:33). Task 130.110 is open: the recipes of ACC-008 ran on the working tree (exit code 0), but `just commit-check` needs the commit, and the pull request with its seven checks needs a push. ACC-009 needs a push too. The work is on the branch `feat-22-python-tools-lockfile` (from `origin/dev` at 5ca997c). Nothing is committed and nothing is pushed. The agent does not push without the "go ahead" of the owner.
+**As of 2026-11-04 05:56**: All tasks and all acceptance criteria (ACC-001 to ACC-009) are done and checked. Pull request #27 (`Closes #22`, against `dev`) is open and has seven green checks at commit f9744e0. It is BLOCKED and REVIEW_REQUIRED, so the owner reviews and merges it (the agent does not merge). The throwaway pull request #29 (closed, not merged, branch deleted) showed in real CI that `validate` fails with `Hash mismatch for attrs==26.1.0`. The status of the feature is not changed by the agent.
 
 ### Blockers
 
@@ -177,6 +177,18 @@ License table (the agent filled it from the license file of the build and not fr
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 05:56:00.000Z - Pull request #27 and throwaway pull request #29 (ACC-008, ACC-009 done)
+
+The owner said "go ahead" to commit and push. The agent made four commits (scope `feat-22`) on the branch, pushed it, and opened pull request #27 to `dev`.
+
+1. `just commit-check` (GITHUB_BASE_REF=dev) returned exit code 0 for the three first commits.
+2. First CI run of #27: 6 of 7 checks passed, and `test-gates` had 2 failed cases (454 ok). The reason: for a dependency that is missing from a lock file, uv 0.13.7 in CI says "Hash-checking is required, but no trusted hash was provided", and uv 0.12.5 on the machine of the author says "must be pinned upfront with `==`". The gate stopped with exit code 1 in both cases. The agent changed the two cases to expect the text of the gate ("uv did not install") and not the wording of uv (commit f9744e0). `just test-gates` shows 456 ok, 0 failed locally.
+3. Second CI run of #27 at f9744e0: all seven checks are green (`validate`, `commit-check`, `license-check`, `check-workflows`, `check-pins`, `check-sudo`, `test-gates`).
+4. ACC-009. The throwaway pull request #28 had the feature branch as its base, so the workflow (trigger `dev` and `main`) did not run. The agent closed it and opened #29 to `dev`. #29 changed the first hash of `attrs` in `specmgr.lock`. Result in real CI: `validate` failed with `cause: Hash mismatch for \`attrs==26.1.0\`` and `uv did not install specmgr from .../tools/python/specmgr.lock`. `test-gates` failed too (as expected: its case "a valid document" installs specmgr from the real lock file). `license-check`, `check-pins`, `check-workflows`, `commit-check` and `check-sudo` passed. #28 and #29 are closed and not merged, and the branch `test/feat-22-pr-bad-hash` is deleted (local and remote).
+5. State: #27 is BLOCKED and REVIEW_REQUIRED. The owner reviews and merges it. The branch `feat-22-python-tools-lockfile` stays until the release.
+
+Finding for the owner. The messages of uv change between versions, so a test that matches the text of uv can fail when `UV_VERSION` changes. The tests of this feature now match the text of the gate where the case is a missing dependency. Cases with "Hash mismatch" and "must have a hash" passed with both versions.
 
 #### 2026-11-04 05:33:00.000Z - Phases 110 to 120 and Task 130.100 done, ACC-001 to ACC-007 checked
 
@@ -216,3 +228,7 @@ The owner decided: one lock file for each tool (A), remove the checksum keys of 
 ### Related PRs / Commits
 
 - GitHub issue #22.
+
+- Pull request #27 (open, `Closes #22`): `feat-22-python-tools-lockfile` to `dev`.
+
+- Pull requests #28 and #29 (throwaway, closed, not merged).
