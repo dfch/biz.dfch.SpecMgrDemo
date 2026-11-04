@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-03T10:57:05.134+01:00'
+updated: '2026-11-04T05:55:03.271+01:00'
 version: 1.0.0
 ---
 
@@ -30,6 +30,7 @@ This handbook is the index of the development policies and standards of this rep
 - DEC 9eade4ab-2f03-439b-b798-770e43154f8b: Keep a Terminology Register for Technical Nouns and Verbs
 - DEC a56f231b-d063-4bef-bbc8-3deb4daff76e: Use Conventional Commits, Feature Branches and a Definition of Done
 - DEC cc4449cd-78fb-452a-904f-7efda89cf004: Set Limits for Coding Agents
+- DEC d778d444-6227-4070-ae6e-b1083c78c58b: Keep dev and main Free of Local Commits and Update Them With Fast-Forward Only
 
 ## Technology Policies
 
@@ -47,6 +48,7 @@ This handbook is the index of the development policies and standards of this rep
 
 - SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519: Add a Requirement With Traceability
 - SOP a64703aa-8e74-4c49-b7f5-f0977522a9af: Add a Term to the Terminology Register
+- SOP 289efe7a-2478-49b8-86b0-2d6983749832: Update the Local dev Branch
 
 ## Risks
 
@@ -78,6 +80,10 @@ This handbook is the index of the development policies and standards of this rep
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 06:00:00.000Z - Rule for the local dev branch added
+
+The handbook has links to DEC d778d444-6227-4070-ae6e-b1083c78c58b and SOP 289efe7a-2478-49b8-86b0-2d6983749832. They tell how to keep `dev` free of local commits and how to update it with fast-forward only.
 
 ### 2026-11-03 09:57:30.000Z - Owner of the open item about the versions and licenses
 
