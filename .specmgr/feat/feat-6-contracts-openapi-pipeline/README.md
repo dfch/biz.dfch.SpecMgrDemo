@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T14:01:18.290+01:00'
+updated: '2026-11-04T17:42:11.388+01:00'
 version: 1.0.0
 ---
 
@@ -14,9 +14,9 @@ version: 1.0.0
 
 ### Overview
 
-This feature makes the pipeline for interfaces. The OpenAPI file is the source of truth for the interfaces between the backend and the frontend. The pipeline has a linter, a check for breaking changes, generators for the server interfaces and for the client schemas, and a gate that compares the generated code with the code in the repository. Two small modules show that the pipeline operates: one Maven module (`backend/`) and one pnpm module (`frontend/`). They have no product code. They have only the files that the generated code needs to compile. GitHub issue #6 is for this feature.
+This feature makes the pipeline for interfaces. The OpenAPI file is the source of truth for the interfaces between the backend and the frontend. The pipeline has a linter, a check for breaking changes, generators for the server interfaces and for the client schemas, a job that makes the API documentation, and a gate that compares the generated code with the code in the repository. Two small modules show that the pipeline operates: one Maven module (`backend/`) and one pnpm module (`frontend/`). They have no product code. They have only the files that the generated code needs to compile. GitHub issue #6 is for this feature.
 
-The feature has many phases, and each phase is small. A phase can be a pull request on its own. The phases are in this order: tool selection (090), license checks (100), the Maven Wrapper (105), the OpenAPI file and the linter (110), the check for breaking changes (115), the generators (120), the gates (130), the owner actions for the rulesets (135) and the review (140). The refinement of 2026-11-04 made this order, because the pull request that adds the first `pom.xml` must pass `check-pins` and `license-check` (see the section Decisions Made).
+The feature has many phases, and each phase is small. A phase can be a pull request on its own. The phases are in this order: tool selection (090), license checks (100), the Maven Wrapper (105), the OpenAPI file and the linter (110), the check for breaking changes (115), the generators and the API documentation (120), the gates (130), the owner actions for the rulesets (135) and the review (140). The refinement of 2026-11-04 made this order, because the pull request that adds the first `pom.xml` must pass `check-pins` and `license-check` (see the section Decisions Made).
 
 ### Requirements
 
@@ -47,6 +47,8 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 - REQ-013: Each new gate must obey the conventions of feat-5-foundation-monorepo-ci: the CI job has the name of its recipe, the job is in `tools/gates/required-setup.txt`, the gate has negative tests in `just test-gates`, and the owner adds the job to the required checks of the rulesets.
 
 - REQ-014: The owner must select each tool from a list of candidates, and the agent must not select a tool alone.
+
+- REQ-015: CI must make the API documentation from the OpenAPI file with the generator `html2` of the plugin that is already pinned. The output must be the same on each run. The HTML is not committed. CI keeps it as an artifact.
 
 ### Acceptance Criteria
 
@@ -82,7 +84,9 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [ ] ACC-016: The owner added the new jobs to the required checks of the rulesets of `dev` and `main`, and `branch-protection.md` shows the new rows as set (REQ-013).
 
-- [ ] ACC-017: The phase 090 has a list of candidates for each tool, with the criteria, and the owner selected each tool. The decision is in the section Decisions Made (REQ-014).
+- [x] ACC-017: The phase 090 has a list of candidates for each tool, with the criteria, and the owner selected each tool. The decision is in the section Decisions Made (REQ-014).
+
+- [ ] ACC-018: CI makes the API documentation from the OpenAPI file with the generator `html2` of the openapi-generator plugin that is already pinned (no new tool). Two runs one after the other make the same HTML. The HTML is not in git, and CI keeps it as an artifact. The gate for generated code does not check it (REQ-015).
 
 ### Scope
 
@@ -90,7 +94,9 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - The OpenAPI file with one example operation (`GET /status`), the error schema with the `code` list, and the first REQ document for this operation.
 
-- The linter with its rules, the tool for breaking changes with its ignore file, the server generator and the Zod generator. The owner selects the tools in the phase 090.
+- The linter with its rules, the tool for breaking changes with its ignore file, the server generator and the Zod generator. The owner selected the tools in the phase 090 (see the section Decisions Made).
+
+- The API documentation, made from the OpenAPI file with the generator `html2` of the openapi-generator plugin (a second execution of the same plugin). It is a CI artifact and is not committed.
 
 - The pins of these tools (`tools/versions.env`, lock files, checksums) and the changes of the gate scripts that the pins need.
 
@@ -140,33 +146,44 @@ Base of the check for breaking changes: DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4
 
 How each new tool is pinned (REQ-009). Each decision is final in the phase of the tool:
 
-- Spectral is an npm package. It needs its own pnpm project with a lock file, installed with `--frozen-lockfile --ignore-scripts`. `sbom.sh` and `check_pins.py` know only two manifest files in `tools/sbom/`, so the phase 110 changes both scripts and their tests.
-- oasdiff is a binary without a package manager. The owner chose a download with a sha256 value in `tools/versions.env`, started by a `just` recipe. This adds no new GitHub Action.
-- The generator plugin for Maven gets a sha256 value for its jar, as the plugin for the SBOM does. The dependencies of the plugin are not checked (GitHub issue #23).
-- The Zod generator and Zod itself are in the lock file of the pnpm module. A root `package.json` must not have a `packageManager` field that is different from `PNPM_VERSION`.
+- Spectral (selected, CLI 6.17.0) is an npm package. It needs its own pnpm project with a lock file under `tools/` (as cdxgen), installed with `--frozen-lockfile --ignore-scripts`. `sbom.sh` and `check_pins.py` know only two manifest files in `tools/sbom/`, so the phase 110 changes both scripts and their tests.
+- oasdiff (selected, 1.35.0) is a binary without a package manager. The owner chose a download with a sha256 value in `tools/versions.env`, started by a `just` recipe. This adds no new GitHub Action.
+- The generator plugin for Maven (selected, openapi-generator 7.27.0) gets a sha256 value for its jar, as the plugin for the SBOM does. The dependencies of the plugin are not checked (GitHub issue #23). The second execution of the same plugin for the API documentation (generator `html2`) needs no new pin.
+- The Zod generator (selected, Kubb) and Zod itself are in the lock file of the pnpm module `frontend/`. The packages `kubb`, `@kubb/plugin-zod` and `@kubb/plugin-ts` have exact versions that are tested together (see "Selected Tools and Fixed Values"). A root `package.json` must not have a `packageManager` field that is different from `PNPM_VERSION`.
 
 Layout rules from the SBOM gate: the Maven module is `backend/pom.xml` with `backend/mvnw`. A pnpm module below `frontend/` is scanned only if `frontend/pnpm-workspace.yaml` and `frontend/pnpm-lock.yaml` exist. A `package.json` in `contracts/` stops the script.
 
-Candidate path of the OpenAPI file: `contracts/openapi.yaml`. Task 090.120 fixes the path, the version of OpenAPI (3.0 or 3.1, because it changes which tools can read the file), the folders of the generated code (they are in git), and the options of the generators (interfaces only, no time stamp, a fixed list of files).
+Fixed values (Task 090.120, owner decision of 2026-11-04):
 
-License table (the agent fills it from the license file of each tool and not from memory). The rows for Spectral, oasdiff, openapi-generator and the Zod generator get the name of the selected tool in the phase 090. Result words: Permitted, Review, Not permitted (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). A tool gets the check of its main license. A library that goes to users gets the check of all its dependencies through the SBOM gate.
+- Path of the OpenAPI file: `contracts/openapi.yaml`.
+- Version of OpenAPI: 3.1.0. Spectral, oasdiff and Kubb read it. The support of openapi-generator for 3.1 is beta, and the tool writes a warning in the log. The owner accepted this.
+- Folder of the generated Java code: `backend/src/generated`. The Maven module adds this folder as a source root, with `build-helper-maven-plugin` or with the plugin option `addCompileSourceRoot`. The exact mechanism is open for the phase 120.
+- Folder of the generated Zod code: `frontend/src/generated`.
+- Both generated folders are committed to git, so the gate of the phase 130 can compare them with a new generation (REQ-005).
+- Mark "generated, do not change" (REQ-001, ACC-009): for the Zod code, the banner of Kubb ("Generated by Kubb (https://kubb.dev/). Do not edit manually.") that Kubb writes by default. For the Java code, a `README.md` or a header in the folder. The way and the details (for example, how the generator and the gate keep the file) are open for the phase 120.
+- Options of the Spring generator (`spring`): `interfaceOnly=true`, `hideGenerationTimestamp=true`, `skipDefaultInterface=true`, and the plugin option `generateSupportingFiles=false`. Without a time stamp, the files are the same in each run (REQ-011).
+- API documentation (REQ-015): a second execution of the same plugin with the generator `html2`. The output is not committed, CI keeps it as an artifact, and the gate for generated code does not check it. The folder of the output and the options are open for the task 120.130.
+- Zod generator: Kubb runs in a small programmatic runner and not through the command `kubb generate`. This is set by the agent, and the owner can change it at the review. The cause and the details are in "Selected Tools and Fixed Values" below.
+
+License table (the agent fills it from the license file of each tool and not from memory). The rows for Spectral, oasdiff, openapi-generator and Kubb have the name and the version of the tool that the owner selected in the phase 090. Result words: Permitted, Review, Not permitted (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). A tool gets the check of its main license. A library that goes to users gets the check of all its dependencies through the SBOM gate.
 
 | Item | Use | License | Result |
 |---|---|---|---|
-| Spectral (candidate) | linter | not checked | open |
-| oasdiff (candidate) | breaking changes | not checked | open |
-| openapi-generator and its Maven plugin | server interfaces | not checked | open |
-| Zod generator (not selected) | client schemas | not checked | open |
-| Zod | runtime library | not checked | open |
+| Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter | not checked | open |
+| oasdiff 1.35.0 | breaking changes | not checked | open |
+| openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool) | not checked | open |
+| Kubb (`kubb`, `@kubb/plugin-zod`, `@kubb/plugin-ts`) | client schemas | not checked | open |
+| Zod 4.x | runtime library | not checked | open |
+| `argparse` 3.0.4 (in the tree of Kubb) | library in the tree of the Zod generator. The owner stated on 2026-11-04 that its license PSF-2.0 is Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The phase 100 reads the license file. | not checked | open |
 | TypeScript | compiler for ACC-005 | not checked | open |
 | Spring Web, `jakarta.annotation`, swagger annotations, `jackson-databind-nullable` | libraries that the generated Java code needs | not checked | open |
 | Jakarta Bean Validation and its implementation | runtime library | not checked | open |
 | Maven Wrapper and the Maven plugins of the build | build tools | not checked | open |
-| New GitHub Actions (if the owner selects one) | CI | not checked | open |
+| New GitHub Actions (the selected tools are not Actions, so the phase 100 checks if the row is needed) | CI | not checked | open |
 
 #### Candidates for the Tools (Task 090.100)
 
-The agent wrote these lists on 2026-11-04. The agent does not select a tool (REQ-014). The owner selects the four tools in the task 090.110. The lines that start with "The agent recommends" are not binding. The license table above stays "open" until the phase 100.
+The agent wrote these lists on 2026-11-04. The agent did not select a tool (REQ-014). The owner selected the four tools on 2026-11-04 (task 090.110, see the section Decisions Made and "Selected Tools and Fixed Values" below). The lines that start with "The agent recommends" were not binding. The license table above stays "open" until the phase 100.
 
 **How the agent got the facts**
 
@@ -300,6 +317,8 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 - Place of the Zod generator: in `frontend/` its packages go into the SBOM and the license gate. In the npm trees that the agent made, `argparse` (Python-2.0) is in the trees of Hey API and Orval. `Python-2.0` is not in the table of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, and `Unlicense` (Spectral tree) is not there either. The tree of Kubb has only classes that are Permitted. An own project in `tools/` (as for cdxgen) makes rule A apply. The agent did not test if cdxgen includes the dev dependencies.
 - Server generator: the list has only two candidates. Is this enough?
 
+The owner answered on 2026-11-04: OpenAPI 3.1.0 with the beta support of openapi-generator accepted, the opt-out of the telemetry in the recipe accepted, the Zod generator in `frontend/` (with `argparse` 3.0.4 as Permitted), and openapi-generator selected for the server generator.
+
 **Overview**
 
 | Tool | Candidate | License | OpenAPI versions | Pin |
@@ -315,6 +334,49 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 | Zod generator | Kubb 5.15.3 | MIT | 3.0, 3.1 | pnpm lock file |
 | Zod generator | Hey API 0.99.0 | MIT | 3.0, 3.1 | pnpm lock file |
 | Zod generator | Orval 8.46.0 | MIT | 3.0, 3.1 | pnpm lock file |
+
+#### Selected Tools and Fixed Values (Tasks 090.110 and 090.120)
+
+The owner selected these tools on 2026-11-04. The causes are in the section Decisions Made. The license class is the one that the agent read in the upstream repository (see the lists above), and the phase 100 reads each license file again.
+
+| Tool | Selected | License (upstream) | Pin |
+|---|---|---|---|
+| Linter | Spectral CLI 6.17.0 | Apache-2.0 | pnpm lock file under `tools/`, `--frozen-lockfile --ignore-scripts` |
+| Breaking changes | oasdiff 1.35.0 | Apache-2.0 | download, sha256 in `tools/versions.env` |
+| Server generator and API documentation | openapi-generator 7.27.0, Maven plugin | Apache-2.0 | sha256 of the plugin jar in `tools/versions.env` |
+| Zod generator | Kubb (`kubb`, `@kubb/plugin-zod`, `@kubb/plugin-ts`) | MIT | pnpm lock file in `frontend/`, `--frozen-lockfile --ignore-scripts` |
+
+**Kubb**
+
+- Versions: the agent checked the npm registry on 2026-11-04 (`npm view <package> version`): `kubb` 5.15.3, `@kubb/cli` 5.15.3, `@kubb/core` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0 and `zod` 4.6.7. These are the versions that the agent tested together in the research (the test project had `@kubb/core` as a direct dependency). The phase 120 pins `kubb`, `@kubb/plugin-zod` and `@kubb/plugin-ts` at exact versions (no `^` and no `~`) that work together. If the phase 120 uses a newer version, it must repeat the check and the tests.
+- Network, command `kubb generate`: each start of the command makes one anonymous GET request to `registry.npmjs.org/@kubb/cli/latest`. No option switches it off. In the 5.x line it does not block, and it has a time-out of 3 seconds. With no network, the exit code is 0 and the result is the same. If packets are dropped, the start has a delay of up to about 10.6 seconds.
+- Telemetry: Kubb sends data with a POST request to `otlp.kubb.dev`. The variable `KUBB_DISABLE_TELEMETRY=1` or `DO_NOT_TRACK=1` switches it off (only the value `1` or `true` counts).
+- Programmatic API: `createKubb` from `@kubb/core`, with a config from `kubb/config`, makes no network call and sends no telemetry. The output is byte-identical to the output of the command.
+- Design decision, set by the agent, and the owner can change it at the review: the recipe `generate` starts Kubb with a small programmatic runner (a `.mjs` file in `frontend/`) and not with the command `kubb generate`. So the generation makes no network call. The recipe also sets `KUBB_DISABLE_TELEMETRY=1` and `DO_NOT_TRACK=1`. The workflow gate does not allow `env:` in the workflow file, so the recipe sets them, and the owner accepted this. The phase 120 writes the runner and tests it (also with no network).
+- Fallback: Hey API 0.99.0 (`@hey-api/openapi-ts` with the plugin `zod`) is the documented fallback.
+- License of `argparse`: the owner chose `argparse` 3.0.4 (PSF-2.0, Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). The tree of Kubb has `argparse@3.0.4`, so no pnpm override is necessary for Kubb. If the generator changes to Hey API, use the pnpm override `argparse` 3.0.4. The owner made no change to the DEC for `Python-2.0`.
+
+**Design rule for `ErrorCode` and Problem Details (REQ-006, ACC-008)**
+
+The evidence of the research is in `/tmp/opencode/r/` and `/tmp/opencode/s/`. These folders are not in the repository.
+
+- One shared component schema `ErrorCode`: a string enum with lower snake case values. The values are unique. `Problem.code` uses it with `$ref`.
+- The schema `Problem` has the properties `type`, `title`, `status`, `detail`, `instance`, `code` and `traceId`. `code` and `traceId` are required. The schema has no text in a language (REQ-006).
+- Each response 4xx and 5xx has ONE media type, `application/problem+json`, with `$ref` to `#/components/schemas/Problem`. A shared `components/responses/ProblemResponse` that has the same content is also possible.
+- The test for ACC-008 compares the list in the YAML file with the Java enum by `getValue()`, and not by the names of the constants (the generator adds number suffixes to a name if two names are the same). It compares the list with the Zod export `errorCodeSchema.options` also.
+
+**Rules of the linter (task 110.115)**
+
+The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/tmp/opencode/r/spectral/ruleset.yaml` (outside of the repository, so the task 110.115 must copy it to a path below `tools/`). It is the start for the task 110.115. It has these rules: each response 4xx and 5xx has `application/problem+json` as the only media type with `$ref` to the schema `Problem` (or to `ProblemResponse`), `components.responses.ProblemResponse` follows the same rule, `Problem.code` is a `$ref` to `ErrorCode`, `Problem` requires `code` and `traceId`, `ErrorCode` is a unique string enum with lower snake case values, and each operation has `x-specmgr-req` with a UUID. These points are important:
+
+- The rule for `x-specmgr-req` needs BOTH a `truthy` check and a `pattern` check with a UUID expression, because the function `pattern` does not report a missing field.
+- The rules that check a `$ref` need `resolved: false`, because Spectral replaces the `$ref` with its target if the option is not set.
+
+**Behavior of oasdiff for the phase 115 (tested with 1.35.0)**
+
+- A new enum value in a property of a RESPONSE is an `error` (a breaking change): the exit code is 1 with `--fail-on ERR`. The removal of a value is only `info`. The agent also tested a file of custom levels (`--severity-levels`, with the line `response-property-enum-value-removed err`) that makes a removal an error. The owner keeps the default levels, so a removal is not a breaking change.
+- Each status (400, 404, 500, 503) gives its own finding. The ignore file needs one line for each status.
+- The format of a line in the ignore file is `METHOD /path <full message>`. The option `-f singleline` prints the findings with one line for each finding, so a person can copy the message to the ignore file.
 
 ### Related Decisions
 
@@ -356,9 +418,9 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 
 - [x] Task 090.100: For each tool (linter, tool for breaking changes, server generator, Zod generator), write a list of two or three candidates with these criteria: the license class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, maintenance, support for the version of OpenAPI, the same output for each run, support for the Node and Java versions in `tools/versions.env`, and the way to pin it. Write the lists in the Design Notes (ACC-017)
 
-- [ ] Task 090.110: The owner selects the four tools. Write the choice and the cause in the section Decisions Made. If the owner does not select a tool, stop (ACC-017)
+- [x] Task 090.110: The owner selects the four tools. Write the choice and the cause in the section Decisions Made. If the owner does not select a tool, stop (ACC-017)
 
-- [ ] Task 090.120: Fix the path and the version of the OpenAPI file, the folders of the generated code, and the options of the generators. Write them in the Design Notes and in the section Decisions Made (ACC-013)
+- [x] Task 090.120: Fix the path and the version of the OpenAPI file, the folders of the generated code, and the options of the generators. Write them in the Design Notes and in the section Decisions Made (ACC-013)
 
 #### Phase 100: License Checks
 
@@ -382,7 +444,7 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 
 - [ ] Task 110.110: Add the selected linter: pin it (`tools/versions.env`, own pnpm project with a lock file under `tools/`), change `sbom.sh`, `check_pins.py` and their tests for the new manifest, and add it to the license table (ACC-011)
 
-- [ ] Task 110.115: Write the rules of the linter (REQ-006 and REQ-008) in a path below `tools/`, add the `just` recipe `lint`, and add the negative cases of ACC-007 (ACC-002, ACC-007)
+- [ ] Task 110.115: Write the rules of the linter (REQ-006 and REQ-008) in a path below `tools/`, add the `just` recipe `lint`, and add the negative cases of ACC-007. The start is the tested ruleset in `/tmp/opencode/r/spectral/ruleset.yaml` (see the Design Notes, "Rules of the linter") (ACC-002, ACC-007)
 
 #### Phase 115: Check for Breaking Changes
 
@@ -400,9 +462,11 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 
 - [ ] Task 120.105: Add the sha256 of the jar of the generator plugin to `tools/versions.env`, and the comparison to a gate, as `sbom.sh` does for its plugin. Write the limit about the dependencies of the plugin in `tools/gates/README.md` and in a comment in GitHub issue #23 (ACC-012)
 
-- [ ] Task 120.110: Make the pnpm module in `frontend/` (`pnpm-workspace.yaml`, lock file) and the generation of the Zod schemas. Install with `--frozen-lockfile --ignore-scripts` (ACC-005, ACC-011)
+- [ ] Task 120.110: Make the pnpm module in `frontend/` (`pnpm-workspace.yaml`, lock file) and the generation of the Zod schemas with Kubb. Pin `kubb`, `@kubb/plugin-zod` and `@kubb/plugin-ts` at exact versions that work together. Use the programmatic runner and not the command `kubb generate` (see the Design Notes). Install with `--frozen-lockfile --ignore-scripts` (ACC-005, ACC-011)
 
 - [ ] Task 120.120: Write the `just` recipe `generate` that makes all generated code again, and the test for ACC-008 and ACC-013 (ACC-002, ACC-008, ACC-013)
+
+- [ ] Task 120.130: Add the API documentation (REQ-015): a second execution of the plugin `openapi-generator-maven-plugin` that is already pinned, with the generator `html2`, and a `just` recipe for it. The output is below a folder that is not in git, and it is not in the gate for generated code. Test that two runs one after the other make the same HTML (check the options, for example the time stamp). The CI job that keeps the HTML as an artifact is added with the CI jobs of the phase 130. If this job is a required check, it is a question for the owner in the phase 135 (ACC-018)
 
 #### Phase 130: Gates
 
@@ -410,7 +474,7 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 
 - [ ] Task 130.105: Add the CI job that compiles the Maven module and the pnpm module with the generated code (ACC-005)
 
-- [ ] Task 130.110: Add the lint gate, the gate for breaking changes, the gate for generated code and the compile job to the CI workflow and to `tools/gates/required-setup.txt`. The name of each job is the name of its recipe (ACC-015)
+- [ ] Task 130.110: Add the lint gate, the gate for breaking changes, the gate for generated code, the compile job and the job for the API documentation (REQ-015) to the CI workflow and to `tools/gates/required-setup.txt`. The name of each job is the name of its recipe (ACC-015)
 
 - [ ] Task 130.120: Test each gate with a change that must cause a failure. Add the cases to `just test-gates`, write the results in this plan, and keep one throwaway pull request in real CI as proof (ACC-004, ACC-007, ACC-015)
 
@@ -434,15 +498,19 @@ The candidate `openapi-zod-client` is not in the list. The README says that it i
 
 ### Current Status
 
-**As of 2026-11-04**: The refinement is done and the status is `progress`. feat-5-foundation-monorepo-ci is done, so the dependency is satisfied. The task 090.100 is done: the Design Notes have the lists of candidates for the four tools. The agent waits for the owner to select the tools in the task 090.110. The tasks 090.110 and 090.120 are not started.
+**As of 2026-11-04**: The phase 090 (Tool Selection) is done. The tasks 090.100, 090.110 and 090.120 are done, and ACC-017 is met. The owner selected Spectral 6.17.0, oasdiff 1.35.0, openapi-generator 7.27.0 and Kubb, and fixed the path, the version (OpenAPI 3.1.0), the folders and the options (see the section Decisions Made and the Design Notes). The owner also added the API documentation (REQ-015, ACC-018, task 120.130). The next phase is the phase 100 (License Checks). The license table still has "not checked" and "open" in each row. feat-5-foundation-monorepo-ci is done, so the dependency is satisfied.
 
 ### Blockers
 
-- None. The owner must select the tools in the task 090.110, and the work on the tools stops until the owner does so.
+- None. One point is set by the agent and the owner can change it at the review: the recipe `generate` starts Kubb with a programmatic runner and not with the command `kubb generate`. The details of the mechanism for the source root of the Java code and of the mark "generated, do not change" for the Java code are open for the phase 120.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 16:45:00.000Z - Phase 090 done: tools selected, values fixed
+
+The owner selected the four tools (task 090.110) and fixed the values of the task 090.120. The agent wrote them in the section Decisions Made (three new entries) and in the Design Notes (the paragraph "Fixed values" and the new section "Selected Tools and Fixed Values"). The Design Notes now also have the ErrorCode design rule, the start for the rules of the linter and the behavior of oasdiff for the phase 115. The agent checked the versions `kubb` 5.15.3, `@kubb/cli` 5.15.3, `@kubb/core` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0, `zod` 4.6.7 and `@hey-api/openapi-ts` 0.99.0 against the npm registry (`npm view`, 2026-11-04). The names in the license table have the selected tools, and a row for `argparse` 3.0.4 is new. The results are still "open" for the phase 100. The owner added the API documentation: the plan has REQ-015, ACC-018, one bullet in Scope/Included and the task 120.130. ACC-017 is ticked. The agent set one design point (the programmatic runner for Kubb), and the owner can change it at the review. No file other than this plan was changed.
 
 #### 2026-11-04 13:00:00.000Z - Task 090.100 done: lists of candidates
 
@@ -459,6 +527,36 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 16:42:00.000Z - The owner adds the API documentation (REQ-015)
+
+The owner chose option (b) for the documentation of the API: CI makes it from the OpenAPI file with the generator `html2` of the openapi-generator plugin, as a second execution of the plugin that is already pinned. So it needs no new tool and no new pin. The output must be the same on each run (REQ-015). The HTML is not committed, and CI keeps it as an artifact. The documentation is not in the gate for generated code, because it is an artifact and not a committed file. The plan has the new REQ-015, ACC-018, one bullet in Scope/Included and the new Task 120.130 (a new number, no task is renumbered). The license table has a note in the row of openapi-generator. The job for the documentation is added with the CI jobs of the phase 130 (task 130.110).
+
+#### 2026-11-04 16:41:00.000Z - Fixed values of the task 090.120
+
+The owner fixed these values on 2026-11-04. The paragraph "Fixed values" in the Design Notes has the same list.
+
+- OpenAPI file: `contracts/openapi.yaml`, version 3.1.0. Spectral, oasdiff and Kubb read 3.1. The support of openapi-generator for 3.1 is beta, and the tool writes a warning in the log. The owner accepted this.
+- Generated Java code: `backend/src/generated`. The Maven module adds it as a source root (`build-helper-maven-plugin` or the plugin option `addCompileSourceRoot`). The exact mechanism is open for the phase 120.
+- Generated Zod code: `frontend/src/generated`. Both generated folders are committed to git.
+- Mark "generated, do not change": the banner of Kubb (default) for the Zod code. A `README.md` or a header in the folder for the Java code. The way and the details are open for the phase 120.
+- Options of the Spring generator: `interfaceOnly=true`, `hideGenerationTimestamp=true`, `skipDefaultInterface=true`, `generateSupportingFiles=false`.
+- ErrorCode design rule (from the research): one shared schema `ErrorCode` (string enum, lower snake case, unique values) that `Problem.code` uses with `$ref`. The schema `Problem` has `type`, `title`, `status`, `detail`, `instance`, `code` and `traceId`, and `code` and `traceId` are required. Each response 4xx and 5xx has the one media type `application/problem+json` with `$ref` to `#/components/schemas/Problem` (or to a shared `components/responses/ProblemResponse`). The test for ACC-008 compares the YAML list with the Java enum by `getValue()` (not by the names of the constants, which get number suffixes if names clash) and with the Zod export `errorCodeSchema.options`. The details are in the Design Notes.
+- Set by the agent, and the owner can change it at the review: the recipe `generate` starts Kubb with a small programmatic runner (a `.mjs` file in `frontend/`) and not with the command `kubb generate`. The cause: the command makes one network call at each start (see the entry of 16:40), and the programmatic API makes none and gives the same output. The recipe also sets `KUBB_DISABLE_TELEMETRY=1` and `DO_NOT_TRACK=1`. The workflow gate does not allow `env:`, so the recipe sets them, and the owner accepted this.
+
+#### 2026-11-04 16:40:00.000Z - The owner selects the four tools (task 090.110)
+
+The owner selected these tools on 2026-11-04. The agent did not select a tool (REQ-014).
+
+- Linter: Spectral (CLI 6.17.0, Apache-2.0). Cause: the rules for `x-specmgr-req` and for Problem Details are plain YAML and work on a 3.1 file. It is pinned with a pnpm lock file, as cdxgen is. Redocly CLI is not selected as linter.
+- Breaking changes: oasdiff 1.35.0 (Apache-2.0), a download with a sha256 value in `tools/versions.env`. Cause: it is the only candidate with an ignore file for each change (REQ-012).
+- Server generator: openapi-generator 7.27.0, Maven plugin (Apache-2.0), generator `spring`.
+- Zod generator: Kubb. The owner selected Kubb after the agent compared it with Hey API and Orval and the owner challenged the choice. Packages: `kubb`, `@kubb/plugin-zod`, `@kubb/plugin-ts` and `zod` 4.x in the pnpm module `frontend/`. `kubb`, `@kubb/plugin-zod` and `@kubb/plugin-ts` get exact versions that work together. The agent checked the npm registry on 2026-11-04: `kubb` and `@kubb/cli` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0 (and `zod` 4.6.7). Hey API 0.99.0 is the documented fallback.
+- Facts of the comparison that the owner recorded: the command `kubb generate` makes one anonymous GET request to `registry.npmjs.org/@kubb/cli/latest` at each start. This cannot be switched off. In 5.x it does not block, it has a time-out of 3 seconds, and the exit code is 0 and the result is the same with no network. If packets are dropped, the start has a delay of up to about 10.6 seconds. The telemetry of Kubb (a POST request to `otlp.kubb.dev`) is switched off by `KUBB_DISABLE_TELEMETRY=1` or `DO_NOT_TRACK=1` (only the value `1` or `true`). The programmatic API (`createKubb` from `@kubb/core`, config from `kubb/config`) makes no network call, sends no telemetry and gives byte-identical output.
+- Licenses: the owner chose `argparse` 3.0.4 (PSF-2.0, Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). The tree of Kubb has `argparse@3.0.4`, so no pnpm override is necessary for Kubb. If the generator changes to Hey API, use the pnpm override `argparse` 3.0.4. The DEC is not changed for `Python-2.0`.
+- Behavior of oasdiff for the phase 115 (tested with 1.35.0): a new enum value in a property of a RESPONSE is an error (a breaking change, exit code 1 with `--fail-on ERR`). The removal of a value is only info. Each status (400, 404, 500, 503) gives its own finding, so the ignore file needs one line for each status. The format is `METHOD /path <full message>`. The owner keeps the default levels, so a removal is not a breaking change.
+- Rules of the linter: a tested ruleset is in `/tmp/opencode/r/spectral/ruleset.yaml`. It is the start for the task 110.115. The rule for `x-specmgr-req` needs a `truthy` check and a UUID `pattern` check, and the rules that check a `$ref` need `resolved: false`.
+- The license table keeps the results "not checked" and "open" until the phase 100.
 
 #### 2026-11-04 11:20:00.000Z - Plan decisions of the refinement
 
