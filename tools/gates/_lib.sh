@@ -33,48 +33,42 @@ version_of() {
     echo "${value}"
 }
 
-# make_python_env <require|verify> <name:VERSION_KEY:SHA256_KEY>...
+# make_python_env <lock-name>
 #
-# Makes a temporary virtual environment for a Python tool of a gate, and installs the packages in
-# it with the checksums of tools/versions.env (feat-5, finding G2). It writes one requirement line
-# for each package from the file, `name==<version> --hash=sha256:<value>`, so that versions.env stays
-# the one source. Then it starts `uv pip install` with --require-hashes (mode `require`) or with
-# --verify-hashes (mode `verify`):
+# Makes a temporary virtual environment for a Python tool of a gate, and installs the tool in it from
+# the lock file tools/python/<lock-name>.lock (feat-22-python-tools-lockfile, finding G2). The lock file
+# has the exact version and the sha256 of each file of each package, with the dependencies. The
+# function starts
 #
-#   require  Each package that uv installs must have a hash in the file. Use it for a tool with no
-#            other dependency than the packages in the list (license-expression with boolean.py,
-#            PyYAML). uv stops for a hash that is wrong, and for a package that has no hash.
-#   verify   uv checks the hash of each package that has one in the file, and does not check the
-#            other packages. Use it for a tool with dependencies that the file does not list
-#            (specmgr). The dependencies of the tool are NOT verified.
+#   uv venv --python <PYTHON_VERSION>
+#   uv pip install --require-hashes --only-binary :all: -r <lock file>
 #
-# uv chooses the file of a release that has the hash. So a hash of a wheel gives the wheel, and the
-# hash of a source archive (PyYAML) gives the source archive, which uv builds. The build tools of
-# that build are not verified.
+#   --require-hashes   uv stops for a file with another hash, and for a package that has no hash or is
+#                      not in the lock file (a dependency too).
+#   --only-binary      uv does not build a source archive, so no build tool is part of the install.
+#
+# PYTHON_VERSION (the minor version, 3.13) is in tools/versions.env. uv uses a Python of this version
+# that is on the machine, or downloads one. The folder of the lock files is tools/python of this
+# repository. The variable PYTHON_LOCK_DIR sets another folder (only the self-tests use it).
+# `just check-pins` ties the version of the tool in the lock file to tools/versions.env.
 #
 # Sets GATE_ENV_DIR (the temporary folder; the variable GATE_PYTHON is the Python of the
-# environment) and removes the folder when the script ends. A key of tools/versions.env that is
-# missing, or a value that has not the form of a version or of a sha256, stops the script.
+# environment) and removes the folder when the script ends. A lock file that is missing, or a
+# PYTHON_VERSION that is not a minor version, stops the script.
 make_python_env() {
-    local mode="$1" spec name version_key sha_key version sha
-    shift
-    [[ "${mode}" == "require" || "${mode}" == "verify" ]] || die "make_python_env: mode must be require or verify"
+    local lock_name="$1" lock_file python_version
+    [[ $# -eq 1 && "${lock_name}" =~ ^[a-z0-9-]+$ ]] || die "make_python_env: usage: make_python_env <lock-name>"
+    lock_file="${PYTHON_LOCK_DIR:-${REPO_ROOT}/tools/python}/${lock_name}.lock"
+    [[ -f "${lock_file}" ]] || die "Lock file not found: ${lock_file}"
+    python_version="$(version_of PYTHON_VERSION)"
+    [[ "${python_version}" =~ ^3\.[0-9]+$ ]] || die "PYTHON_VERSION is not a minor version like 3.13: '${python_version}'"
     require_cmd uv
     GATE_ENV_DIR="$(mktemp -d)"
     trap 'rm -rf "${GATE_ENV_DIR}"' EXIT
-    : >"${GATE_ENV_DIR}/requirements.txt"
-    for spec in "$@"; do
-        IFS=: read -r name version_key sha_key <<<"${spec}"
-        version="$(version_of "${version_key}")"
-        sha="$(version_of "${sha_key}")"
-        [[ "${version}" =~ ^[0-9A-Za-z.+_-]+$ ]] || die "${version_key} is not a version: '${version}'"
-        [[ "${sha}" =~ ^[0-9a-f]{64}$ ]] || die "${sha_key} is not a sha256 value (64 hexadecimal characters): '${sha}'"
-        printf '%s==%s --hash=sha256:%s\n' "${name}" "${version}" "${sha}" >>"${GATE_ENV_DIR}/requirements.txt"
-    done
-    uv venv --quiet "${GATE_ENV_DIR}/venv" || die "uv could not make a virtual environment"
+    uv venv --quiet --python "${python_version}" "${GATE_ENV_DIR}/venv" || die "uv could not make a virtual environment with Python ${python_version}"
     GATE_PYTHON="${GATE_ENV_DIR}/venv/bin/python"
-    uv pip install --quiet --python "${GATE_PYTHON}" "--${mode}-hashes" -r "${GATE_ENV_DIR}/requirements.txt" \
-        || die "uv did not install the tools with the checksums of ${VERSIONS_FILE} (see the message of uv above)"
+    uv pip install --quiet --python "${GATE_PYTHON}" --require-hashes --only-binary :all: -r "${lock_file}" \
+        || die "uv did not install ${lock_name} from ${lock_file} (see the message of uv above)"
 }
 
 # manifest_files <root> -- print the manifests of the project (one path for each line, relative to

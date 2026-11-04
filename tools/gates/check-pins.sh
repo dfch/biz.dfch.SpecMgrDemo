@@ -22,10 +22,15 @@
 #     or file stops the check. The folder is SBOM_TOOL_DIR (a variable for the tests; the default is
 #     tools/sbom of this repository, as in sbom.sh, and not of GATE_WORK_ROOT: the tool belongs to the gates).
 #
-# check_pins.py does the work. It reads the YAML with PyYAML. The version and the sha256 value
-# (the source archive) are PYYAML_VERSION and PYYAML_SHA256 in the versions file (the first
-# argument), and the script installs it with `uv pip install --require-hashes` (make_python_env in
-# _lib.sh). Exit codes: 0 pass, 1 a pin is not correct, 2 an error in a file.
+#   - the lock files of the Python tools (finding G2, feat-22-python-tools-lockfile): tools/python/ must have
+#     the lock files specmgr.lock, pyyaml.lock and license-expression.lock, each with exact pins and sha256
+#     hashes only, and the version of the tool in each file must be the version of the versions file (the
+#     first argument). The folder is PYTHON_LOCK_DIR (a variable for the tests, as in make_python_env in
+#     _lib.sh; the default is tools/python of this repository).
+#
+# check_pins.py does the work. It reads the YAML with PyYAML. The version is PYYAML_VERSION in the versions
+# file (the first argument), and the script installs it with `uv pip install --require-hashes` from the
+# lock file tools/python/pyyaml.lock (make_python_env in _lib.sh). Exit codes: 0 pass, 1 a pin is not correct, 2 an error in a file.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
@@ -33,5 +38,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 [[ $# -eq 2 || $# -eq 3 ]] || die "Usage: check-pins.sh <versions.env> <workflows-dir> [<allowed-actions>]"
 allowed="${3:-${REPO_ROOT}/tools/license/allowed-actions.txt}"
 VERSIONS_FILE="$1"
-make_python_env require "PyYAML:PYYAML_VERSION:PYYAML_SHA256"
-"${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}" "${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}"
+make_python_env pyyaml
+"${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}" "${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}" \
+    "${PYTHON_LOCK_DIR:-${REPO_ROOT}/tools/python}"

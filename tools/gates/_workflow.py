@@ -2,7 +2,7 @@
 
 feat-5-foundation-monorepo-ci, Tasks 130.140 and 130.142. Do not run this file.
 check_workflows.py and check_pins.py import it. PyYAML must be installed (the scripts
-check-workflows.sh and check-pins.sh install it with checksums, see make_python_env in _lib.sh).
+check-workflows.sh and check-pins.sh install it from a lock file with hashes, see make_python_env in _lib.sh).
 """
 
 from pathlib import Path

@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-03T22:17:37.880+01:00'
+updated: '2026-11-04T06:20:55.667+01:00'
 version: 1.0.0
 ---
 
@@ -72,7 +72,7 @@ These are the first classes of licenses. The owner must make sure that they are 
 
 | Class | Licenses | Rule |
 |---|---|---|
-| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0, LGPL-3.0-only, LGPL-3.0-or-later, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
+| Permitted | MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Apache-2.0, CC0-1.0, Zlib, Unicode-3.0, Unicode-DFS-2016, BlueOak-1.0.0, Artistic-2.0, PSF-2.0, LGPL-3.0-only, LGPL-3.0-or-later, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later | Permitted. The gate must match the complete expression. |
 | Permitted | GPL-2.0-only WITH Classpath-exception-2.0 | Permitted. The gate must match the complete expression. The license GPL-2.0-only with no exception stays not permitted. |
 | Review | EPL-2.0, MPL-2.0 | A DEC about the deviation is necessary |
 | Not permitted | GPL-2.0-only, SSPL, BUSL, licenses with no right to commercial use, proprietary licenses | Not permitted |
@@ -84,6 +84,10 @@ All approved deviations are in one register DEC, with one dated section for each
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 05:20:47.000Z - PSF-2.0 in the class Permitted
+
+The owner gave a permission for one time to make this change, and no other change (statement of the owner on 2026-11-04, in the chat: "I get a one-time DEC permission", the answer to the question about the license class of Python 3.13). The agent added `PSF-2.0` to the row of the class Permitted in More Information. The reason is that the gates of the project will run on a pinned Python 3.13 (feat-22-python-tools-lockfile), and the license of CPython has no class in this DEC. The agent read the file `lib/python3.13/LICENSE.txt` of the build `cpython-3.13.13-linux-x86_64-gnu` (uv, sha256 of the file `78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb`). The main license of the file is the "Python Software Foundation License Version 2" (SPDX identifier `PSF-2.0`). The file also has the older agreements of BeOpen, CNRI and CWI and a zero-clause BSD text for code in the documentation. Under rule A, only the main license of a tool is checked, so these texts are not checked. Python is a tool that does not go to users. The entry also permits a library with the license `PSF-2.0`. A person who has competence in the law must examine the new entry, in the same way as for the other rows. The status and the text of the Decision Outcome are not changed. The other rows are not changed.
 
 ### 2026-11-03 21:17:29.000Z - Review of the license DEC by the owner
 

@@ -54,3 +54,4 @@
 44-error-not-json.cdx.json | ERROR | a file that is not JSON
 45-error-not-cyclonedx.cdx.json | ERROR | a JSON file that is not a CycloneDX SBOM
 46-error-no-components.cdx.json | ERROR | a CycloneDX SBOM with no `components` list
+47-psf2.cdx.json | PASS | PSF-2.0 is in the class Permitted since 2026-11-04 (feat-22)
