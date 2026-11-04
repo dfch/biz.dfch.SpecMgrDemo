@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:48.525+01:00'
 id: 84c37f7d-08cb-457d-8ab3-1db37dba9bc9
 status: accepted
 type: dec
-updated: '2026-11-04T06:20:55.667+01:00'
+updated: '2026-11-04T06:59:48.447+01:00'
 version: 1.0.0
 ---
 
@@ -84,6 +84,10 @@ All approved deviations are in one register DEC, with one dated section for each
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 05:59:43.000Z - Review of the PSF-2.0 entry by the owner
+
+The owner gave a permission for one time to add this entry, and no other change (statement of the owner on 2026-11-04, in the chat: "PSF-2.0: I reviewed, update the doc (you have one-time permission)"). The owner told the coding agent on 2026-11-04 that the owner reviewed the entry `PSF-2.0` in the class Permitted, which the agent added on 2026-11-04 at 05:20:47 (see the entry below). The reviewer is dfch, and the date of the review is 2026-11-04 (the agent has no other source for this fact). The owner did not tell the agent of a change in the class table, and this entry does not change the table. No person with legal competence is named as a reviewer. The status and the text of the Decision Outcome are not changed.
 
 ### 2026-11-04 05:20:47.000Z - PSF-2.0 in the class Permitted
 

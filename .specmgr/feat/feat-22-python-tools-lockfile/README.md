@@ -4,7 +4,7 @@ created: '2026-11-04T06:22:50.630+01:00'
 id: feat-22-python-tools-lockfile
 status: planning
 type: feat
-updated: '2026-11-04T06:55:54.244+01:00'
+updated: '2026-11-04T06:59:50.345+01:00'
 version: 1.0.0
 ---
 
@@ -172,7 +172,7 @@ License table (the agent filled it from the license file of the build and not fr
 
 - None.
 
-- Open item for the owner (not a blocker): a person with competence in the law must examine the `PSF-2.0` entry of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9.
+- Resolved on 2026-11-04 (statement of the owner; DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry of 05:59:43): the owner reviewed the `PSF-2.0` entry. Open item for the owner (not a blocker): no person with legal competence is named as a reviewer.
 
 ### Updates
 
