@@ -21,6 +21,7 @@ rules for `main` are in the section "Ruleset for `main`" below.
 | Dismiss stale pull request approvals when new commits are pushed | On (suggestion) |
 | Require status checks to pass before merging | On, with the checks in the next table |
 | Require branches to be up to date before merging | On (suggestion) |
+| Allowed merge methods | Squash only (a pull request into `dev` is a squash merge, see DEC d778d444-6227-4070-ae6e-b1083c78c58b) |
 | Bypass list | Only the role `maintain` (the owner chose this for `dev`). Use the mode `pull_request` and not `always` (see "Bypass mode") |
 | Allow force pushes | Off |
 | Allow deletions | Off |
@@ -93,12 +94,14 @@ The workflow runs for pull requests to `dev` and to `main`, so `main` can have t
 `gh api repos/dfch/biz.dfch.SpecMgrDemo/rulesets/26472506` on 2026-11-03): deletion blocked,
 force push blocked, a pull request with 1 approval, review of a code owner and stale approvals dismissed,
 and the seven required checks (integration id 15368 is GitHub Actions) with the strict policy. There
-are three differences:
+are two differences:
 
 - The target is `refs/heads/main` (the ruleset of `dev` has the default branch).
-- The bypass mode is `pull_request` (see "Bypass mode" below). The ruleset of `dev` has `always`.
 - Only the merge method "merge commit" is allowed (see "Release case" below). The ruleset of `dev`
-  allows merge, squash and rebase. You can add the two other methods if you accept the cost.
+  allows only the merge method "squash". This is on purpose: `dev` has one conventional commit for
+  each pull request, and `main` must keep the commits of `dev` (see "Release case" below).
+
+The bypass mode is `pull_request` in both rulesets (see "Bypass mode" below).
 
 The agent did not make this ruleset. You apply it, and the order is important.
 
@@ -192,8 +195,7 @@ The role `maintain` can bypass a ruleset. The mode decides how:
   checks run and are visible, and the owner can then merge it although the approval is missing (the
   author cannot approve the own pull request). A direct push is not possible.
 
-Use `pull_request` for `main`. The owner set `always` for `dev`. The agent advises to change `dev` to
-`pull_request` too, but this is a decision of the owner.
+Both rulesets, `dev` and `main`, use `pull_request` (checked with `gh api` on 2026-11-04).
 
 ### Release case: the commits of `dev` that are not in `main`
 

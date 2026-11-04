@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-04T07:16:45.374+01:00'
+updated: '2026-11-04T10:20:51.999+01:00'
 version: 1.0.0
 ---
 
@@ -81,6 +81,10 @@ This handbook is the index of the development policies and standards of this rep
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 09:22:00.000Z - Review flow for the close of a feature
+
+SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8 now has the review flow. The agent sets the status `review` and opens the pull request. The owner reviews and accepts. The owner tells the agent to set `done`, and the agent pushes to the same pull request. The owner approves again and squash-merges after green CI. This replaces the description of the entry of 2026-11-04 06:16, where `done` was set before the review.
 
 ### 2026-11-04 06:16:10.000Z - Rule to close a feature with one pull request added
 
