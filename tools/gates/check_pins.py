@@ -34,8 +34,9 @@ _lib.sh) and stops for each of these:
     value with versions.env (the file has the sha512 of the tar.gz), so it checks that the value is there;
   * a project with a `pom.xml` and no wrapper (fail closed: sbom.sh does not use the Maven of the runner).
 
-A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". Until
-feat-6-contracts-openapi-pipeline adds the wrapper, a `pom.xml` stops this gate on purpose.
+A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". A `pom.xml`
+with no wrapper stops this gate on purpose. feat-6-contracts-openapi-pipeline (Task 105.100) added backend/pom.xml
+and the wrapper.
 
 The lock file of the SBOM tool cdxgen (the finding G2 of the review, feat-16-cdxgen-lockfile; REQ-003, REQ-005).
 tools/versions.env is the one source of truth for CDXGEN_VERSION and CDXGEN_INTEGRITY. <sbom-tool-dir> is the

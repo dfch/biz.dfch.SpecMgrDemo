@@ -18,7 +18,7 @@
 #             is covered only if frontend/pnpm-workspace.yaml and frontend/pnpm-lock.yaml both exist
 #             (cdxgen reads the workspace from the lock file; a nested package.json with no
 #             workspace is not read).
-#   none      if no manifest exists (this is the case until feat-6-contracts-openapi-pipeline adds
+#   none      if no manifest exists (this was the case until feat-6-contracts-openapi-pipeline added
 #             them): a valid SBOM with `components: []`, in <dir>/project.cdx.json. The script says so.
 #
 # Rules (fail closed):
@@ -37,6 +37,10 @@
 #        peerDependencies (or a scanned pom.xml has a <dependency> in <dependencies>) and the SBOM that the
 #        tool made has no component, the script stops. sbom_check.py does this check (it reads
 #        the manifests and counts the components of the SBOM file, with the Python of `uv run`).
+#        One case is not an error (feat-6-contracts-openapi-pipeline, Task 105.110): for a pom.xml with no
+#        <dependency>, cyclonedx-maven-plugin 2.9.3 writes an SBOM with no `components` key, and license_check.py
+#        stops for that. Then sbom_check.py writes `"components": []` to <dir>/backend.cdx.json (the file in
+#        target/ stays as the plugin made it). With a declared dependency, the same SBOM stops the script.
 #   G1   A Maven project must have the Maven Wrapper (mvnw) next to the scanned pom.xml. The script
 #        starts mvnw, and never the Maven of the machine or of the runner, so that Maven is the version that
 #        the wrapper pins (check-pins.sh checks that this version is MAVEN_VERSION). No mvnw stops the script.
@@ -58,7 +62,7 @@
 #
 # The versions and the checksums are in tools/versions.env (VERSIONS_FILE sets another file, for the
 # tests). The script does not change the system, except for the folder tools/sbom/node_modules (it is
-# in .gitignore). The test with real dependencies is open until feat-6 gives the manifests. These
+# in .gitignore). The first run with the real backend/pom.xml (no dependency) is done (feat-6 Task 105.110). These
 # environment variables are for the tests:
 #   SBOM_PROJECT_ROOT       another root of the project
 #   SBOM_TOOL_DIR           another folder for the cdxgen project (the default is tools/sbom of this

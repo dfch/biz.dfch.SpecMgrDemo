@@ -16,6 +16,14 @@ The SBOM must have at least one component (the `components` list and the compone
 level) if one manifest declares dependencies. Otherwise the tool that made the SBOM did not see the
 dependencies, and a license gate that passes on an empty SBOM would be wrong. The gate fails closed.
 
+One case is different (feat-6-contracts-openapi-pipeline, Task 105.110, the first run with a real pom.xml): for
+`maven`, cyclonedx-maven-plugin 2.9.3 writes an SBOM with NO `components` key if the project has no dependency
+(the key is optional in CycloneDX), and license_check.py stops for an SBOM with no `components` list. If the
+SBOM has no `components` key and the manifests declare no dependency, the script writes `"components": []` to
+the SBOM file and says so, so the license gate can read it. If the manifests declare a dependency, the same SBOM
+stops the script (exit code 1), as an empty list does. The script does this for `maven` only: no other tool is known
+to omit the key.
+
 Exit codes: 0 the SBOM is plausible; 1 dependencies are declared and the SBOM has no component;
 2 a file cannot be read.
 """
@@ -85,6 +93,15 @@ def components_in(node: Any) -> int:
     return count
 
 
+def add_empty_components(sbom: Path, data: dict[str, Any]) -> None:
+    """Write the SBOM file again with `"components": []` (all other keys stay)."""
+    data["components"] = []
+    try:
+        sbom.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    except OSError as error:
+        raise CheckError(f"cannot write the SBOM {sbom}: {error}") from error
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 4 or argv[1] not in ("node", "maven"):
         print("Usage: sbom_check.py <node|maven> <sbom.json> <manifest>...", file=sys.stderr)
@@ -92,15 +109,19 @@ def main(argv: list[str]) -> int:
     kind, sbom = argv[1], Path(argv[2])
     try:
         try:
-            components = components_in(json.loads(sbom.read_text(encoding="utf-8")))
+            data = json.loads(sbom.read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read the SBOM {sbom}: {error}") from error
+        components = components_in(data)
         counter = node_dependencies if kind == "node" else maven_dependencies
         declared = {name: counter(Path(name)) for name in argv[3:]}
+        total = sum(declared.values())
+        if kind == "maven" and total == 0 and isinstance(data, dict) and "components" not in data:
+            add_empty_components(sbom, data)
+            print(f"{sbom}: no `components` key and no declared dependency: wrote `components: []`")
     except CheckError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
-    total = sum(declared.values())
     for name, count in declared.items():
         print(f"{name}: {count} declared dependenc{'y' if count == 1 else 'ies'}")
     print(f"{sbom}: {components} component(s)")

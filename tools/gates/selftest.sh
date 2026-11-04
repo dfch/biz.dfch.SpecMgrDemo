@@ -501,7 +501,7 @@ distributionType=only-script
 distributionUrl=${good_url}
 distributionSha256Sum=${good_sha}"
 
-expect 0 "no Maven project" "no pom.xml and no wrapper (the real repository)" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+expect 0 "Maven Wrapper: 1 file(s), Maven $(version_of MAVEN_VERSION)" "backend/pom.xml and the wrapper with the pinned Maven version and a sha256 (the real repository, feat-6 Task 105.100)" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/mv-none"
 expect 0 "no Maven project" "no pom.xml and no wrapper (an empty tree)" run_maven "${work}/mv-none"
 mkdir -p "${work}/mv-pom" && echo "${pom_xml}" >"${work}/mv-pom/pom.xml"
@@ -800,7 +800,10 @@ fi
 [[ ${skip} -eq 1 ]] && exit 0
 [[ "${STUB_MVN_FAIL:-}" == "1" ]] && exit 0
 mkdir -p target
-if [[ "${STUB_EMPTY:-}" == "1" ]]; then
+if [[ "${STUB_NO_COMPONENTS:-}" == "1" ]]; then
+    # like cyclonedx-maven-plugin 2.9.3 for a project with no dependency: no `components` key (first real run, feat-6)
+    echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"metadata":{"component":{"type":"library","name":"backend"}}}' >target/bom.json
+elif [[ "${STUB_EMPTY:-}" == "1" ]]; then
     echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[]}' >target/bom.json
 else
     cat >target/bom.json <<'JSON'
@@ -1094,6 +1097,32 @@ empty_case pomprofile 1 "has no component" "pom.xml with a dependency in a profi
 empty_case pombroken 1 "cannot read" "a pom.xml that is not XML" pom 'this is not xml'
 empty_case nodebroken 1 "cannot read" "a package.json that is not JSON" node 'this is not json'
 empty_case nodebadkey 1 "is not an object" "a package.json with dependencies that is not an object" node '{"dependencies":["a"]}'
+# The real plugin writes no `components` key for a project with no dependency (the first real run, feat-6 Task 105.110).
+root="$(new_tree no-components-key)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 0 'wrote `components: []`' "pom.xml with no dependency, and an SBOM with no components key: the script writes the empty list" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
+expect 0 "RESULT: PASS. 0 component(s)" "license-check.sh reads the SBOM that has the empty list" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+if grep -q '"components"' "${root}/build/sbom/backend.cdx.json" && ! grep -q '"components"' "${root}/backend/target/bom.json"; then
+    echo "ok   the SBOM in the SBOM folder has the list, and the file of the plugin in target/ is not changed"
+    passed=$((passed + 1))
+else
+    echo "FAIL the SBOM folder has no components list, or the file of the plugin was changed"
+    failed=$((failed + 1))
+fi
+root="$(new_tree no-components-key-deps)"
+put "${root}" backend/pom.xml "${pom_deps}"
+put_mvnw "${root}" backend
+expect 1 "has no component" "pom.xml with a dependency, and an SBOM with no components key: the script stops" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
+root="$(new_tree no-components-key-module-deps)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+put "${root}" backend/svc/pom.xml "${pom_deps}"
+expect 1 "backend/svc/pom.xml: 1 declared dependency" "a dependency in a module pom.xml, and an SBOM with no components key: the script stops" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
 root="$(new_tree nested-deps)"
 put "${root}" frontend/package.json '{}'
 put "${root}" frontend/pnpm-lock.yaml 'lockfileVersion: 9'

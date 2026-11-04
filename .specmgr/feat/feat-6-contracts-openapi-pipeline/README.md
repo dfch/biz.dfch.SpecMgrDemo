@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T19:22:36.713+01:00'
+updated: '2026-11-04T19:34:28.969+01:00'
 version: 1.0.0
 ---
 
@@ -70,7 +70,7 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [ ] ACC-009: The README of `contracts/` says that a change starts in the OpenAPI file. Each generated folder has a mark that tells "generated, do not change", and the gate of ACC-004 stops a change by hand (REQ-001).
 
-- [ ] ACC-010: `backend/mvnw` is executable (git mode 100755), and `backend/.mvn/wrapper/maven-wrapper.properties` has the Maven version of `tools/versions.env` and a `distributionSha256Sum` that was verified with a source other than the properties file. `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `backend/pom.xml` (REQ-010).
+- [x] ACC-010: `backend/mvnw` is executable (git mode 100755), and `backend/.mvn/wrapper/maven-wrapper.properties` has the Maven version of `tools/versions.env` and a `distributionSha256Sum` that was verified with a source other than the properties file. `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `backend/pom.xml` (REQ-010).
 
 - [ ] ACC-011: Each tool of this feature has a version in `tools/versions.env` and a lock file or a checksum. `just check-pins` returns exit code 0 now, and returns exit code 1 in `just test-gates` for a changed version and for a changed checksum of each tool (REQ-009).
 
@@ -457,6 +457,64 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 - Each status (400, 404, 500, 503) gives its own finding. The ignore file needs one line for each status.
 - The format of a line in the ignore file is `METHOD /path <full message>`. The option `-f singleline` prints the findings with one line for each finding, so a person can copy the message to the ignore file.
 
+#### First Real Run (Phase 105)
+
+The agent did the work on 2026-11-04 with the pinned tools of `~/.config/biz.dfch.SpecMgrDemo/env.sh` (JDK 21.0.13, Maven 3.10.0, just 1.59.0). The scratch folder was `/tmp/opencode/p105/` (outside of the repository, nothing from it is in git).
+
+**How the agent made the wrapper files**
+
+- The agent started the real plugin in an empty scratch folder with a new local Maven repository: `mvn org.apache.maven.plugins:maven-wrapper-plugin:3.3.4:wrapper -Dtype=only-script -Dmaven=3.10.0`. The result was BUILD SUCCESS. The plugin jar has the sha256 `a355a8d7cb510412da78c2a165e4f500341028a569b12afa7fe99faf87516583`, and the zip `maven-wrapper-distribution-3.3.4-only-script.zip` has the sha256 `6cb584c2bc907b849a0b931d8266d3ff3214cdd3127115ed4f49fb7176413d36`. Both values are the same as in the phase 100.
+- The plugin made `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties` and no jar. The properties file has `wrapperVersion=3.3.4`, `distributionType=only-script` and the `distributionUrl` `https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.zip`. It has no `distributionSha256Sum`.
+- The agent copied `mvnw` (byte for byte, checked with `cmp`) and the properties file to `backend/`, and added the line `distributionSha256Sum=1f6d9909266510f039f59aa0e13dcd2c66da85f043e56276e41f2918f8bddaff` by hand. The agent did not copy `mvnw.cmd`: the task names two files only, the project has no Windows build, and the recipes need `bash`.
+
+**How the agent verified the `distributionSha256Sum` (not with the properties file)**
+
+| Step | Result |
+|---|---|
+| `apache-maven-3.10.0-bin.zip.sha512` from `repo.maven.apache.org`, from `archive.apache.org` and from `dlcdn.apache.org` | The three files have the same value: `22d31676d5b92ed53308c19ecded3245d0efd0cddfec51ec7bab62f4f13ad70ddddceff8e62940e0e8e2421f3cde8106737f4becec0aa034ffeff2a754e88337` |
+| `sha512sum` of the zip from Maven Central and of the zip from `archive.apache.org` (10102082 bytes each) | Both are the value of the `.sha512` file |
+| `sha256sum` of the same two files | Both are `1f6d9909266510f039f59aa0e13dcd2c66da85f043e56276e41f2918f8bddaff`. This is the value in `tools/gates/README.md` (section G1, written in feat-5) and the value in `maven-wrapper.properties` |
+| `.sha256` file on Maven Central | Does not exist (HTTP 404), so no vendor value for the sha256 exists, and the sha256 is computed from a zip that has the vendor sha512 |
+| `.tar.gz` of the same release | The `.sha512` file and `sha512sum` of the file are `908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa`, the same as `MAVEN_SHA512` in `tools/versions.env` |
+
+**Tests of the wrapper (copies in the scratch folder, a new `MAVEN_USER_HOME` for each test)**
+
+- With the real value, `./mvnw -v` downloaded the zip, and Maven said "Apache Maven 3.10.0 (c43a36b8d67be7e0805a411bc0898af1a51f5472)" with Java 21.0.13 (Eclipse Adoptium).
+- With the value changed to 64 zeros, `./mvnw -v` returned exit code 1 and the message "Failed to validate Maven distribution SHA-256, your Maven distribution might be compromised."
+- With a PATH that has no `unzip`, `mvnw` 3.3.4 downloads the `.tar.gz` and compares it with the sha256 of the zip, so it stops with the same message (exit code 1). The check fails closed, but a machine with no `unzip` cannot use `mvnw`. The agent wrote this limit in `tools/gates/README.md`. The runners of GitHub and the machine of the author have `unzip`.
+
+**`backend/pom.xml`**
+
+The agent chose these values. The owner can change them at the review.
+
+- `groupId` `biz.dfch.specmgrdemo`, `artifactId` `backend`, `version` `0.0.0-SNAPSHOT`. No document in the repository names a Maven `groupId`. The repository is `dfch/biz.dfch.SpecMgrDemo`, and the other projects of the owner use the `biz.dfch` prefix, so the `groupId` is the lower case form of the repository name.
+- Packaging `jar`. The phase 120 adds the generated sources and compiles them. A `pom` packaging would not compile them. A jar with no source is empty, and Maven compiles nothing ("No sources to compile").
+- `maven.compiler.release` 21 (the JDK of `tools/versions.env`), `project.build.sourceEncoding` UTF-8, and a fixed `project.build.outputTimestamp`, so that the archives of a build are the same in each run (REQ-011).
+- No `<dependencies>`, no `<build>` and no version of a plugin. Maven 3.10.0 binds the plugins of the license table (`maven-clean-plugin` 3.5.0, `maven-resources-plugin` 3.5.0, `maven-compiler-plugin` 3.16.0, `maven-surefire-plugin` 3.6.0 and `maven-jar-plugin` 3.5.1).
+- A `<licenses>` entry with AGPL-3.0-only, as in `NOTICE`.
+- `.gitignore` has a new line `target/`, because the build writes `backend/target/` (the file `target/bom.json` of the SBOM gate). Before, only `/build/` was ignored.
+
+**Result of the gates with the real `pom.xml` and the real `mvnw` (first real run)**
+
+- `just check-pins`: exit code 0. Lines: `Maven pin: Maven Wrapper: 1 file(s), Maven 3.10.0` and `RESULT: PASS. 23 `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. The lock file of cdxgen and the lock files of the Python tools are the ones of tools/versions.env.`
+- `just sbom` (first run, with no cyclonedx jar in `~/.m2`): exit code 0. `mvnw` downloaded Maven 3.10.0 to `~/.m2/wrapper/dists`, Maven downloaded `cyclonedx-maven-plugin-2.9.3.jar` from Maven Central, and the gate said `sha256 of the plugin jar is the value of CYCLONEDX_MAVEN_PLUGIN_SHA256` (the jar has `c452d5eebe28bc86bef2e7c72d129f04f60877bef843eac8120f01fb655be293`). The plugin said `Creating BOM version 1.6 with 0 component(s)`, and the gate said `backend/pom.xml: 0 declared dependencies`, `0 component(s)` and `[sbom.sh] PASS`. The network was necessary (Maven Central for the Maven distribution, the plugin and the dependencies of the plugin).
+- `just license-check` with the first version of the gates: exit code 2 (a gate error, not a license finding): `ERROR: build/sbom/backend.cdx.json: the SBOM has no `components` list (an empty SBOM has `components: []`)`. This is the gap that the stubs of `just test-gates` could not show, see the finding below.
+- `just sbom` and `just license-check` after the fix: both exit code 0. The gate said `no `components` key and no declared dependency: wrote `components: []``, then `RESULT: PASS. 0 component(s), all licenses permitted.`
+- `just test-gates`: exit code 0, `gates self-test: 461 ok, 0 failed`. `just test-license-gate`: exit code 0, `license gate fixtures: 47 ok, 0 failed`. `just check-workflows`: exit code 0. `just check-sudo`: exit code 0 (22 files). `just --fmt --unstable --check`: exit code 0. `just validate`: exit code 0 (`linted=5 failed=0`). `just commit-check`: exit code 0 (9 commits correct, the new work is not yet in a commit).
+- The git mode of `backend/mvnw` is 100755 (`git ls-files -s backend/mvnw`: `100755 bd8896bf2217b46faa0291585e01ac1a3441a958`).
+
+**Findings of the first real run**
+
+- P1, the real plugin and an SBOM with no component. `cyclonedx-maven-plugin` 2.9.3 writes no `components` key for a project with no dependency (the key is optional in CycloneDX), and `license_check.py` stops for an SBOM with no `components` list (fixture `46-error-no-components.cdx.json` tests this on purpose). The stubs of `just test-gates` always wrote `components: []`, so no test found this. The agent made the smallest change that keeps the license gate strict: `sbom_check.py` (it already compares the manifests with the SBOM) writes `"components": []` to the file in the SBOM folder, but only for Maven, only if the SBOM has no `components` key, and only if the manifests declare no dependency. If a manifest declares a dependency, the SBOM stops the script (exit code 1) as before. The file `target/bom.json` of the plugin is not changed. `license_check.py` and its fixtures are not changed. New cases in `selftest.sh` (a stub mode `STUB_NO_COMPONENTS` that writes no key like the real plugin): no dependency (exit 0, the list is written, `license-check.sh` says `RESULT: PASS. 0 component(s)`, `target/bom.json` is not changed), a dependency in the `pom.xml` (exit 1), and a dependency in a module (exit 1). The behavior of cdxgen for a project with no dependency is not tested, so the change is for Maven only.
+- P2, a test that expected the old state of the repository. The case "no pom.xml and no wrapper (the real repository)" in `selftest.sh` failed, because the repository now has the Maven project. The agent changed the case to expect `Maven Wrapper: 1 file(s), Maven 3.10.0`.
+
+**What this run did not check**
+
+- A library: the `pom.xml` has no dependency, so the SBOM has 0 components, and the license gate had nothing to compare. The phase 120 adds the libraries and runs the gate again (see the note in the task 120.100).
+- The dependencies of `cyclonedx-maven-plugin` and of the other Maven plugins (GitHub issue #23), and the contents of the Maven distribution. The wrapper checks the sha256 of the zip only.
+- The real `frontend/` (pnpm). The repository has no `frontend/package.json` yet.
+- Maven plugins other than `cyclonedx-maven-plugin`: the SBOM gate does not start them. The agent started `./mvnw -B clean verify` in `backend/` once by hand (after the gates, not part of a recipe): BUILD SUCCESS with `clean` 3.5.0, `resources` 3.5.0, `compiler` 3.16.0 (`No sources to compile`), `surefire` 3.6.0 and `jar` 3.5.1 (`JAR will be empty`). These are the versions of the license table. The dependencies of these plugins were not read (GitHub issue #23). The agent deleted `backend/target/` after the run.
+
 ### Related Decisions
 
 - DEC f92e35a1-77a2-4749-917f-bf9b644e8ddd: Write Interfaces First in OpenAPI and Use Layers for Validation
@@ -511,9 +569,9 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 
 #### Phase 105: Maven Wrapper and the Shell of the Backend Module
 
-- [ ] Task 105.100: Make `backend/pom.xml` with no dependencies. Add the Maven Wrapper without a jar (`backend/mvnw` and `backend/.mvn/wrapper/maven-wrapper.properties`) for the Maven version of `tools/versions.env`. Verify the `distributionSha256Sum` with the `.sha512` of Apache and `tools/gates/README.md`, and not only with the value in the properties file (ACC-010)
+- [x] Task 105.100: Make `backend/pom.xml` with no dependencies. Add the Maven Wrapper without a jar (`backend/mvnw` and `backend/.mvn/wrapper/maven-wrapper.properties`) for the Maven version of `tools/versions.env`. Verify the `distributionSha256Sum` with the `.sha512` of Apache and `tools/gates/README.md`, and not only with the value in the properties file (ACC-010). Done on 2026-11-04: see the section "First Real Run (Phase 105)" in the Design Notes
 
-- [ ] Task 105.110: Set the git mode of `backend/mvnw` to 100755. Run `just check-pins`, `just sbom` and `just license-check` with the real `pom.xml`, and write the result in this plan. Change the section "Limits" of `tools/gates/README.md` for the first real run (ACC-010)
+- [x] Task 105.110: Set the git mode of `backend/mvnw` to 100755. Run `just check-pins`, `just sbom` and `just license-check` with the real `pom.xml`, and write the result in this plan. Change the section "Limits" of `tools/gates/README.md` for the first real run (ACC-010). Done on 2026-11-04: see the section "First Real Run (Phase 105)" in the Design Notes. The first run found one gap in `sbom_check.py`, and the agent fixed it (see the section Decisions Made)
 
 #### Phase 110: OpenAPI Source and Lint
 
@@ -583,6 +641,8 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 
 **As of 2026-11-04 (phase 100 done)**: The phase 100 (License Checks) is done. The owner decided finding F1: the generated code uses `org.apache.tomcat:tomcat-annotations-api` 10.1.61 (Apache-2.0, Permitted) in place of `jakarta.annotation-api`. The agent read the artifact again. The tasks 100.100, 100.110 and 100.120 are done, and ACC-006 is met: each row of the license table has the result Permitted (the row of `jakarta.annotation-api` is "Replaced", and the row for the implementation of Jakarta Bean Validation is "Not necessary", so neither item is used), and no row has the result "open". The DEC and `tools/license/` are not changed. The task 120.100 has a note for the Maven module. The next phase is the phase 105 (Maven Wrapper and the shell of the backend module).
 
+**As of 2026-11-04 (phase 105 done)**: The phase 105 (Maven Wrapper and the shell of the backend module) is done. The tasks 105.100 and 105.110 are done, and ACC-010 is met. `backend/` has `pom.xml` (no dependency), `mvnw` (git mode 100755) and `.mvn/wrapper/maven-wrapper.properties` (Maven 3.10.0, no jar). The `distributionSha256Sum` was verified with the `.sha512` files of Maven Central and of Apache, and with `tools/gates/README.md` (see "First Real Run (Phase 105)" in the Design Notes). `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `pom.xml`, and the other recipes of ACC-015 that the phase touches also return exit code 0. The first real run found one gap: the real plugin writes no `components` key for a project with no dependency, and the license gate stopped for it. The agent fixed `sbom_check.py` and added tests. The changes are not committed. The next phase is the phase 110 (OpenAPI source and lint).
+
 ### Blockers
 
 - None. The open question of the phase 100 (`jakarta.annotation-api`) is closed: the owner decided on 2026-11-04 to use `tomcat-annotations-api` 10.1.61.
@@ -591,6 +651,10 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 18:40:00.000Z - Phase 105 done: Maven Wrapper, shell of the backend module, first real run
+
+The agent made `backend/pom.xml` (group `biz.dfch.specmgrdemo`, artifact `backend`, version `0.0.0-SNAPSHOT`, packaging `jar`, release 21, no dependency) and the Maven Wrapper without a jar (`backend/mvnw` and `backend/.mvn/wrapper/maven-wrapper.properties`). The agent made the wrapper files with the real plugin `maven-wrapper-plugin` 3.3.4 (`wrapper -Dtype=only-script -Dmaven=3.10.0`) in an empty scratch folder, and added the `distributionSha256Sum` by hand. The value `1f6d9909266510f039f59aa0e13dcd2c66da85f043e56276e41f2918f8bddaff` is the `sha256sum` of `apache-maven-3.10.0-bin.zip`. The agent verified it with the `.sha512` file of the zip from Maven Central, from `archive.apache.org` and from `dlcdn.apache.org` (the same value in all three, and `sha512sum` of both zips gives it), and with `tools/gates/README.md` (the same sha256). The `.tar.gz` and `MAVEN_SHA512` of `tools/versions.env` also agree. `./mvnw -v` passes with this value and stops (exit code 1) with a changed value. The git mode of `backend/mvnw` is 100755. `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real files (0 components, `RESULT: PASS. 0 component(s), all licenses permitted.`). The first real run found that the real plugin writes no `components` key for a project with no dependency, and `license_check.py` stops for this. The agent changed `sbom_check.py` (Maven only, no declared dependency only) to write `"components": []` to the file in the SBOM folder, and added three cases to `selftest.sh`. The agent also changed one case that expected the old state of the repository, added `target/` to `.gitignore`, and changed the section "Limits" and the new section "Maven Wrapper" of `tools/gates/README.md` (with the limit about a machine with no `unzip`), `backend/README.md`, and the comments of `sbom.sh` and `check_pins.py`. These recipes return exit code 0: `just test-gates` (461 ok), `just test-license-gate` (47 ok), `just check-workflows`, `just check-sudo`, `just --fmt --unstable --check`, `just validate` and `just commit-check`. The details and the list of what the run did not check are in the Design Notes ("First Real Run (Phase 105)"). The agent did not commit.
 
 #### 2026-11-04 18:25:00.000Z - Phase 100 done: the owner decided finding F1
 
@@ -619,6 +683,13 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 18:40:00.000Z - Phase 105: points that the agent set (the owner can change them at the review)
+
+- Values of the `pom.xml`: group `biz.dfch.specmgrdemo`, artifact `backend`, version `0.0.0-SNAPSHOT`, packaging `jar`. The cause: no document names a Maven group. The group is the lower case form of the repository name. A `jar` can compile the generated sources of the phase 120 (a `pom` packaging cannot), and an empty jar is not a problem for the phase 105.
+- The wrapper has no `mvnw.cmd`. The task names `mvnw` and the properties file only, the project has no Windows build, and the recipes need `bash`.
+- Fix of the first real run (finding P1): the real `cyclonedx-maven-plugin` writes no `components` key for a project with no dependency, and the license gate stops for an SBOM with no `components` list. The agent did not make the license gate accept such a file, because the rule is on purpose (fixture 46 tests it) and the fail-closed behavior protects against a file that is not complete. The agent changed `sbom_check.py` (it compares the manifests with the SBOM) to write `"components": []` to the copy in `build/sbom/`. This is only for Maven, only if no manifest declares a dependency. With a declared dependency, the script stops. If the owner prefers a change of `license_check.py` (a missing key is the same as an empty list), this is a change of a rule of the license gate, and `tools/` has a CODEOWNERS review.
+- The limit about `unzip` is only written in `tools/gates/README.md`. The wrapper fails closed, so no change of the gates was necessary.
 
 #### 2026-11-04 18:20:00.000Z - The owner decides finding F1: `tomcat-annotations-api` in place of `jakarta.annotation-api`
 

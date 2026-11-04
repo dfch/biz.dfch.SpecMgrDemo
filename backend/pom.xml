@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Maven module of the backend (feat-6-contracts-openapi-pipeline, Task 105.100).
+
+  This is a shell with no product code and no dependency. The phase 120 adds the generation of the
+  Spring server interfaces and the libraries that the generated code needs. Build with ./mvnw: the Maven
+  Wrapper (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>biz.dfch.specmgrdemo</groupId>
+  <artifactId>backend</artifactId>
+  <version>0.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>biz.dfch.SpecMgrDemo backend</name>
+  <description>The Java backend. This module has no product code and no dependency yet.</description>
+
+  <licenses>
+    <license>
+      <name>GNU Affero General Public License, version 3 only</name>
+      <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+    </license>
+  </licenses>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- The JDK of tools/versions.env (JDK_VERSION) is Temurin 21. -->
+    <maven.compiler.release>21</maven.compiler.release>
+    <!-- A fixed time stamp, so that the archives of a build are the same in each run. -->
+    <project.build.outputTimestamp>2026-11-04T00:00:00Z</project.build.outputTimestamp>
+  </properties>
+</project>
