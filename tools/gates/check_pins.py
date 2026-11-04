@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Gate: the pins in the workflows (ACC-013) and the lock file of cdxgen (feat-16-cdxgen-lockfile).
+"""Gate: the pins in the workflows (ACC-013), the lock file of cdxgen and the lock files of the Python tools.
 
 feat-5-foundation-monorepo-ci, Task 130.142 (REQ-003, REQ-015).
 feat-16-cdxgen-lockfile, Task 110.100 (REQ-003, REQ-005).
+feat-22-python-tools-lockfile, Task 120.100 (REQ-003, REQ-004).
 
-Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>
+Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> <python-lock-dir>
 
 The script stops for each of these:
 
@@ -65,6 +66,26 @@ ties the lock file to tools/versions.env and stops a lock file that the install 
 source that is not the registry. A change of only one of the three places (versions.env, package.json, the
 lock file) stops the check.
 
+The lock files of the Python tools (the finding G2 of the review, feat-22-python-tools-lockfile; REQ-003, REQ-004).
+<python-lock-dir> is tools/python/. It has one lock file for each tool (PYTHON_LOCKS below), and no other lock
+file. The check is always on, and it fails closed. The script reads each lock file as text (it does not start uv
+and does not make the file again, so the result does not depend on the version of uv). It stops for each of these:
+
+  * the folder or a lock file is missing, the folder has a file that is not in PYTHON_LOCK_FILES, or a lock file has
+    no package;
+  * a line of a lock file that is not a comment, an empty line or an entry `name==version` (with an optional
+    marker after ` ; `) that has one or more `--hash=sha256:<64 hexadecimal characters>` values. This stops a
+    package with no hash, a range or an unpinned package, a URL (`name @ https://...`), a path, `git+...`, `-e`, and an
+    option such as `--index-url`, `--extra-index-url`, `--find-links` and `--no-binary` (a line that continues with
+    a backslash is one entry);
+  * the version of the tool (`SPECMGR_VERSION`, `PYYAML_VERSION`, `LICENSE_EXPRESSION_VERSION`) is missing in
+    tools/versions.env or is not an exact version, or the lock file has no entry of the tool or an entry with
+    another version (the name is compared after the normalization of PEP 503).
+
+A change of only one of the two places (versions.env, the lock file) stops the check. The install itself checks
+each file against the hashes (make_python_env in _lib.sh); this check ties the lock file to tools/versions.env and
+stops a lock file that has a source that is not an exact pin with hashes.
+
 The comment is not in the YAML data, so the script reads the lines of the file for the comment,
 and the YAML data for the inputs. Exit codes: 0 pass; 1 a pin is not correct; 2 an error in a file (versions.env or a workflow).
 """
@@ -120,6 +141,23 @@ LOCK_KEYS = {"lockfileVersion", "settings", "importers", "packages", "snapshots"
 EXACT_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 INTEGRITY = re.compile(r"sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}")
 CDXGEN_INTEGRITY_FORM = re.compile(r"sha512-[A-Za-z0-9+/]{86}==")
+
+
+# The lock files of the Python tools (feat-22-python-tools-lockfile): the file, the name of the package of the
+# tool (normalized) and the key of its version in tools/versions.env. PYTHON_LOCK_FILES are the only files that
+# the folder may have.
+PYTHON_LOCKS = (
+    ("specmgr.lock", "biz-dfch-specmgr", "SPECMGR_VERSION"),
+    ("pyyaml.lock", "pyyaml", "PYYAML_VERSION"),
+    ("license-expression.lock", "license-expression", "LICENSE_EXPRESSION_VERSION"),
+)
+PYTHON_LOCK_FILES = {lock[0] for lock in PYTHON_LOCKS} | {"README.md", "make-locks.sh"}
+# `name==version`, with an optional marker after ` ; `. The marker has no `@`, `/` or `:`, so a URL is not a marker.
+LOCK_REQUIREMENT = re.compile(
+    r"(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==(?P<version>[0-9][0-9A-Za-z.+!_-]*)(?: ; [A-Za-z0-9_.'\"()<>=! ,~-]+)?"
+)
+LOCK_HASH = re.compile(r"--hash=sha256:[0-9a-f]{64}")
+MAX_LOCK_PROBLEMS = 5
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -519,10 +557,103 @@ def check_sbom_tool(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list
     return ("" if problems else note), problems
 
 
+def _normalize_name(name: str) -> str:
+    """The name of a Python package after the normalization of PEP 503."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _python_lock_entries(path: Path) -> tuple[list[tuple[int, str, str]], list[str]]:
+    """Read a lock file. Return the entries (line, normalized name, version) and the problems.
+
+    A line that ends with a backslash continues in the next line, and both lines are one entry.
+    """
+    problems: list[str] = []
+    entries: list[tuple[int, str, str]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        return [], [f"Python lock: cannot read {path}: {error}"]
+    logical: list[tuple[int, str]] = []
+    pending: tuple[int, str] | None = None
+    for number, line in enumerate(lines, start=1):
+        if pending is not None:
+            joined = pending[1] + " " + line.strip()
+        else:
+            joined = line
+        if joined.endswith("\\"):
+            pending = (pending[0] if pending is not None else number, joined[:-1].rstrip())
+            continue
+        logical.append((pending[0] if pending is not None else number, joined))
+        pending = None
+    if pending is not None:
+        problems.append(f"Python lock: {path}, line {pending[0]}: the file ends after a backslash")
+    for number, line in logical:
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        requirement, separator, hashes = text.partition(" --hash=")
+        match = LOCK_REQUIREMENT.fullmatch(requirement)
+        hash_values = ("--hash=" + hashes).split() if separator else []
+        if not match or not hash_values or not all(LOCK_HASH.fullmatch(value) for value in hash_values):
+            problems.append(
+                f"Python lock: {path}, line {number}: {text[:90]!r} is not an exact pin `name==version` with "
+                "`--hash=sha256:<64 hexadecimal characters>` values (a package with no hash, a range, a URL, a path, "
+                "a VCS source, an editable entry and an option are not allowed)"
+            )
+            continue
+        entries.append((number, _normalize_name(match.group("name")), match.group("version")))
+    if len(problems) > MAX_LOCK_PROBLEMS:
+        # One broken entry can make a problem for each of its hash lines. The first ones are enough to find the place.
+        hidden = len(problems) - MAX_LOCK_PROBLEMS
+        problems = problems[:MAX_LOCK_PROBLEMS] + [f"Python lock: {path}: and {hidden} more line(s) that are not correct"]
+    return entries, problems
+
+
+def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the lock files of the Python tools (feat-22-python-tools-lockfile). Return a message and the problems."""
+    problems: list[str] = []
+    if not lock_dir.is_dir():
+        return "", [f"Python lock: the folder {lock_dir} (the lock files of the Python tools) does not exist"]
+    for name in sorted(path.name for path in lock_dir.iterdir()):
+        if name not in PYTHON_LOCK_FILES:
+            problems.append(
+                f"Python lock: {lock_dir / name} is not allowed. The folder has only {sorted(PYTHON_LOCK_FILES)}"
+            )
+    notes: list[str] = []
+    total = 0
+    for lock_name, package, key in PYTHON_LOCKS:
+        path = lock_dir / lock_name
+        version = versions.get(key, "")
+        if not version:
+            problems.append(f"{key} is not in tools/versions.env")
+        elif not EXACT_VERSION.fullmatch(version):
+            problems.append(f"{key} in tools/versions.env is {version!r}, but it must be an exact version")
+        if not path.is_file():
+            problems.append(f"Python lock: {path} does not exist")
+            continue
+        entries, found = _python_lock_entries(path)
+        problems += found
+        total += len(entries)
+        if not entries and not found:
+            problems.append(f"Python lock: {path} has no package")
+        tool_versions = sorted({entry_version for _, entry, entry_version in entries if entry == package})
+        if not tool_versions:
+            if entries:
+                problems.append(f"Python lock: {path} has no entry of {package}")
+        elif version and tool_versions != [version]:
+            problems.append(
+                f"Python lock: {path} has {package} {', '.join(tool_versions)}, but {key} in tools/versions.env is {version}"
+            )
+        notes.append(f"{package} {version}")
+    note = f"Python locks: {lock_dir}: {len(PYTHON_LOCKS)} lock files, {total} entries ({', '.join(notes)}), exact pins with hashes"
+    return ("" if problems else note), problems
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 6:
+    if len(argv) != 7:
         print(
-            "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>",
+            "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> "
+            "<python-lock-dir>",
             file=sys.stderr,
         )
         return 2
@@ -542,6 +673,9 @@ def main(argv: list[str]) -> int:
         note, sbom_problems = check_sbom_tool(Path(argv[5]), versions)
         print(f"SBOM tool pin: {note or str(len(sbom_problems)) + ' problem(s)'}")
         problems += sbom_problems
+        note, python_problems = check_python_locks(Path(argv[6]), versions)
+        print(f"Python lock pin: {note or str(len(python_problems)) + ' problem(s)'}")
+        problems += python_problems
     except GateError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
@@ -552,7 +686,7 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
-        "The lock file of cdxgen is the one of tools/versions.env."
+        "The lock file of cdxgen and the lock files of the Python tools are the ones of tools/versions.env."
     )
     return 0
 

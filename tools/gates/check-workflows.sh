@@ -9,9 +9,9 @@
 #   actions that each job must have. The gate also checks the rest of the workflow (the trigger, the
 #   permissions, the keys of a job and of a step, `if:`). See check_workflows.py.
 #
-# check_workflows.py does the work. It reads the YAML with PyYAML. The version and the sha256 value
-# (the source archive) are PYYAML_VERSION and PYYAML_SHA256 in tools/versions.env, and the script
-# installs it with `uv pip install --require-hashes` (make_python_env in _lib.sh). The script needs
+# check_workflows.py does the work. It reads the YAML with PyYAML. The version is PYYAML_VERSION in
+# tools/versions.env, and the script installs it with `uv pip install --require-hashes` from the lock
+# file tools/python/pyyaml.lock (make_python_env in _lib.sh). The script needs
 # `just` in the PATH (it starts `just --summary`). Exit codes: 0 pass, 1 a step is not correct, 2 an
 # error in a file.
 
@@ -21,5 +21,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 [[ $# -eq 2 || $# -eq 3 ]] || die "Usage: check-workflows.sh <justfile> <workflows-dir> [<required-setup>]"
 required="${3:-${GATES_DIR}/required-setup.txt}"
 require_cmd just
-make_python_env require "PyYAML:PYYAML_VERSION:PYYAML_SHA256"
+make_python_env pyyaml
 "${GATE_PYTHON}" "${GATES_DIR}/check_workflows.py" "$1" "$2" "${required}"

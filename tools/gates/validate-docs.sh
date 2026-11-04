@@ -11,11 +11,11 @@
 # deleted files. It starts `specmgr lint` (the full parse of each document
 # with the model of its type, the same check that the MCP tools do) for them.
 # CI has no MCP server, so the script uses the command line of specmgr. The
-# version is SPECMGR_VERSION in tools/versions.env, and SPECMGR_SHA256 is the sha256 value of its
-# wheel on PyPI. The script installs it with `uv pip install --verify-hashes` (make_python_env in
-# _lib.sh), and the package needs the extra `mcp` (the command line imports the server). A wrong
-# sha256 value stops the gate. The dependencies of specmgr (40 packages on 2026-11-03) are NOT verified,
-# because the file has no hash for them.
+# version is SPECMGR_VERSION in tools/versions.env. The script installs it with
+# `uv pip install --require-hashes` from the lock file tools/python/specmgr.lock (make_python_env in
+# _lib.sh), and the package needs the extra `mcp` (the command line imports the server). The lock file
+# has the sha256 of each file of specmgr and of its dependencies (feat-22-python-tools-lockfile).
+# A wrong sha256 value, a package with no value or a package that is not in the file stops the gate.
 #
 # Files that are not documents of a type (for example a README.md in docs/)
 # are skipped by specmgr and counted in its summary. The gate stops (exit
@@ -55,7 +55,7 @@ log "${#files[@]} changed Markdown file(s) under docs/ and .specmgr/:"
 printf '  %s\n' "${files[@]}"
 
 specmgr_version="$(version_of SPECMGR_VERSION)"
-make_python_env verify "biz-dfch-specmgr[mcp]:SPECMGR_VERSION:SPECMGR_SHA256"
-log "specmgr ${specmgr_version} (the sha256 of the wheel is checked): lint"
+make_python_env specmgr
+log "specmgr ${specmgr_version} (all packages are checked with the lock file): lint"
 "${GATE_ENV_DIR}/venv/bin/specmgr" lint --skip-unrecognized "${files[@]}"
 log "PASS"

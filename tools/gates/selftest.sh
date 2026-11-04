@@ -479,7 +479,7 @@ expect 1 "JUST_VERSION in tools/versions.env is 1.60.0" "tools/versions.env has 
 sed -e 's#^actions/checkout v7.0.1 #actions/checkout v7.0.2 #' "${real_allowed}" >"${work}/pin-env/allowed.txt"
 expect 1 "but the table has" "the table of actions has another tag than the workflow" \
     "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${work}/pin-env/allowed.txt"
-{ grep -E '^PYYAML_(VERSION|SHA256)=' "${real_versions}"; echo 'this is not a version line'; } >"${work}/pin-env/bad.env"
+{ grep -E '^(PYTHON|PYYAML)_VERSION=' "${real_versions}"; echo 'this is not a version line'; } >"${work}/pin-env/bad.env"
 expect 2 "the form is not KEY=value" "tools/versions.env has a line that is not KEY=value" \
     "${GATES_DIR}/check-pins.sh" "${work}/pin-env/bad.env" "${work}/wf-real" "${real_allowed}"
 
@@ -1315,46 +1315,164 @@ expect 0 "Nothing to validate" "a deleted document is skipped" run_docs with-bad
 expect 1 "does not exist" "a base that does not exist" run_docs no-such-base
 
 # ---------------------------------------------------------------------------------------------
-section "the checksums of the tools that the gates install (finding G2)"
-# changed_env <KEY> <file>: a copy of tools/versions.env in which the value of KEY has another first character
-changed_env() {
-    sed -e "/^$1=/{s/=0/=1/;t;s/=./=0/}" "${real_versions}" >"$2"
-    if cmp -s "${real_versions}" "$2"; then
-        echo "FAIL changed_env $1: the value did not change"
-        failed=$((failed + 1))
+section "the lock files of the Python tools: install with hashes (finding G2, feat-22-python-tools-lockfile)"
+real_locks="${REPO_ROOT}/tools/python"
+# lock_copy <name>: a copy of tools/python/ in ${work}/locks-<name>. Print the folder.
+lock_copy() {
+    rm -rf "${work:?}/locks-$1"
+    cp -r "${real_locks}" "${work}/locks-$1"
+    echo "${work}/locks-$1"
+}
+# The next three functions write a changed lock file to stdout. <file> is a lock file, <package> a name in it.
+# break_hashes: each hash of the package has another first character, so no file of it has the hash.
+break_hashes() {
+    awk -v pkg="$2" '/^[^ #]/ {inb = (index($0, pkg "==") == 1)} inb && /--hash=sha256:/ {
+        i = index($0, "sha256:") + 7; c = substr($0, i, 1); n = (c == "0") ? "1" : "0"; $0 = substr($0, 1, i - 1) n substr($0, i + 1)
+    } {print}' "$1"
+}
+# drop_package: the entry of the package (its line, its hashes and its `# via` lines) is not in the file.
+drop_package() { awk -v pkg="$2" '/^[^ #]/ {inb = (index($0, pkg "==") == 1)} !inb {print}' "$1"; }
+# no_hash: the package has its line, but no hash.
+no_hash() {
+    awk -v pkg="$2" '/^[^ #]/ {inb = (index($0, pkg "==") == 1); if (inb) {sub(/ \\$/, ""); print; next}} inb && /--hash=/ {next} {print}' "$1"
+}
+# changed_lock <name> <file> <function> <package>: a copy of the folder in which <file> is the output of <function>.
+# The function runs in a command substitution, so it cannot count a failure. If the file did not change, it prints a
+# folder that does not exist, and the case that uses it fails (its text is not the text of a stop that it expects).
+changed_lock() {
+    local dir
+    dir="$(lock_copy "$1")"
+    "$3" "${real_locks}/$2" "$4" >"${dir}/$2"
+    if cmp -s "${real_locks}/$2" "${dir}/$2"; then
+        echo "${work}/changed_lock-did-not-change-$1"
+    else
+        echo "${dir}"
     fi
 }
 sbom_empty="${work}/empty-project/build/sbom"
 permitted_list="${REPO_ROOT}/tools/license/permitted-licenses.txt"
-run_license() { env VERSIONS_FILE="$1" "${GATES_DIR}/license-check.sh" "${sbom_empty}" "${permitted_list}"; }
-expect 0 "(sha256 checked)" "license-check.sh installs the wheels with the sha256 values of versions.env" run_license "${real_versions}"
-changed_env LICENSE_EXPRESSION_SHA256 "${work}/g2-le.env"
-expect 1 "Hash mismatch" "license-check.sh: a wrong sha256 of license-expression" run_license "${work}/g2-le.env"
-changed_env BOOLEAN_PY_SHA256 "${work}/g2-bool.env"
-expect 1 "Hash mismatch" "license-check.sh: a wrong sha256 of boolean.py" run_license "${work}/g2-bool.env"
-sed -e 's#^LICENSE_EXPRESSION_VERSION=.*#LICENSE_EXPRESSION_VERSION=30.4.3#' "${real_versions}" >"${work}/g2-le-version.env"
-expect 1 "did not install the tools with the checksums" "license-check.sh: another version with the old sha256" run_license "${work}/g2-le-version.env"
-grep -v '^BOOLEAN_PY_SHA256=' "${real_versions}" >"${work}/g2-bool-missing.env"
-expect 1 "BOOLEAN_PY_SHA256 is not set" "license-check.sh: no sha256 for boolean.py" run_license "${work}/g2-bool-missing.env"
-sed -e 's#^BOOLEAN_PY_SHA256=.*#BOOLEAN_PY_SHA256=not-a-sha256#' "${real_versions}" >"${work}/g2-bool-form.env"
-expect 1 "is not a sha256 value" "license-check.sh: a sha256 of boolean.py that is not a sha256 value" run_license "${work}/g2-bool-form.env"
-expect 1 "did not install the tools with the checksums" "a package of the list that has a dependency with no hash (mode require stops)" \
-    env VERSIONS_FILE="${real_versions}" bash -c 'source "$1/_lib.sh"; make_python_env require "license-expression:LICENSE_EXPRESSION_VERSION:LICENSE_EXPRESSION_SHA256"' _ "${GATES_DIR}"
+run_license() { env PYTHON_LOCK_DIR="$1" VERSIONS_FILE="${2:-${real_versions}}" "${GATES_DIR}/license-check.sh" "${sbom_empty}" "${permitted_list}"; }
+run_workflows() { env PYTHON_LOCK_DIR="$1" "${GATES_DIR}/check-workflows.sh" "${real_justfile}" "${work}/wf-real" "${real_required}"; }
+run_pins_locks() { env PYTHON_LOCK_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
 
-changed_env PYYAML_SHA256 "${work}/g2-yaml.env"
-expect 1 "Hash mismatch" "check-workflows.sh: a wrong sha256 of PyYAML" \
-    env VERSIONS_FILE="${work}/g2-yaml.env" "${GATES_DIR}/check-workflows.sh" "${real_justfile}" "${work}/wf-real" "${real_required}"
-expect 1 "Hash mismatch" "check-pins.sh: a wrong sha256 of PyYAML" \
-    "${GATES_DIR}/check-pins.sh" "${work}/g2-yaml.env" "${work}/wf-real" "${real_allowed}"
-expect 0 "RESULT: PASS" "check-workflows.sh: the sha256 of PyYAML (the source archive) is the right one" \
-    env VERSIONS_FILE="${real_versions}" "${GATES_DIR}/check-workflows.sh" "${real_justfile}" "${work}/wf-real" "${real_required}"
+expect 0 "all packages are checked with the lock file" "license-check.sh installs license-expression and boolean.py from the lock file" run_license "${real_locks}"
+expect 1 "Hash mismatch for \`license-expression" "license-check.sh: a wrong hash of license-expression" \
+    run_license "$(changed_lock le-hash license-expression.lock break_hashes license-expression)"
+expect 1 "Hash mismatch for \`boolean-py" "license-check.sh: a wrong hash of boolean.py (a dependency)" \
+    run_license "$(changed_lock bool-hash license-expression.lock break_hashes boolean-py)"
+expect 1 "must be pinned upfront with" "license-check.sh: boolean.py is not in the lock file (a dependency that is missing)" \
+    run_license "$(changed_lock bool-drop license-expression.lock drop_package boolean-py)"
+expect 1 "must have a hash" "license-check.sh: boolean.py has no hash (a dependency with no hash)" \
+    run_license "$(changed_lock bool-nohash license-expression.lock no_hash boolean-py)"
+no_lock_dir="$(lock_copy no-lock)"
+rm "${no_lock_dir}/license-expression.lock"
+expect 1 "Lock file not found" "license-check.sh: the lock file does not exist" run_license "${no_lock_dir}"
 
+# PyYAML. The lock file has wheels only, so a hash of the source archive is not a hash that uv can use.
+expect 0 "RESULT: PASS" "check-workflows.sh installs PyYAML from the lock file" run_workflows "${real_locks}"
+expect 1 "Hash mismatch for \`pyyaml" "check-workflows.sh: a wrong hash of PyYAML" \
+    run_workflows "$(changed_lock yaml-hash pyyaml.lock break_hashes pyyaml)"
+expect 1 "Hash mismatch for \`pyyaml" "check-pins.sh: a wrong hash of PyYAML" \
+    run_pins_locks "$(changed_lock yaml-hash2 pyyaml.lock break_hashes pyyaml)"
+yaml_sdist_dir="$(lock_copy yaml-sdist)"
+{
+    sed -n '/^#/p' "${real_locks}/pyyaml.lock"
+    echo "pyyaml==$(version_of PYYAML_VERSION) \\"
+    echo "    --hash=sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"
+} >"${yaml_sdist_dir}/pyyaml.lock"
+expect 1 "Hash mismatch for \`pyyaml" "check-workflows.sh: only the hash of the source archive of PyYAML (no source build)" run_workflows "${yaml_sdist_dir}"
+
+# make_python_env itself
+expect 1 "usage: make_python_env" "make_python_env: no lock name" bash -c 'source "$1/_lib.sh"; make_python_env' _ "${GATES_DIR}"
+expect 1 "usage: make_python_env" "make_python_env: a lock name with a slash" bash -c 'source "$1/_lib.sh"; make_python_env ../x' _ "${GATES_DIR}"
+expect 1 "usage: make_python_env" "make_python_env: the old mode argument" bash -c 'source "$1/_lib.sh"; make_python_env require pyyaml' _ "${GATES_DIR}"
+grep -v '^PYTHON_VERSION=' "${real_versions}" >"${work}/g2-nopython.env"
+expect 1 "PYTHON_VERSION is not set" "license-check.sh: no PYTHON_VERSION in versions.env" run_license "${real_locks}" "${work}/g2-nopython.env"
+sed -e 's#^PYTHON_VERSION=.*#PYTHON_VERSION=3.13.1#' "${real_versions}" >"${work}/g2-python-patch.env"
+expect 1 "is not a minor version" "license-check.sh: PYTHON_VERSION is not a minor version" run_license "${real_locks}" "${work}/g2-python-patch.env"
+expect 0 "" "make_python_env: no --verify-hashes and no mode in _lib.sh" bash -c '! grep -n -e "--verify-hashes" -e "<require|verify>" "$1/_lib.sh"' _ "${GATES_DIR}"
+expect 0 "" "versions.env has no checksum of the Python tools and no boolean.py" \
+    bash -c '! grep -n -E "^(SPECMGR|PYYAML|LICENSE_EXPRESSION|BOOLEAN_PY)_SHA256=|^BOOLEAN_PY_VERSION=" "$1"' _ "${real_versions}"
+
+# specmgr: the dependencies are checked too
 dgit switch -q valid
-changed_env SPECMGR_SHA256 "${work}/g2-specmgr.env"
-expect 1 "Hash mismatch" "validate-docs.sh: a wrong sha256 of the specmgr wheel" env VERSIONS_FILE="${work}/g2-specmgr.env" GATE_WORK_ROOT="${docs}" "${GATES_DIR}/validate-docs.sh" base
-grep -v '^SPECMGR_SHA256=' "${real_versions}" >"${work}/g2-specmgr-missing.env"
-expect 1 "SPECMGR_SHA256 is not set" "validate-docs.sh: no sha256 for specmgr" env VERSIONS_FILE="${work}/g2-specmgr-missing.env" GATE_WORK_ROOT="${docs}" "${GATES_DIR}/validate-docs.sh" base
-expect 0 "linted=1 failed=0" "validate-docs.sh: the sha256 of the specmgr wheel is the right one" env VERSIONS_FILE="${real_versions}" GATE_WORK_ROOT="${docs}" "${GATES_DIR}/validate-docs.sh" base
+run_docs_locks() { env PYTHON_LOCK_DIR="$1" GATE_WORK_ROOT="${docs}" "${GATES_DIR}/validate-docs.sh" base; }
+expect 0 "linted=1 failed=0" "validate-docs.sh: installs specmgr from the lock file" run_docs_locks "${real_locks}"
+expect 1 "Hash mismatch for \`biz-dfch-specmgr" "validate-docs.sh: a wrong hash of specmgr" \
+    run_docs_locks "$(changed_lock sm-hash specmgr.lock break_hashes biz-dfch-specmgr)"
+expect 1 "Hash mismatch for \`attrs" "validate-docs.sh: a wrong hash of a dependency of specmgr (attrs)" \
+    run_docs_locks "$(changed_lock sm-dep-hash specmgr.lock break_hashes attrs)"
+expect 1 "must have a hash" "validate-docs.sh: a dependency of specmgr (attrs) has no hash" \
+    run_docs_locks "$(changed_lock sm-dep-nohash specmgr.lock no_hash attrs)"
+expect 1 "must be pinned upfront with" "validate-docs.sh: a dependency of specmgr (attrs) is not in the lock file" \
+    run_docs_locks "$(changed_lock sm-dep-drop specmgr.lock drop_package attrs)"
+sed -e 's#^SPECMGR_VERSION=.*#SPECMGR_VERSION=0.38.1#' "${real_versions}" >"${work}/g2-specmgr-version.env"
+expect 0 "linted=1 failed=0" "validate-docs.sh: the install is from the lock file, so another SPECMGR_VERSION in versions.env does not change it (check-pins stops it)" \
+    env PYTHON_LOCK_DIR="${real_locks}" VERSIONS_FILE="${work}/g2-specmgr-version.env" GATE_WORK_ROOT="${docs}" "${GATES_DIR}/validate-docs.sh" base
+
+# ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the lock files of the Python tools (feat-22-python-tools-lockfile, REQ-003, REQ-004)"
+expect 0 "Python locks:" "the real lock files are exact pins with hashes, and have the versions of versions.env" run_pins_locks "${real_locks}"
+# lock_case <name> <exit code> <text> <description> <file> <sed expression>: change a lock file of specmgr or license-expression
+# with sed. (A change of pyyaml.lock stops the install of PyYAML before the check, see the cases above.)
+lock_case() {
+    local name="$1" code="$2" text="$3" description="$4" file="$5" expression="$6" dir
+    dir="$(lock_copy "pin-${name}")"
+    sed -e "${expression}" "${real_locks}/${file}" >"${dir}/${file}"
+    if cmp -s "${real_locks}/${file}" "${dir}/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change the lock file"
+        failed=$((failed + 1))
+        return
+    fi
+    expect "${code}" "${text}" "${description}" run_pins_locks "${dir}"
+}
+no_spec_dir="$(lock_copy pin-nospec)"
+rm "${no_spec_dir}/specmgr.lock"
+expect 1 "specmgr.lock does not exist" "no lock file of specmgr" run_pins_locks "${no_spec_dir}"
+expect 1 "Lock file not found" "no folder of the lock files (the install of PyYAML stops first)" run_pins_locks "${work}/no-such-lock-dir"
+lock_case version 1 "has license-expression 30.4.3, but LICENSE_EXPRESSION_VERSION in tools/versions.env is 30.4.4" \
+    "another version of the tool in the lock file" license-expression.lock 's#^license-expression==30.4.4#license-expression==30.4.3#'
+sed -e 's#^SPECMGR_VERSION=.*#SPECMGR_VERSION=0.38.1#' "${real_versions}" >"${work}/pin-env/specmgr-version.env"
+expect 1 "SPECMGR_VERSION in tools/versions.env is 0.38.1" "another version of the tool in versions.env" run_pins_locks "${real_locks}" "${work}/pin-env/specmgr-version.env"
+grep -v '^SPECMGR_VERSION=' "${real_versions}" >"${work}/pin-env/no-specmgr-version.env"
+expect 1 "SPECMGR_VERSION is not in tools/versions.env" "no version of the tool in versions.env" run_pins_locks "${real_locks}" "${work}/pin-env/no-specmgr-version.env"
+sed -e 's#^SPECMGR_VERSION=.*#SPECMGR_VERSION=^0.38#' "${real_versions}" >"${work}/pin-env/range-specmgr-version.env"
+expect 1 "must be an exact version" "a version range in versions.env" run_pins_locks "${real_locks}" "${work}/pin-env/range-specmgr-version.env"
+lock_case nohash 1 "is not an exact pin" "a package with no hash" specmgr.lock '/^attrs==/{s/ \\$//;n;d}'
+lock_case range 1 "is not an exact pin" "a package with a range and not an exact version" specmgr.lock 's#^anyio==4.16.0#anyio>=4.16.0#'
+lock_case url 1 "is not an exact pin" "a package with a URL" specmgr.lock '1i foo @ https://example.invalid/foo-1.0-py3-none-any.whl'
+lock_case urlhash 1 "is not an exact pin" "a URL after a package with hashes" specmgr.lock 's#^attrs==26.1.0 \\$#attrs @ https://example.invalid/attrs.whl \\#'
+lock_case vcs 1 "is not an exact pin" "a package from a VCS source" specmgr.lock '1i git+https://example.invalid/foo.git'
+lock_case editable 1 "is not an exact pin" "an editable entry" license-expression.lock '1i -e .'
+lock_case path 1 "is not an exact pin" "a package from a path" license-expression.lock '1i ./local/foo.whl'
+lock_case index 1 "is not an exact pin" "an index option" license-expression.lock '1i --index-url https://example.invalid/simple'
+lock_case extraindex 1 "is not an exact pin" "an extra index option" license-expression.lock '1i --extra-index-url https://example.invalid/simple'
+lock_case findlinks 1 "is not an exact pin" "a find-links option" license-expression.lock '1i --find-links https://example.invalid/'
+lock_case nobinary 1 "is not an exact pin" "a no-binary option" license-expression.lock '1i --no-binary :all:'
+lock_case shorthash 1 "is not an exact pin" "a hash that is not 64 hexadecimal characters" license-expression.lock '0,/--hash=sha256:[0-9a-f]\{64\}/s//--hash=sha256:abc123/'
+lock_case sha512 1 "is not an exact pin" "a hash that is not a sha256 value" license-expression.lock '0,/--hash=sha256:/s//--hash=sha512:/'
+lock_case markerurl 1 "is not an exact pin" "a marker that has a URL" specmgr.lock "s#^click==8.5.0 ; sys_platform != 'emscripten'#click==8.5.0 ; sys_platform @ https://example.invalid#"
+lock_case notool 1 "has no entry of biz-dfch-specmgr" "no entry of the tool in its lock file" specmgr.lock '/^biz-dfch-specmgr==/,/^    # via/d'
+two_dir="$(lock_copy pin-two)"
+{
+    cat "${real_locks}/license-expression.lock"
+    printf 'license-expression==30.4.3 ; python_version < "3" \\\n    --hash=sha256:%064d\n' 0
+} >"${two_dir}/license-expression.lock"
+expect 1 "has license-expression 30.4.3, 30.4.4" "two entries of the tool with other versions" run_pins_locks "${two_dir}"
+backslash_dir="$(lock_copy pin-backslash)"
+{
+    cat "${real_locks}/license-expression.lock"
+    printf 'license-expression==30.4.4 \\\n'
+} >"${backslash_dir}/license-expression.lock"
+expect 1 "ends after a backslash" "a file that ends after a backslash" run_pins_locks "${backslash_dir}"
+lock_case blankpkg 1 "has no package" "a lock file with no package" license-expression.lock '/^[a-z]/d;/^    /d'
+extra_dir="$(lock_copy pin-extra)"
+echo "foo==1.0 \\" >"${extra_dir}/extra.lock"
+expect 1 "extra.lock is not allowed" "a fourth lock file in the folder" run_pins_locks "${extra_dir}"
+echo "[pip]" >"${extra_dir}/pip.conf"
+rm "${extra_dir}/extra.lock"
+expect 1 "pip.conf is not allowed" "a pip.conf in the folder (it could change the index)" run_pins_locks "${extra_dir}"
+expect 0 "Python lock pin: Python locks:" "check-pins.sh says that it checked the Python locks" run_pins_locks "${real_locks}"
 
 echo
 echo "gates self-test: ${passed} ok, ${failed} failed"
