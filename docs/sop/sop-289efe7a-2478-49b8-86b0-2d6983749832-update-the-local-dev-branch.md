@@ -4,7 +4,7 @@ created: '2026-11-04T05:52:47.603+01:00'
 id: 289efe7a-2478-49b8-86b0-2d6983749832
 status: active
 type: sop
-updated: '2026-11-04T05:52:48.603+01:00'
+updated: '2026-11-04T05:59:00.460+01:00'
 version: 1.0.0
 ---
 
@@ -67,7 +67,7 @@ Run `git reset --hard origin/dev`. Run `git status -sb` and make sure that it sh
 
 ### Step 6: Check
 
-Run `git log origin/dev..dev`. The output must be empty. Delete a backup branch that you do not need with `git branch -D <name>`. Delete a feature branch whose pull request is merged.
+Run `git log origin/dev..dev`. The output must be empty. Delete a backup branch that you do not need with `git branch -D <name>`. Do not delete a feature branch after its pull request is merged. The owner keeps the feature branches, local and remote, until the next release is done.
 
 ## Related Artifacts
 
@@ -82,6 +82,10 @@ The conflict of 2026-11-04 was the reason for this procedure. A squash merge mak
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 06:30:00.000Z - Feature branches are kept until the release
+
+The owner told the coding agent on 2026-11-04 that feature branches stay until a new release is done. Step 6 no longer tells the author to delete a feature branch after the merge of its pull request.
 
 ### 2026-11-04 00:00:00.000Z - Created
 
