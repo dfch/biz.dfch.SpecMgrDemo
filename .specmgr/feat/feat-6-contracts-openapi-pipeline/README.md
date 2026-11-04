@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T17:42:11.388+01:00'
+updated: '2026-11-04T17:56:19.181+01:00'
 version: 1.0.0
 ---
 
@@ -169,21 +169,98 @@ License table (the agent fills it from the license file of each tool and not fro
 
 | Item | Use | License | Result |
 |---|---|---|---|
-| Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter | not checked | open |
-| oasdiff 1.35.0 | breaking changes | not checked | open |
-| openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool) | not checked | open |
-| Kubb (`kubb`, `@kubb/plugin-zod`, `@kubb/plugin-ts`) | client schemas | not checked | open |
-| Zod 4.x | runtime library | not checked | open |
-| `argparse` 3.0.4 (in the tree of Kubb) | library in the tree of the Zod generator. The owner stated on 2026-11-04 that its license PSF-2.0 is Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The phase 100 reads the license file. | not checked | open |
-| TypeScript | compiler for ACC-005 | not checked | open |
-| Spring Web, `jakarta.annotation`, swagger annotations, `jackson-databind-nullable` | libraries that the generated Java code needs | not checked | open |
-| Jakarta Bean Validation and its implementation | runtime library | not checked | open |
-| Maven Wrapper and the Maven plugins of the build | build tools | not checked | open |
-| New GitHub Actions (the selected tools are not Actions, so the phase 100 checks if the row is needed) | CI | not checked | open |
+| Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter | Apache-2.0 | Permitted |
+| oasdiff 1.35.0 | breaking changes | Apache-2.0 | Permitted |
+| openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool) | Apache-2.0 | Permitted |
+| Kubb (`kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0) | client schemas | MIT (all three packages) | Permitted |
+| Zod 4.6.7 | runtime library | MIT | Permitted |
+| `argparse` 3.0.4 (in the tree of Kubb, through `js-yaml` 5.5.0) | library in the tree of the Zod generator. The owner stated on 2026-11-04 that its license PSF-2.0 is Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The phase 100 read the license file. | PSF-2.0 | Permitted |
+| TypeScript 5.9.3 (the version that was tested) | compiler for ACC-005 | Apache-2.0 | Permitted |
+| Spring Web: `spring-web` and `spring-context` 6.2.19, with their seven dependencies (`spring-beans`, `spring-core`, `spring-jcl`, `spring-aop`, `spring-expression`, `micrometer-observation`, `micrometer-commons`) | libraries that the generated Java code needs | Apache-2.0 (`spring-core` also has BSD-3-Clause code of ASM, and Apache-2.0 code of CGLIB, JavaPoet and Objenesis) | Permitted |
+| `jakarta.validation-api` 3.0.2 (Jakarta Bean Validation, API only) | library that the generated Java code needs | Apache-2.0 | Permitted |
+| `jackson-annotations` 2.21 | library that the generated Java code needs | Apache-2.0 | Permitted |
+| `swagger-annotations-jakarta` 2.2.55 and `jackson-databind-nullable` 0.2.13 | libraries that the generated Java code needs only with the default options of the generator (the options `annotationLibrary=none`, `documentationProvider=none` and `openApiNullable=false` remove them) | Apache-2.0 (both) | Permitted |
+| `jakarta.annotation-api` 2.1.1 (and 3.0.0) | library that the generated Java code needs with each option (`import jakarta.annotation.Generated` is in each template) | EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 (see the finding F1 below) | Review (open question for the owner) |
+| Implementation of Jakarta Bean Validation (for example `hibernate-validator`) | runtime library | none | Not necessary: the generated code compiles with the API only, and this feature has no product code. A later feature must check the implementation before it adds it |
+| Maven Wrapper 3.3.4 (type `only-script`: `mvnw` and `.mvn/wrapper/maven-wrapper.properties`) | build tool | Apache-2.0 | Permitted |
+| Maven plugins of the build: `maven-wrapper-plugin` 3.3.4, `maven-clean-plugin` 3.5.0, `maven-resources-plugin` 3.5.0, `maven-compiler-plugin` 3.16.0, `maven-surefire-plugin` 3.6.0, `maven-jar-plugin` 3.5.1 (the versions that Maven 3.10.0 binds), and the two plugins above (`openapi-generator-maven-plugin` 7.27.0 and `cyclonedx-maven-plugin` 2.9.3) | build tools | Apache-2.0 (each plugin) | Permitted |
+| New GitHub Actions | CI | None is new. The only action that this feature can add is `actions/upload-artifact` (ACC-018). It is already in `tools/license/allowed-actions.txt` (v7.0.2, MIT, checked in feat-5-foundation-monorepo-ci) and in `ci.yml` | Permitted (no new action) |
+
+#### License Checks (Tasks 100.100 and 100.110)
+
+The agent did the checks on 2026-11-04. The work folder was `/tmp/opencode/p100/` (outside of the repository, nothing from it is in git). The agent read the license file of each item and not only the field of a registry. DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 gives the classes. Rule A: a tool gets the check of its main license. A library that goes to users gets the check of all its dependencies through the SBOM gate. The agent did not add a license class to the DEC and did not change a file of `tools/`.
+
+**Tools: the license file that the agent read**
+
+| Item | Source of the license file | sha256 of the license file | Result of the reading |
+|---|---|---|---|
+| Spectral CLI 6.17.0 | `package/LICENSE` of the npm package `@stoplight/spectral-cli-6.17.0.tgz` (sha256 `fdff616155068111f5fe00cd06ae8fdb640630f1082ad1e59187d466af7039bf`, the sha512 integrity is the one of the registry), and https://github.com/stoplightio/spectral/blob/develop/LICENSE. The two files are the same | `d45c17f7ecc80e0deab3372ff352c7d00b7d573755c3c672088c21a376673698` | Apache-2.0 (copyright 2018 Stoplight). The field `license` of `package.json` is also Apache-2.0 |
+| oasdiff 1.35.0 | `LICENSE` in the release file `oasdiff_1.35.0_linux_amd64.tar.gz` (sha256 `a8023002fcb2eaa7f5758148a9303cb63d33b939886df312268bc0fc7b939140`, the same value as in the plan and in `checksums.txt` of the release), and https://github.com/oasdiff/oasdiff/blob/main/LICENSE. The two files are the same | `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4` | Apache-2.0 |
+| openapi-generator 7.27.0 and plugin | https://github.com/OpenAPITools/openapi-generator/blob/master/LICENSE. The plugin jar (sha256 `9af831e2593931d9fe91a0804cd550f6f040bc690ab96aaf503b20c7558fa1c6`, the value in the plan) has no license file. The POM of its parent `openapi-generator-project` 7.27.0 says "Apache License 2.0". The generators `spring` and `html2` are in the core jar `openapi-generator-7.27.0.jar` (sha256 `0249ca38130103bb4743b08c34d02281dbe07c42df6cef92386efdb1b2cad67d`) of the same project | `91a2fcdfc23cbd1188a22cc3b76647bf6eb05c87889e376a19fe478f0398ff02` | Apache-2.0 (copyright 2018 OpenAPI-Generator Contributors and SmartBear) |
+| Kubb: `kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0 | `LICENSE` of each npm package (installed with `pnpm install --ignore-scripts`). The file of `kubb` is the same as https://github.com/kubb-labs/kubb/blob/main/LICENSE | `kubb`: `5918197284a9c383f145cee8311448cbc9204d2df7dd9536a432c25844a828be`. `@kubb/plugin-zod` and `@kubb/plugin-ts`: `64d31dd0303198f439f2a59c7ad6e98a3df0100067ec536c42530260d3b7751d` | MIT in all three (the text is the MIT text; the field `license` is MIT) |
+| Zod 4.6.7 | `LICENSE` of the npm package. It is the same as https://github.com/colinhacks/zod/blob/main/LICENSE | `3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8` | MIT (copyright 2025 Colin McDonnell) |
+| `argparse` 3.0.4 | `LICENSE` of the npm package in the pnpm store of the scratch project. It is the same as https://github.com/nodeca/argparse/blob/master/LICENSE | `ab745c5061d1dea43a3885e5b4b6befc7e983954954775c5736debeefcdfd89b` | "PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2", the field `license` is PSF-2.0. This is the class Permitted of the DEC |
+| TypeScript 5.9.3 | `LICENSE.txt` of the npm package. It is the same as https://github.com/microsoft/TypeScript/blob/main/LICENSE.txt | `a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47` | Apache-2.0. The terms agree word for word with the Apache text (only the list markers are different). TypeScript 7.0.2 has the field `license` Apache-2.0 in the registry, and so have the three platform packages that the agent looked at |
+
+For Spectral, oasdiff and openapi-generator, the terms of the file (from "TERMS AND CONDITIONS" to "END OF TERMS AND CONDITIONS", white space made equal) are the same as the text of https://www.apache.org/licenses/LICENSE-2.0.txt (sha256 `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`). The license file of the installed Maven 3.10.0 and of `spring-web`, `micrometer-observation` and `swagger-annotations-jakarta` also has these terms.
+
+**Generated Java code: what it needs**
+
+The agent made a scratch Maven module with the pinned plugin 7.27.0 (generator `spring`, a 3.1.0 file, the four options of the task 090.120, all other options default), JDK 21.0.13 and Maven 3.10.0, a new local repository, and the Spring Boot BOM 3.5.16 for the versions. The generation and `mvn compile` gave BUILD SUCCESS. The generated code imports Spring Web (`ResponseEntity`, `web.bind.annotation.*`, `MultipartFile`), `spring-context` (`@Validated`), `spring-core` (`@Nullable`), Jakarta Validation, `jakarta.annotation.Generated`, Jackson annotations, the swagger annotations (`io.swagger.v3.oas.annotations`) and `JsonNullable`. The agent removed one library at a time and compiled the files with `javac`. Each of these is necessary: `spring-web`, `spring-context`, `spring-core` with `spring-beans`, `jakarta.validation-api`, `jakarta.annotation-api`, `jackson-annotations`, `swagger-annotations-jakarta` and `jackson-databind-nullable`. `jackson-databind` is not necessary to compile (a product that runs the code needs it). With the options `annotationLibrary=none`, `documentationProvider=none` and `openApiNullable=false`, the code compiles without the swagger annotations and without `jackson-databind-nullable` (the tree has 12 components). The options of the generator are for the task 120.100. The versions above are the tested ones, and the phase 120 must repeat the SBOM gate if it uses other versions.
+
+**Java libraries and Maven items: what the agent read**
+
+| Artifact | License in the POM | License file in the jar | sha256 of the jar |
+|---|---|---|---|
+| `spring-web` 6.2.19 (and `spring-beans`, `spring-core`, `spring-jcl`, `spring-aop`, `spring-expression`) | Apache License, Version 2.0 | `META-INF/license.txt`: Apache terms, and the notices for ASM (BSD-3-Clause) and for CGLIB, JavaPoet and Objenesis (Apache-2.0), which `spring-core` includes | `spring-web`: `ca88e364ecebee61163e2260e8a20584138eca74e28a050d6a2ef6302bad2f2d` |
+| `spring-context` 6.2.19 | Apache License, Version 2.0 | the same `license.txt` | `ead4b645f94a7f665f00093eaafde634e97b34524294de653b51e43e0b3fc4a4` |
+| `micrometer-observation` and `micrometer-commons` 1.15.12 | The Apache Software License, Version 2.0 | `META-INF/LICENSE`: Apache terms | not written |
+| `jakarta.validation-api` 3.0.2 | Apache License 2.0 | none in the jar | `291c25e6910cc6a7ebd96d4c6baebf6d7c37676c5482c2d96146e901b62c1fc9` |
+| `jackson-annotations` 2.21 (and `jackson-databind`, `jackson-core` 2.21.4, if a product needs them) | The Apache Software License, Version 2.0 | `META-INF/LICENSE`: the Apache text | `jackson-annotations`: `53ca085f4a150f703f49e1aabd935bd03b43e1ea3d55d135438292af22cef56b` |
+| `swagger-annotations-jakarta` 2.2.55 | Apache License 2.0 (in the parent POM `swagger-project-jakarta`) | `META-INF/LICENSE`: Apache terms | `d464521aac0e9ae2cfead9d2f56e9e8c110ef4b15ad9c046408a087a4c58952b` |
+| `jackson-databind-nullable` 0.2.13 | Apache License 2.0 | `META-INF/LICENSE`: the Apache text | `afd06e34c42e6724a3ccf7cb2e143bce8d5161c806db610d457cc64205c8f4b7` |
+| `jakarta.annotation-api` 2.1.1 | two entries: "EPL 2.0" and "GPL2 w/ CPE" | `META-INF/LICENSE.md` (EPL-2.0 text and GPL-2.0 text with the Classpath Exception) and `META-INF/NOTICE.md` | `5f65fdaf424eee2b55e1d882ba9bb376be93fb09b37b808be6e22e8851c909fe` |
+| `maven-wrapper-plugin` 3.3.4 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `a355a8d7cb510412da78c2a165e4f500341028a569b12afa7fe99faf87516583` |
+| Maven Wrapper `maven-wrapper-distribution` 3.3.4, type `only-script` (the zip with `mvnw`) | not read (the artifact has no POM in the local repository) | `mvnw` and `mvnw.cmd` have the Apache-2.0 header of the ASF. https://github.com/apache/maven-wrapper/blob/maven-wrapper-3.3.4/LICENSE is the Apache text (sha256 `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`) | `6cb584c2bc907b849a0b931d8266d3ff3214cdd3127115ed4f49fb7176413d36` |
+| `maven-clean-plugin` 3.5.0 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `a15977e3457ff8cd803c1a37e1e53aad76e4609cd23bbca8e8f783e5c78e5fa8` |
+| `maven-resources-plugin` 3.5.0 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `2c923c63a197565a3e78f2b16d762d0f49bb83250dd2b1e6286704ea0f447060` |
+| `maven-compiler-plugin` 3.16.0 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `f2a6a4668dd833cfe559dd345929196e7b61ed13f6c03f8e087ffba3d85be807` |
+| `maven-surefire-plugin` 3.6.0 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `07117c7456920c14b9d3bdb9b1e82fbcb2fc5004ff2a3bd19c8fc6d25d6f15bb` |
+| `maven-jar-plugin` 3.5.1 | Apache-2.0 (parent `org.apache:apache`) | `META-INF/LICENSE`: the Apache text | `c83db6059be3fec9a4a68a0e226caefaa944663008617c697e087444415181d5` |
+| `cyclonedx-maven-plugin` 2.9.3 | Apache-2.0 | none in the jar. The result of feat-5-foundation-monorepo-ci stays | `c452d5eebe28bc86bef2e7c72d129f04f60877bef843eac8120f01fb655be293` (the value of `CYCLONEDX_MAVEN_PLUGIN_SHA256`) |
+
+The plugins `maven-resources-plugin`, `maven-compiler-plugin`, `maven-surefire-plugin` and `maven-jar-plugin` (and `maven-clean-plugin` for `mvn clean`) are the plugins that the lifecycle of Maven 3.10.0 binds. The agent found them with `mvn clean verify` in the scratch module. `maven-install-plugin` and `maven-deploy-plugin` are not in the planned recipes (no `install` and no `deploy`), so they have no row. `build-helper-maven-plugin` is not necessary: the plugin option `addCompileSourceRoot=true` worked in the test, and the phase 120 uses it or checks `build-helper-maven-plugin` first. The Maven Wrapper downloads the Maven distribution `apache-maven-3.10.0-bin.zip` (the checked result of Maven is in `tools/versions.env`: Apache-2.0). The agent also checked `maven-wrapper-plugin` 3.3.4 with `wrapper:wrapper -Dtype=only-script -Dmaven=3.10.0` in the scratch folder: it makes `mvnw`, `mvnw.cmd` and `.mvn/wrapper/maven-wrapper.properties` and no jar.
+
+**The SBOM gate with the real tools (scratch module and scratch `frontend/`)**
+
+- Maven, default options of the generator (all eight libraries): `cyclonedx-maven-plugin` 2.9.3 gave 16 components. `tools/gates/license-check.sh` said: 15 PERMITTED (all Apache-2.0) and 1 STOP, `jakarta.annotation:jakarta.annotation-api@2.1.1`: `NOT KNOWN (EPL-2.0 AND A license exception symbol can only be used as an exception in a "WITH exception" statement. for token: "GPL-2.0-with-classpath-exception")`. Result: `RESULT: STOP. NOT PERMITTED: 0. NOT KNOWN: 1.`
+- Maven, reduced options (12 components): the same one STOP for the same artifact.
+- Maven, the artifact `org.apache.tomcat:tomcat-annotations-api` 10.1.61 in place of `jakarta.annotation-api` (see F1, alternative c): the code compiles, and the result is `RESULT: PASS. 12 component(s), all licenses permitted.`
+- pnpm, scratch `frontend/` with `zod` 4.6.7 and the dev dependencies `@kubb/core` 5.15.3, `@kubb/plugin-ts` 5.4.0, `@kubb/plugin-zod` 5.8.0, `kubb` 5.15.3 and `typescript` 5.9.3 (91 packages installed): the real `tools/gates/sbom.sh` (with `SBOM_PROJECT_ROOT` and `SBOM_TOOL_DIR` on a copy of the cdxgen project, so that the repository did not change) made 102 components, and `tools/gates/license-check.sh` said `RESULT: PASS. 102 component(s), all licenses permitted.` The licenses in the tree: 93 MIT, 3 Apache-2.0, 3 ISC, 2 BSD-3-Clause and 1 PSF-2.0 (`argparse` 3.0.4, which `js-yaml` 5.5.0 needs). So the tree of Kubb has no license that is not in the DEC and in `tools/license/permitted-licenses.txt`. The package `@kubb/plugin-ts` lists `@typescript/typescript6` as a peer. pnpm did not install it, so it is not in this result.
+
+**Findings**
+
+- F1, `jakarta.annotation-api` (result Review, open question for the owner). The file `META-INF/NOTICE.md` of the jar says `SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0` (sha256 of the file `3852834ebb4c2e04ecc18c9d099a05eab72cbd6edf35fb191390be6306019b4c`). The version 3.0.0 (jar sha256 `b01f55552284cfb149411e64eabca75e942d26d2e1786b32914250e4330afaa2`) has the same two entries in its POM and the line `SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only with Classpath-exception-2.0` in its notice, so the user selects one of the two licenses. In the DEC, `GPL-2.0-only WITH Classpath-exception-2.0` is Permitted and `EPL-2.0` is Review. The agent gives the result Review, and not Permitted, for these reasons: the POM has two `<license>` entries, so the SBOM has two entries, and the gate reads more than one entry as AND (README of `tools/license/`). The gate stops for this library, as the test above shows. The agent cannot change the DEC or `tools/license/`, and the selection of one license of an OR pair is not a rule of the DEC. The generator cannot avoid the library: the templates `model.mustache` and `api.mustache` of the generator `spring` have `import {{javaxPackage}}.annotation.Generated;` for each option. The alternatives for the owner (the agent does not select one):
+  - (a) The owner states that an OR license is Permitted when one alternative is Permitted, and a change in `tools/license/` (owner review by CODEOWNERS) lets the gate read this library as `EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0`. The agent made no such change.
+  - (b) The owner makes a DEC about the deviation for `EPL-2.0` (class Review). The gate must still be changed for the identifier `GPL-2.0-with-classpath-exception`.
+  - (c) The project uses `org.apache.tomcat:tomcat-annotations-api` (Apache-2.0, POM and `META-INF/LICENSE` of the jar; jar sha256 `8d408d675d89da99f86171ead3067f9e947accf722e3785e6775e9af387ff3a6`, the sha1 is the one on Maven Central) in place of `jakarta.annotation-api`. The jar has the class `jakarta.annotation.Generated`. The test above shows that the generated code compiles with it and that the gate says PASS. The agent did not test this: a Spring Boot starter in a later feature can bring `jakarta.annotation-api` again.
+  - Until the owner decides: no `pom.xml` in the repository has `jakarta.annotation-api` or `tomcat-annotations-api`. The phases 105 and 110 do not need a Java library. The task 120.100 is blocked for this library.
+- F2, the generator `html2`. The core jar has the folder `htmlDocs2/`, and the generator writes these third-party parts into each HTML file: jQuery 3.7.1 (MIT), Bootstrap 2.3.2 (the header says Apache License 2.0), marked (the header says MIT), the JSON formatter (MIT in the file) and a script for code colors (no license text in the file, not checked). Rule A does not check them, because the HTML is an artifact of CI and not a product for users (REQ-015). If the owner publishes the HTML, this changes. The template `fonts.mustache` also has `@import url('https://fonts.googleapis.com/css?family=Source+Code+Pro')`, so a person who opens the HTML makes a network request. The task 120.130 must know this.
+- F3, the tree of Spectral (rule A, not a gate item). The agent installed Spectral 6.17.0 in a scratch project with `pnpm install --ignore-scripts` (241 packages): 188 MIT, 27 Apache-2.0, 16 ISC, 3 Unlicense (`get-source`, `printable-characters`, `stacktracey`), 3 0BSD, 2 BSD-3-Clause, 1 BSD-2-Clause, and 1 with an old license field (`reserved` 0.1.2, MIT). `Unlicense` is not in the DEC. Spectral is a tool in `tools/`, so only its main license counts (Apache-2.0, Permitted). The task 110.110 must keep this project out of the SBOM, as it does for cdxgen, or the gate stops for `Unlicense`. Spectral also depends on `@scarf/scarf` (Apache-2.0), which has a `postinstall` script that makes a report. `--ignore-scripts` stops it, and the files of Spectral do not use it.
+- F4, notes for the next phases that are not license questions. `tools/gates/check_workflows.py` allows `if: ${{ !cancelled() }}` only on `actions/upload-artifact` in the job `license-check` (`ALLOWED_IF`), so the job for the API documentation (task 130.110, ACC-018) must have no `if:`, or the gate must change. No new action is necessary: the jobs of this feature use `actions/setup-java`, `actions/setup-node`, `pnpm/action-setup` and `actions/upload-artifact`, and all four are in `tools/license/allowed-actions.txt` already. The row "New GitHub Actions" is therefore Permitted with no new action.
+
+**What the agent could not check**
+
+- The dependencies of the Maven plugins (rule A, GitHub issue #23): they are not in the SBOM and the agent did not read them.
+- The Spring Boot 4 line (`useSpringBoot4`) and Spring 7. The agent read the POM and the notice of `jakarta.annotation-api` 3.0.0 only, and did not compile with it.
+- TypeScript 7.0.2 (native): the agent read only the registry fields of the main package and of three platform packages (of 20), and did not install it or read the license files. The tested version is 5.9.3.
+- The license of the script for code colors in the `html2` template, and the third-party parts in the Maven distribution `apache-maven-3.10.0-bin.zip` (rule A).
+- The scratch `frontend/` is not the future `frontend/pnpm-lock.yaml`. The phase 120 must run the gate again with the real lock file.
+- No person with legal competence examined the results (the DEC asks for this for the classes).
 
 #### Candidates for the Tools (Task 090.100)
 
-The agent wrote these lists on 2026-11-04. The agent did not select a tool (REQ-014). The owner selected the four tools on 2026-11-04 (task 090.110, see the section Decisions Made and "Selected Tools and Fixed Values" below). The lines that start with "The agent recommends" were not binding. The license table above stays "open" until the phase 100.
+The agent wrote these lists on 2026-11-04. The agent did not select a tool (REQ-014). The owner selected the four tools on 2026-11-04 (task 090.110, see the section Decisions Made and "Selected Tools and Fixed Values" below). The lines that start with "The agent recommends" were not binding. The phase 100 filled the license table above (see "License Checks (Tasks 100.100 and 100.110)").
 
 **How the agent got the facts**
 
@@ -424,9 +501,9 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 
 #### Phase 100: License Checks
 
-- [ ] Task 100.100: Read the license file of each selected tool in the license table, and write the result. Stop and tell the owner if a license is not clear (ACC-006)
+- [x] Task 100.100: Read the license file of each selected tool in the license table, and write the result. Stop and tell the owner if a license is not clear (ACC-006)
 
-- [ ] Task 100.110: Read the license of each library that the generated code needs, of the Maven Wrapper and of the Maven plugins, and write the results. Add a new class of license to DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 only with the permission of the owner (ACC-006)
+- [x] Task 100.110: Read the license of each library that the generated code needs, of the Maven Wrapper and of the Maven plugins, and write the results. Add a new class of license to DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 only with the permission of the owner (ACC-006)
 
 - [ ] Task 100.120: If a tool or library has the result Review, tell the owner and wait for a decision. Do not use the item before the decision (ACC-006)
 
@@ -498,15 +575,22 @@ The agent tested a ruleset with Spectral 6.17.0 on a 3.1.0 file. The file is `/t
 
 ### Current Status
 
-**As of 2026-11-04**: The phase 090 (Tool Selection) is done. The tasks 090.100, 090.110 and 090.120 are done, and ACC-017 is met. The owner selected Spectral 6.17.0, oasdiff 1.35.0, openapi-generator 7.27.0 and Kubb, and fixed the path, the version (OpenAPI 3.1.0), the folders and the options (see the section Decisions Made and the Design Notes). The owner also added the API documentation (REQ-015, ACC-018, task 120.130). The next phase is the phase 100 (License Checks). The license table still has "not checked" and "open" in each row. feat-5-foundation-monorepo-ci is done, so the dependency is satisfied.
+**As of 2026-11-04**: The phase 090 (Tool Selection) is done. The tasks 090.100, 090.110 and 090.120 are done, and ACC-017 is met. The owner selected Spectral 6.17.0, oasdiff 1.35.0, openapi-generator 7.27.0 and Kubb, and fixed the path, the version (OpenAPI 3.1.0), the folders and the options (see the section Decisions Made and the Design Notes). The owner also added the API documentation (REQ-015, ACC-018, task 120.130). feat-5-foundation-monorepo-ci is done, so the dependency is satisfied.
+
+**As of 2026-11-04 (phase 100)**: The tasks 100.100 and 100.110 are done. The agent read the license file of each item and filled the license table. All items have the result Permitted, except one: `jakarta.annotation-api` has the result Review (an open question for the owner, finding F1 in "License Checks (Tasks 100.100 and 100.110)"). The task 100.120 is not done, because it waits for the decision of the owner. ACC-006 is not met until then. The phase 105 and the phase 110 need no Java library, so the Review does not block them. It blocks the task 120.100. The next step is the decision of the owner for F1.
 
 ### Blockers
 
-- None. One point is set by the agent and the owner can change it at the review: the recipe `generate` starts Kubb with a programmatic runner and not with the command `kubb generate`. The details of the mechanism for the source root of the Java code and of the mark "generated, do not change" for the Java code are open for the phase 120.
+- Open question for the owner (task 100.120, ACC-006): the library `jakarta.annotation-api` (the generated Java code imports `jakarta.annotation.Generated` with each option) has two licenses (`EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0`). The result is Review. The license gate stops for it (`NOT KNOWN`), and the agent must not change the DEC or `tools/license/`. The owner selects the alternative (a), (b) or (c) of finding F1 in "License Checks (Tasks 100.100 and 100.110)". No `pom.xml` in the repository may have this library before the decision. The task 120.100 is blocked for it.
+- One point is set by the agent and the owner can change it at the review: the recipe `generate` starts Kubb with a programmatic runner and not with the command `kubb generate`. The details of the mechanism for the source root of the Java code and of the mark "generated, do not change" for the Java code are open for the phase 120.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 16:55:00.000Z - Tasks 100.100 and 100.110 done, one Review open (task 100.120)
+
+The agent read the license file of each tool and library of the license table, and filled the License and Result columns. The sources and the sha256 values are in the new section "License Checks (Tasks 100.100 and 100.110)" of the Design Notes. These items have the result Permitted: Spectral CLI 6.17.0 (Apache-2.0), oasdiff 1.35.0 (Apache-2.0), openapi-generator 7.27.0 with its Maven plugin and the generator `html2` (Apache-2.0), Kubb with `@kubb/plugin-zod` and `@kubb/plugin-ts` (MIT), Zod 4.6.7 (MIT), `argparse` 3.0.4 (PSF-2.0), TypeScript 5.9.3 (Apache-2.0), Spring Web and its seven dependencies (Apache-2.0), `jakarta.validation-api`, `jackson-annotations`, `swagger-annotations-jakarta` and `jackson-databind-nullable` (Apache-2.0), the Maven Wrapper 3.3.4 and the Maven plugins of the build (Apache-2.0). No new GitHub Action is necessary: `actions/upload-artifact` (ACC-018) is already in `tools/license/allowed-actions.txt`. An implementation of Jakarta Bean Validation is not necessary. The agent tested the Java libraries with a real generation (pinned plugin, a 3.1.0 file, the four fixed options) and a compile, and ran the real SBOM gate on the Maven tree and on the tree of Kubb in a scratch `frontend/` (102 components, all permitted). One item has the result Review: `jakarta.annotation-api` (`EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0`). The gate stops for it, and the agent did not change the DEC or `tools/license/`. The task 100.120 and ACC-006 wait for the decision of the owner (alternatives in finding F1). The section also has the findings F2 to F4 (bundled third-party code of `html2`, `Unlicense` in the tree of Spectral, the `if:` rule of `check_workflows.py` for the job of the API documentation) and the list of what the agent could not check. Only this plan was changed. The scratch work is in `/tmp/opencode/p100/`.
 
 #### 2026-11-04 16:45:00.000Z - Phase 090 done: tools selected, values fixed
 
@@ -527,6 +611,10 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 16:55:00.000Z - Result of the license checks: `jakarta.annotation-api` gets Review (task 100.120)
+
+The agent gave the result Review to `jakarta.annotation-api` and not Permitted. The reasons: the library has two licenses (EPL-2.0 is the class Review, and GPL-2.0-only WITH Classpath-exception-2.0 is the class Permitted), the POM has two license entries that the SBOM gate reads as AND, and the gate stops for it. The selection of the license of an OR pair is a decision of the owner, so the agent did not select it. The agent did not add a license class to the DEC (task 100.110), did not change `tools/license/` and did not add a library to a `pom.xml`. The alternatives for the owner are (a) to state the OR rule and change the gate, (b) a DEC about the deviation for EPL-2.0 and (c) `tomcat-annotations-api` in place of the library (see finding F1). The task 100.120 stays open until the owner decides. The other items have the result Permitted, and the rule A of the DEC (main license for a tool) applied to the tools in `tools/` and to the Maven plugins.
 
 #### 2026-11-04 16:42:00.000Z - The owner adds the API documentation (REQ-015)
 
