@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-04T06:22:50.630+01:00'
 id: feat-22-python-tools-lockfile
-status: planning
+status: done
 type: feat
-updated: '2026-11-04T06:55:54.244+01:00'
+updated: '2026-11-04T07:16:58.614+01:00'
 version: 1.0.0
 ---
 
@@ -166,17 +166,29 @@ License table (the agent filled it from the license file of the build and not fr
 
 ### Current Status
 
-**As of 2026-11-04 05:56**: All tasks and all acceptance criteria (ACC-001 to ACC-009) are done and checked. Pull request #27 (`Closes #22`, against `dev`) is open and has seven green checks at commit f9744e0. It is BLOCKED and REVIEW_REQUIRED, so the owner reviews and merges it (the agent does not merge). The throwaway pull request #29 (closed, not merged, branch deleted) showed in real CI that `validate` fails with `Hash mismatch for attrs==26.1.0`. The status of the feature is not changed by the agent.
+**As of 2026-11-04 06:16**: Done. All tasks and all acceptance criteria (ACC-001 to ACC-009) are checked, pull request #27 is merged into `dev`, and the status is `done` (set in the pull request of the close-out, see SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8). The owner reviewed the `PSF-2.0` entry.
 
 ### Blockers
 
 - None.
 
-- Open item for the owner (not a blocker): a person with competence in the law must examine the `PSF-2.0` entry of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9.
+- Resolved on 2026-11-04 (statement of the owner; DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has an entry of 05:59:43): the owner reviewed the `PSF-2.0` entry. Open item for the owner (not a blocker): no person with legal competence is named as a reviewer.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 06:16:10.000Z - Handover at the end of the session
+
+State: feat-22 is merged and `done`. Run the SOP 289efe7a-2478-49b8-86b0-2d6983749832 first (`git fetch --prune`, `git switch dev`, `git pull`), and make new branches from `origin/dev`. Source `~/.config/biz.dfch.SpecMgrDemo/env.sh` for the tools.
+
+Open, in the order that the agent suggests (the owner decides):
+1. GitHub issue #31 for the cost of pull requests (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8 is step A; the options B and C are in the issue). The SOP has the status `draft`: the owner activates it.
+2. Release of `dev` to `main` with a merge commit. The old feature branches can go after it.
+3. feat-6-contracts-openapi-pipeline (empty license table, adds `mvnw`), then issue #23 (Maven plugin dependencies).
+4. Small items: the cdxgen `NODE_PATH` warning, NOTICE has no copyright line, the local branch `backup/dev-pre-squash` (9 commits not in `dev`).
+
+Do not push to a branch after its pull request is merged (the old branch `feat-22-python-tools-lockfile` has a duplicate commit 0f40987, do not push it).
 
 #### 2026-11-04 05:56:00.000Z - Pull request #27 and throwaway pull request #29 (ACC-008, ACC-009 done)
 

@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-04T05:55:03.271+01:00'
+updated: '2026-11-04T07:16:45.374+01:00'
 version: 1.0.0
 ---
 
@@ -49,6 +49,7 @@ This handbook is the index of the development policies and standards of this rep
 - SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519: Add a Requirement With Traceability
 - SOP a64703aa-8e74-4c49-b7f5-f0977522a9af: Add a Term to the Terminology Register
 - SOP 289efe7a-2478-49b8-86b0-2d6983749832: Update the Local dev Branch
+- SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8: Close a Feature With One Pull Request
 
 ## Risks
 
@@ -80,6 +81,10 @@ This handbook is the index of the development policies and standards of this rep
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 06:16:10.000Z - Rule to close a feature with one pull request added
+
+The handbook has a link to SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8. It tells how to set a feature to done, and how to write handover notes, in a pull request that exists, with no extra pull request after the merge.
 
 ### 2026-11-04 06:00:00.000Z - Rule for the local dev branch added
 
