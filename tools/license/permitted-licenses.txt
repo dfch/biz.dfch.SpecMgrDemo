@@ -26,6 +26,7 @@ Unicode-3.0
 Unicode-DFS-2016
 BlueOak-1.0.0
 Artistic-2.0
+PSF-2.0
 LGPL-3.0-only
 LGPL-3.0-or-later
 GPL-2.0-or-later
