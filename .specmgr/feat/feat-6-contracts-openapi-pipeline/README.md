@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T12:20:00.000+01:00'
+updated: '2026-11-04T14:01:18.290+01:00'
 version: 1.0.0
 ---
 
@@ -164,6 +164,158 @@ License table (the agent fills it from the license file of each tool and not fro
 | Maven Wrapper and the Maven plugins of the build | build tools | not checked | open |
 | New GitHub Actions (if the owner selects one) | CI | not checked | open |
 
+#### Candidates for the Tools (Task 090.100)
+
+The agent wrote these lists on 2026-11-04. The agent does not select a tool (REQ-014). The owner selects the four tools in the task 090.110. The lines that start with "The agent recommends" are not binding. The license table above stays "open" until the phase 100.
+
+**How the agent got the facts**
+
+- License class: the agent read the license file in the upstream repository. The URL of the file is in the list of each candidate. The class is from the table in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. MIT and Apache-2.0 are in the class Permitted. The check is for the main license of the tool (rule A). The parts that a tool bundles are not checked here (phase 100).
+- Maintenance: the dates of the releases and of the last commit are from the GitHub API and from the npm registry (2026-11-04). The number of open issues is also given.
+- Node and Java: the `engines` field of the npm package, or the README. The agent also started the tools with the pinned JDK 21.0.13 and the pinned Node 26.13.0 of `tools/versions.env`. A tool with "not tested" was not started.
+- Tests: a small OpenAPI file with `GET /status` and a schema `Problem` with a `code` list (3.0.3 and 3.1.0 versions). The files were in `/tmp`, and nothing is in the repository. The agent used `npm` for the tests, because `pnpm` is not on this machine. The package tree of a pnpm project can be different.
+- Same output: the agent started each tool two times with the same input. It compared the output with `diff -r` or `cmp`.
+- Pin: the three ways are in "How each new tool is pinned" above. The checksums in the lists are from the release files, and the agent checked them with `sha256sum -c`. They are not yet in `tools/versions.env`.
+- OpenAPI versions: 3.0, 3.1 and 3.2 exist. The task 090.120 fixes the version of the file.
+
+**Linter (REQ-002, REQ-006, REQ-008)**
+
+- Spectral CLI, `@stoplight/spectral-cli` 6.17.0
+  - License: Apache-2.0 (https://github.com/stoplightio/spectral/blob/develop/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-10-01, 2026-08-03, 2026-07-20 and 2026-06-30. Before that, the last release was 2025-04-22. The last commit is from 2026-11-04. 223 open issues.
+  - OpenAPI: the README says OpenAPI v2, v3.0, v3.1 and v3.2. The tool finds the version in the file.
+  - Same output: two runs gave the same JSON (`cmp`). The tool writes no file.
+  - Node and Java: `engines` is `^22.0 || >= 24.0`. It ran on Node 26.13.0 and on Node 24.22.2. It needs no Java.
+  - Pin: an own pnpm project with a lock file, installed with `--frozen-lockfile --ignore-scripts` (as cdxgen). The package has no install script.
+  - Rules: the rules are YAML. The agent wrote the rule for `x-specmgr-req` (function `pattern` with a UUID expression) and the rule for 4xx and 5xx (function `truthy` on `application/problem+json`). With a 3.1.0 file, the good file had no error, and the bad file had two errors.
+  - Other: the agent found no telemetry code in the installed packages. The tree has 240 packages with `Unlicense` (3 packages) and one old license field. It would be in `tools/`, so rule A applies.
+- Redocly CLI, `@redocly/cli` 2.73.0
+  - License: MIT (https://github.com/Redocly/redocly-cli/blob/main/LICENSE.md). The file has the MIT text and no name of the license. Class: Permitted (the agent compared the text with MIT, so phase 100 must read it again).
+  - Maintenance: many releases each day (the last on 2026-11-03). The last commit is from 2026-11-04. 173 open issues.
+  - OpenAPI: the README says OpenAPI 3.x and 2.0. The command `generate-client` says 3.0, 3.1 and 3.2.
+  - Same output: two runs gave the same JSON.
+  - Node and Java: `engines` is `>=22.12.0 || >=20.19.0 <21.0.0`. It ran on Node 26.13.0. It needs no Java.
+  - Pin: an own pnpm project with a lock file (as Spectral). The npm package has no dependency, because it bundles its code.
+  - Rules: the rules are in `redocly.yaml` (configurable rules). The agent wrote both rules. The rule for 4xx and 5xx needs the keys `where`, `MediaTypesMap` and `required`. Result with a 3.1.0 file: the good file had no error, and the bad file had one error for each rule.
+  - Other: the tool sends telemetry by default. `REDOCLY_TELEMETRY=off` or `telemetry: off` in `redocly.yaml` stops it (https://github.com/Redocly/redocly-cli/blob/main/docs/@v2/usage-data.md). `THIRD_PARTY_NOTICES` of the package lists 122 bundled packages. One has the license "unknown" (`format@0.2.2`) and one has "(MIT AND BSD)" (`dictionary-en@4.0.0`). Rule A does not check them.
+- vacuum 0.36.2
+  - License: MIT (https://github.com/daveshanley/vacuum/blob/main/LICENSE). Class: Permitted.
+  - Maintenance: releases almost each day (the last on 2026-11-01). The last commit is from 2026-11-01. 14 open issues. The version is 0.x.
+  - OpenAPI: the README does not list the versions. It names OpenAPI 3.2 tags. The parser is `libopenapi` 0.42.3, and its README says "OpenAPI 3, 3.1 and 3.2". This is not clear in the README of vacuum.
+  - Same output: two runs gave the same text (without the lines with the time of the run).
+  - Node and Java: a Go binary. It needs no Node and no Java. The npm package `@quobix/vacuum` has a `postinstall` script and `engines` `>=24.16.0`, so the agent does not suggest it (the install uses `--ignore-scripts`).
+  - Pin: the sha256 of the `vacuum_0.36.2_linux_x86_64.tar.gz` is `5736f27a806888f7ed89fba6bb8a3a00e5da895f1ad870f699b3018b7c8bcb0d`. The release has `checksums.txt` and a sigstore file.
+  - Rules: the tool reads a Spectral ruleset. The same two rules of Spectral gave exit code 0 for the good file and exit code 1 for the bad file. The README says that the compatibility with Spectral has limits.
+- The agent recommends Spectral (not binding). The rules for REQ-006 and REQ-008 are YAML and they work with 3.1. The pin is the same as for cdxgen. The agent found no telemetry. Redocly is a good second choice, but it has telemetry and many bundled packages. vacuum is a good choice if the owner wants a binary with a sha256 value, but the version is 0.x.
+
+**Tool for breaking changes (REQ-003, REQ-012)**
+
+- oasdiff 1.35.0
+  - License: Apache-2.0 (https://github.com/oasdiff/oasdiff/blob/main/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-10-28, 2026-10-21, 2026-10-18 and 2026-10-01. The last commit is from 2026-11-03. 79 open issues.
+  - OpenAPI: 3.0 and 3.1 (3.1 is generally available since 1.15.0). It reads 3.2 files (https://github.com/oasdiff/oasdiff/blob/main/docs/OPENAPI-31.md).
+  - Same output: two runs gave the same text (`cmp`). The text has no time.
+  - Node and Java: a Go binary. It needs no Node and no Java.
+  - Pin: a download with a sha256 value. `oasdiff_1.35.0_linux_amd64.tar.gz` has the sha256 `a8023002fcb2eaa7f5758148a9303cb63d33b939886df312268bc0fc7b939140`. It is the same in `checksums.txt` of the release and in the digest of GitHub.
+  - Test: for a removed required property of a response, `oasdiff breaking old new --fail-on ERR` gave exit code 1. With `--err-ignore <file>` and a line "GET /status removed the required property `note` from the response with the `200` status", it gave exit code 0. For two equal files, it gave exit code 0.
+  - Other: the ignore file is a text file with a line for each change. This fits REQ-012. The tool does not know the version number of the interface, so the check of the version number is an own script. `oasdiff breaking origin/main:contracts/openapi.yaml contracts/openapi.yaml` reads a file from a git revision. If the base file does not exist, the tool stops with exit code 102, so the recipe must test for the file first (ACC-003).
+- openapi-changes 0.4.1 (pb33f)
+  - License: Apache-2.0 (https://github.com/pb33f/openapi-changes/blob/main/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-11-01 (two), 2026-10-11, 2026-10-10 and 2026-08-26. The last commit is from 2026-11-01. 9 open issues. The version is 0.x.
+  - OpenAPI: the README says "OpenAPI or AsyncAPI 3.x" and does not list the OpenAPI versions. The parser is `libopenapi` 0.42.3 (3, 3.1 and 3.2). It found the removed property in a 3.1.0 file.
+  - Same output: two runs gave the same text (with `--no-logo --no-color`).
+  - Node and Java: a Go binary. It needs no Node and no Java.
+  - Pin: `openapi-changes_0.4.1_linux_x86_64.tar.gz` has the sha256 `c8a516f284c0a828f4281966a6190158b0ce1c6a831526e2ce1f3f4c13c9af0c`.
+  - Test: `summary` gave exit code 1 for the removed property and exit code 0 for equal files.
+  - Other: the agent found no ignore file for one single change. The file `changes-rules.yaml` switches off a whole kind of change. So REQ-012 needs more own work with this tool.
+- openapi-diff 2.1.7 (OpenAPITools)
+  - License: Apache-2.0 (https://github.com/OpenAPITools/openapi-diff/blob/master/LICENSE). Class: Permitted.
+  - Maintenance: the last release is 2026-01-26 (before that 2025-11-26). The last commit is from 2026-08-05. 89 open issues.
+  - OpenAPI: the README says "OpenAPI spec v3.0". The tool does not read 3.1 files according to the README.
+  - Same output: not tested.
+  - Node and Java: a Java program (Java 8 or higher, README). It is on Maven Central and Docker Hub. Not tested with JDK 21.
+  - Pin: the jar from Maven Central. Maven Central has `.sha1`, `.md5` and `.asc` files and no `.sha256` file, so the sha256 is computed on the machine of the author (as for the plugin of the SBOM).
+  - Other: the agent found no ignore file in the README. The options are `--fail-on-incompatible` and `--fail-on-changed`.
+- The agent recommends oasdiff (not binding). It is the only candidate with an ignore file for each change, it reads 3.0 and 3.1, and it is a Go binary with a sha256 value (the way that the owner chose on 2026-11-04).
+
+**Server generator for Spring interfaces (REQ-004, REQ-011)**
+
+The agent found only two candidates for Java with Spring interfaces. The agent did not look at other tools.
+
+- openapi-generator, `openapi-generator-maven-plugin` 7.27.0, generator `spring`
+  - License: Apache-2.0 (https://github.com/OpenAPITools/openapi-generator/blob/master/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-11-02, 2026-10-06, 2026-08-24, 2026-07-20 and 2026-06-08. The last commit is from 2026-11-04. 5810 open issues (a large project).
+  - OpenAPI: the README says "1.0, 1.1, 1.2, 2.0, 3.0, 3.1 (beta support)". With a 3.1.0 file the tool writes the warning "OpenAPI 3.1 support is still in beta". The page of the generator `spring` lists the type `Null` as not supported. 3.2 is not in the list. The generator `spring` has the stability STABLE.
+  - Options for the task 090.120: `interfaceOnly=true`, `skipDefaultInterface`, `hideGenerationTimestamp=true`, `useSpringBoot3` (true by default), `generateSupportingFiles` (a plugin option), `openApiNullable`.
+  - Same output: with `hideGenerationTimestamp=true`, two runs gave the same files (`diff -r`), with JDK 21.0.13 and with JDK 11. Without the option, the `@Generated` annotation has a time (`date = ...`), and two runs are different.
+  - Node and Java: the README says Java 11 as the minimum. It needs no Node.
+  - Pin: the sha256 of the jar of the plugin 7.27.0 is `9af831e2593931d9fe91a0804cd550f6f040bc690ab96aaf503b20c7558fa1c6`. The sha1 of the file is the same as the `.sha1` on Maven Central. Maven Central has no `.sha256` file. The dependencies of the plugin are not checked (GitHub issue #23).
+  - Other: the generated Java code needs libraries (see the license table), and the options of the generator decide which ones.
+- swagger-codegen v3, `swagger-codegen-maven-plugin` 3.0.84 (`io.swagger.codegen.v3`)
+  - License: Apache-2.0 (https://github.com/swagger-api/swagger-codegen/blob/master/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-11-02, 2026-10-26, 2026-08-04 and 2026-05-18. The last commit is from 2026-11-02. 3438 open issues. The README of the default branch is for version 2, and the table in it is old (it says 3.0.71 is the stable release).
+  - OpenAPI: 3.0 only ("OpenAPI 3.0.X is supported from the 3.X version only").
+  - Options: the agent read the source of the generator. The Spring generator has `interfaceOnly`, `jakarta` and the library `spring-boot3`. The template of `@Generated` has `hideGenerationTimestamp`, and its default in `AbstractJavaCodegen` is false, so the option must be set. The agent did not start this tool.
+  - Same output: not tested.
+  - Node and Java: the Java version is not clear. The agent did not read it.
+  - Pin: the sha256 of the jar 3.0.84 is `2395a654ff68d828d8e1ebc241733013d30613217c5c18d5776bbce3fd7d4e08` (the sha1 is the same as on Maven Central).
+- The agent recommends openapi-generator (not binding). It is the only candidate that the agent started, and the output was the same in each run with `hideGenerationTimestamp`. If the file has OpenAPI 3.1, the support is beta, so the owner must accept this risk. With OpenAPI 3.0, both candidates read the file.
+
+**Zod generator (REQ-004, REQ-006, REQ-011)**
+
+The candidate `openapi-zod-client` is not in the list. The README says that it is deprecated (commit of 2026-08-05), the last release is from 2025-02-10, and the repository has no license file.
+
+- Kubb, `kubb` 5.15.3 with `@kubb/plugin-zod` 5.8.0
+  - License: MIT (https://github.com/kubb-labs/kubb/blob/main/LICENSE). Class: Permitted.
+  - Maintenance: many releases (the last on 2026-10-29). The last commit is from 2026-11-03. 7 open issues. The line 5.x is young (the last 100 releases are from the last three months).
+  - OpenAPI: the adapter says Swagger 2.0, OpenAPI 3.0 and 3.1. 3.2 is not named. The agent tested 3.0.3 and 3.1.0.
+  - Zod: the plugin has the peer dependency `zod ^4.0.0`. Zod 3 is not possible.
+  - Same output: two runs gave the same files for 3.0.3 and for 3.1.0, also on Node 26.13.0. The agent got one file for each schema (`problemSchema.ts`, `statusSchema.ts`) and one for the operation. The header is "Generated by Kubb (https://kubb.dev/). Do not edit manually." It has no time. The `code` list is `z.enum(['A', 'B'])`.
+  - Node and Java: `engines` is `>=22.22`. It ran on Node 26.13.0. It needs no Java.
+  - Pin: the pnpm lock file (in `frontend/` or in an own project). The packages have no install script.
+  - Other: the tool sends anonymous data to `https://otlp.kubb.dev`, unless `DO_NOT_TRACK=1` or `KUBB_DISABLE_TELEMETRY=1` is set (the agent read this in `@kubb/cli/dist/Telemetry-*.js`). The workflow gate does not allow `env:`, so the recipe must set the variable. The tool also writes messages about sponsors to the output.
+- Hey API, `@hey-api/openapi-ts` 0.99.0 with the plugin `zod`
+  - License: MIT (https://github.com/hey-api/hey-api/blob/main/LICENSE). Class: Permitted.
+  - Maintenance: the last stable release is 0.99.0 from 2026-06-22. Newer builds are only `0.0.0-next-*` snapshots (the last from 2026-09-30). The last commit on `main` is from 2026-09-30. 660 open issues. The version is 0.x.
+  - OpenAPI: the README says "accepts any OpenAPI specification". The agent tested 3.0.3 and 3.1.0.
+  - Zod: the plugin makes Zod v3, v4 and mini.
+  - Same output: two runs gave the same file for 3.0.3 and 3.1.0, also on Node 26.13.0. The result is one file `zod.gen.ts` with `zStatus`, `zProblem` and the responses. The header is "This file is auto-generated by @hey-api/openapi-ts" (no time, no version).
+  - Node and Java: `engines` is `>=22.18.0`. The peer dependency is `typescript >=5.5.3`. It needs no Java.
+  - Pin: the pnpm lock file. The package has no install script. The tree has 53 packages.
+- Orval, `orval` 8.46.0 with the client `zod`
+  - License: MIT (https://github.com/orval-labs/orval/blob/master/LICENSE). Class: Permitted.
+  - Maintenance: releases on 2026-10-30, 2026-10-25, 2026-10-21 and 2026-10-14. The last commit is from 2026-11-04. 29 open issues.
+  - OpenAPI: the documentation says "any valid OpenAPI v3 or Swagger v2". The agent tested 3.0.3 and 3.1.0. 3.2 is not named.
+  - Zod: Zod 3 and Zod 4 (`override.zod.version`), also the variant `mini`.
+  - Same output: two runs gave the same file for 3.0.3 and 3.1.0, also on Node 26.13.0. The header has "Generated by orval", the title and the version of the OpenAPI file. It has no time. `override.header` can change it.
+  - Test: with `client: 'zod'`, the agent got only the schemas of the operation (`GetStatusResponse`), and not the schema `Problem` of the 500 response. With `schemas: { type: 'zod' }` it got one file for each component, but the tool also made an `api.ts` client. The task 090.120 must test if the client can be switched off.
+  - Node and Java: `engines` is `>=22.18.0`. It needs no Java.
+  - Pin: the pnpm lock file. The tree has 84 packages.
+- The agent recommends Kubb (not binding), if the owner accepts the telemetry with an opt-out in the recipe. If the owner does not accept it, Hey API is the second choice (the tree is small and no telemetry code was found, but there is no stable release since 2026-06-22). The agent suggests Orval last, because the `code` list of the 500 response is only in the output when the `schemas` option is set, and it makes a client too.
+
+**Open questions for the owner**
+
+- OpenAPI version (task 090.120): with 3.0, each candidate in all lists reads the file. With 3.1, `swagger-codegen` and `openapi-diff` can not read it, and `openapi-generator` has beta support only.
+- Telemetry: Kubb and Redocly CLI send data by default. Is an opt-out in the recipe acceptable?
+- Place of the Zod generator: in `frontend/` its packages go into the SBOM and the license gate. In the npm trees that the agent made, `argparse` (Python-2.0) is in the trees of Hey API and Orval. `Python-2.0` is not in the table of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, and `Unlicense` (Spectral tree) is not there either. The tree of Kubb has only classes that are Permitted. An own project in `tools/` (as for cdxgen) makes rule A apply. The agent did not test if cdxgen includes the dev dependencies.
+- Server generator: the list has only two candidates. Is this enough?
+
+**Overview**
+
+| Tool | Candidate | License | OpenAPI versions | Pin |
+|---|---|---|---|---|
+| Linter | Spectral CLI 6.17.0 | Apache-2.0 | 3.0, 3.1, 3.2 | pnpm lock file |
+| Linter | Redocly CLI 2.73.0 | MIT | 3.0, 3.1 (3.2 for one command) | pnpm lock file |
+| Linter | vacuum 0.36.2 | MIT | not clear in the README (parser: 3, 3.1, 3.2) | sha256 of the binary |
+| Breaking changes | oasdiff 1.35.0 | Apache-2.0 | 3.0, 3.1 (reads 3.2) | sha256 of the binary |
+| Breaking changes | openapi-changes 0.4.1 | Apache-2.0 | not clear in the README (parser: 3, 3.1, 3.2) | sha256 of the binary |
+| Breaking changes | openapi-diff 2.1.7 | Apache-2.0 | 3.0 | sha256 of the jar |
+| Server generator | openapi-generator 7.27.0 | Apache-2.0 | 3.0, 3.1 (beta) | sha256 of the plugin jar |
+| Server generator | swagger-codegen 3.0.84 | Apache-2.0 | 3.0 | sha256 of the plugin jar |
+| Zod generator | Kubb 5.15.3 | MIT | 3.0, 3.1 | pnpm lock file |
+| Zod generator | Hey API 0.99.0 | MIT | 3.0, 3.1 | pnpm lock file |
+| Zod generator | Orval 8.46.0 | MIT | 3.0, 3.1 | pnpm lock file |
+
 ### Related Decisions
 
 - DEC f92e35a1-77a2-4749-917f-bf9b644e8ddd: Write Interfaces First in OpenAPI and Use Layers for Validation
@@ -202,7 +354,7 @@ License table (the agent fills it from the license file of each tool and not fro
 
 #### Phase 090: Tool Selection
 
-- [ ] Task 090.100: For each tool (linter, tool for breaking changes, server generator, Zod generator), write a list of two or three candidates with these criteria: the license class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, maintenance, support for the version of OpenAPI, the same output for each run, support for the Node and Java versions in `tools/versions.env`, and the way to pin it. Write the lists in the Design Notes (ACC-017)
+- [x] Task 090.100: For each tool (linter, tool for breaking changes, server generator, Zod generator), write a list of two or three candidates with these criteria: the license class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, maintenance, support for the version of OpenAPI, the same output for each run, support for the Node and Java versions in `tools/versions.env`, and the way to pin it. Write the lists in the Design Notes (ACC-017)
 
 - [ ] Task 090.110: The owner selects the four tools. Write the choice and the cause in the section Decisions Made. If the owner does not select a tool, stop (ACC-017)
 
@@ -282,7 +434,7 @@ License table (the agent fills it from the license file of each tool and not fro
 
 ### Current Status
 
-**As of 2026-11-04**: The refinement is done and the status is `progress`. feat-5-foundation-monorepo-ci is done, so the dependency is satisfied. No task of the Task List is done. The next step is the phase 090 (the selection of the tools by the owner).
+**As of 2026-11-04**: The refinement is done and the status is `progress`. feat-5-foundation-monorepo-ci is done, so the dependency is satisfied. The task 090.100 is done: the Design Notes have the lists of candidates for the four tools. The agent waits for the owner to select the tools in the task 090.110. The tasks 090.110 and 090.120 are not started.
 
 ### Blockers
 
@@ -291,6 +443,10 @@ License table (the agent fills it from the license file of each tool and not fro
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-04 13:00:00.000Z - Task 090.100 done: lists of candidates
+
+The agent wrote the lists of candidates in the Design Notes (section "Candidates for the Tools (Task 090.100)"). Each tool has two or three candidates: the linter (Spectral, Redocly CLI, vacuum), the tool for breaking changes (oasdiff, openapi-changes, openapi-diff), the server generator (openapi-generator, swagger-codegen v3) and the Zod generator (Kubb, Hey API, Orval). The agent read the license file of each candidate in the upstream repository, got the dates of the releases from the GitHub API and the npm registry, and started the tools with the pinned JDK 21.0.13 and Node 26.13.0 for the tests of the same output. The agent did not select a tool (REQ-014). The lists have the agent's recommendation for each tool, and it is not binding. The lists also have these facts for the owner: only the generator openapi-generator reads OpenAPI 3.1 (in beta), `swagger-codegen` and `openapi-diff` read only 3.0, Kubb and Redocly CLI send telemetry by default, and the Zod generators in a `frontend/` project can add packages with a license that is not in the table of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 (`Python-2.0`). The tasks 090.110 and 090.120 wait for the owner. No file of the repository other than this plan was changed.
 
 #### 2026-11-04 11:20:00.000Z - Plan refined
 
