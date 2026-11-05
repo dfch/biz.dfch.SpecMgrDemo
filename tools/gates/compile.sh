@@ -11,7 +11,7 @@
 # Usage: compile.sh <backend dir> <frontend dir>
 #
 # The sha256 of the jar of the generator plugin must be the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 first
-# (verify_generator_plugin in _lib.sh). The CI job that starts this recipe is the task 130.105. Needs JDK 21, Node, pnpm and the
+# (verify_generator_plugin in _lib.sh). The CI job `compile` starts this recipe (task 130.105). Needs JDK 21, Node, pnpm and the
 # network for the first run. The Maven build writes <backend dir>/target (in .gitignore).
 
 set -euo pipefail

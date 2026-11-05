@@ -14,6 +14,10 @@
 #     check-workflows forbids it).
 #   - Each job has the name of the gate. Use these names for the required checks of the branch
 #     protection (branch-protection.md in the folder of the feature).
+#   - feat-6-contracts-openapi-pipeline added the jobs lint, breaking-changes, check-generated, compile and
+#     api-docs (Task 130.110). The job api-docs keeps the HTML as an artifact, and has no `if:`. The jobs that
+#     need Java, Node or pnpm have the setup actions with the versions of tools/versions.env. The owner makes
+#     the new jobs required checks of the rulesets (phase 135 of feat-6).
 
 name: CI
 
@@ -144,6 +148,128 @@ jobs:
           just-version: "1.59.0"
       - run: just check-sudo
 
+  # The linter of the OpenAPI file (feat-6-contracts-openapi-pipeline, REQ-002). Spectral comes from the lock file in
+  # tools/spectral/ (pnpm install --frozen-lockfile --ignore-scripts), so the job needs Node and pnpm and the network.
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just lint
+
+  # The check for breaking changes (feat-6-contracts-openapi-pipeline, REQ-003). The gate needs the history for the merge base
+  # (`git merge-base`, so fetch-depth: 0 of the checkout), `uv` (PyYAML from the lock file for the version number) and the
+  # network (it downloads oasdiff and compares the sha256). The base is origin/<GITHUB_BASE_REF> (the justfile). It needs no
+  # Node and no Java.
+  breaking-changes:
+    name: breaking-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just breaking-changes
+
+  # The gate for generated code (feat-6-contracts-openapi-pipeline, REQ-005): it makes the code again (`just generate`) and
+  # compares it with HEAD with `git status`. It needs the tools of `just generate`: Java (the Maven Wrapper and the plugin),
+  # Node and pnpm (Kubb), and the network (Maven Central, the npm registry).
+  check-generated:
+    name: check-generated
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just check-generated
+
+  # Compiles the Maven module and the pnpm module with the generated code (feat-6-contracts-openapi-pipeline, ACC-005).
+  # Same tools as check-generated.
+  compile:
+    name: compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just compile
+
+  # The API documentation (feat-6-contracts-openapi-pipeline, REQ-015, ACC-018): the generator html2 of the pinned plugin
+  # makes build/api-docs/index.html. The HTML is not in git, and the run keeps it as an artifact. The upload step has no
+  # `if:` (check-workflows allows `if:` only for the SBOM upload), so the artifact is only made for a run that passes.
+  api-docs:
+    name: api-docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just api-docs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
+        with:
+          name: api-docs
+          path: build/api-docs/
+          if-no-files-found: error
+
   # The tests of the gates themselves: the license gate with its fixtures, and the other
   # gates with good and bad input.
   test-gates:
@@ -161,4 +287,16 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
         with:
           version: "0.13.7"
+      # The tests of the gates of feat-6-contracts-openapi-pipeline start the real tools: Spectral (Node, pnpm), oasdiff
+      # (download), and the generators and the Maven Wrapper (Java, Node, pnpm, the network).
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
       - run: just test-gates

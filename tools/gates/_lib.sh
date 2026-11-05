@@ -71,6 +71,34 @@ make_python_env() {
         || die "uv did not install ${lock_name} from ${lock_file} (see the message of uv above)"
 }
 
+# copy_work_tree <dest>
+#
+# Makes a temporary git repository in <dest> (feat-6-contracts-openapi-pipeline, Task 130.100): a copy of the files of this
+# repository that git knows or that .gitignore does not ignore (`git ls-files --cached --others --exclude-standard`, so the
+# files that are not yet committed, for example a new gate script, are in the copy, and node_modules, target and build are not),
+# in one commit on the branch `work` with the tag `base`. The tests of the gates for generated code and for the build use it, so
+# they never change the real work tree. The modes of the files (mvnw, the scripts) stay. A file that the index has and the work
+# tree has deleted is not in the copy.
+copy_work_tree() {
+    local dest="$1"
+    [[ $# -eq 1 && -n "${dest}" ]] || die "copy_work_tree: usage: copy_work_tree <dest>"
+    require_cmd git
+    require_cmd tar
+    mkdir -p "${dest}"
+    git -C "${REPO_ROOT}" ls-files -z --cached --others --exclude-standard --deduplicate \
+        | tar --null --ignore-failed-read -C "${REPO_ROOT}" -T - -cf - 2>/dev/null | tar -C "${dest}" -xf -
+    (
+        cd "${dest}"
+        git init --quiet --initial-branch=work
+        git config user.name "Gate Test"
+        git config user.email "gate-test@example.invalid"
+        git config commit.gpgsign false
+        git add -A
+        git commit --quiet --no-verify -m "base"
+        git tag base
+    ) || die "copy_work_tree: could not make the temporary repository in ${dest}"
+}
+
 # manifest_files <root> -- print the manifests of the project (one path for each line, relative to
 # <root>, with ./ at the start) that are not in an excluded folder. The manifests are pom.xml,
 # package.json, pnpm-lock.yaml and pnpm-workspace.yaml. The excluded folders are .git, node_modules,

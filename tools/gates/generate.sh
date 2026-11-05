@@ -4,7 +4,7 @@
 # Makes all generated code again from contracts/openapi.yaml:
 #   - the Spring server interfaces (Java) in backend/src/generated, with openapi-generator-maven-plugin, generator `spring`;
 #   - the Zod schemas and the TypeScript types in frontend/src/generated, with Kubb (the runner frontend/generate.mjs).
-# Both folders are committed to git. The gate for generated code (phase 130) makes the code again and compares it with git.
+# Both folders are committed to git. The gate for generated code (check-generated.sh, task 130.100) makes the code again and compares it with git.
 #
 # Usage: generate.sh <backend dir> <frontend dir>
 #   <backend dir>   the Maven module with mvnw, for example backend

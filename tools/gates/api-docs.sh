@@ -15,7 +15,7 @@
 # compares two runs with `diff -r`.
 #
 # The sha256 of the jar of the plugin must be the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 first
-# (verify_generator_plugin in _lib.sh). The CI job that keeps the HTML as an artifact is the task 130.110.
+# (verify_generator_plugin in _lib.sh). The CI job `api-docs` starts this script and keeps the HTML as an artifact (task 130.110).
 # Note for a person who opens the HTML: the template of html2 has a font from fonts.googleapis.com
 # (`@import url(...)`), so a browser makes a network request when it shows the page (finding F2 of the license checks).
 # Needs JDK 21 and the network for the first run (Maven Central).

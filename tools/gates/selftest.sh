@@ -336,6 +336,41 @@ wf_case extraaction 1 "has the action(s) actions/setup-node, which are not in re
     's|^      - run: just commit-check$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
 wf_case twocheckout 1 "has the action(s) actions/checkout" "commit-check: the checkout twice" \
     's|^      - run: just commit-check$|      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1\n&|'
+# the jobs of feat-6-contracts-openapi-pipeline (Task 130.110): each has its own line in required-setup.txt. job_range <job> <recipe>
+# is the sed address of the lines of one job (from its identifier to its run step), so a case changes this job only.
+job_range() { printf '/^  %s:$/,/^      - run: just %s$/' "$1" "$2"; }
+wf_case nolintnode 1 "job 'lint' lacks the required action(s) actions/setup-node" "lint: setup-node removed (only in this job)" \
+    "$(job_range lint lint){/actions\/setup-node@/,/node-version:/d}"
+wf_case nolintpnpm 1 "job 'lint' lacks the required action(s) pnpm/action-setup" "lint: pnpm/action-setup removed (only in this job)" \
+    "$(job_range lint lint){/pnpm\/action-setup@/,/version: \"12.16.1\"/d}"
+wf_case nobreakinguv 1 "job 'breaking-changes' lacks the required action(s) astral-sh/setup-uv" "breaking-changes: setup-uv removed (only in this job)" \
+    "$(job_range breaking-changes breaking-changes){/astral-sh\/setup-uv@/,/version: \"0.13.7\"/d}"
+wf_case breakingjava 1 "job 'breaking-changes' has the action(s) actions/setup-java, which are not in required-setup.txt" "breaking-changes: an extra action (Java)" \
+    's|^      - run: just breaking-changes$|      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0\n        with:\n          distribution: temurin\n          java-version: "21.0.13+9"\n&|'
+wf_case nogenjava 1 "job 'check-generated' lacks the required action(s) actions/setup-java" "check-generated: setup-java removed (only in this job)" \
+    "$(job_range check-generated check-generated){/actions\/setup-java@/,/java-version:/d}"
+wf_case nogennode 1 "job 'check-generated' lacks the required action(s) actions/setup-node" "check-generated: setup-node removed (only in this job)" \
+    "$(job_range check-generated check-generated){/actions\/setup-node@/,/node-version:/d}"
+wf_case nocompilejava 1 "job 'compile' lacks the required action(s) actions/setup-java" "compile: setup-java removed (only in this job)" \
+    "$(job_range compile compile){/actions\/setup-java@/,/java-version:/d}"
+wf_case nocompilepnpm 1 "job 'compile' lacks the required action(s) pnpm/action-setup" "compile: pnpm/action-setup removed (only in this job)" \
+    "$(job_range compile compile){/pnpm\/action-setup@/,/version: \"12.16.1\"/d}"
+wf_case nodocsjava 1 "job 'api-docs' lacks the required action(s) actions/setup-java" "api-docs: setup-java removed (only in this job)" \
+    "$(job_range api-docs api-docs){/actions\/setup-java@/,/java-version:/d}"
+wf_case nodocsupload 1 "job 'api-docs' lacks the required action(s) actions/upload-artifact" "api-docs: the upload of the artifact removed" \
+    '/^      - run: just api-docs$/,/if-no-files-found: error/{/^      - uses: actions\/upload-artifact@/,/if-no-files-found: error/d}'
+wf_case docsupnode 1 "job 'api-docs' has the action(s) actions/setup-node, which are not in required-setup.txt" "api-docs: an extra action (Node)" \
+    's|^      - run: just api-docs$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
+wf_case docsif 1 "\`if: \${{ !cancelled() }}\` is not allowed" "api-docs: the upload step has the if of the SBOM upload (it is allowed in license-check only)" \
+    '/^  api-docs:$/,/^  # The tests of the gates/{/^      - uses: actions\/upload-artifact@/s|$|\n        if: ${{ !cancelled() }}|}'
+wf_case docsneeds 1 "job 'api-docs' has the key \`needs\`" "api-docs: needs" 's|^  api-docs:$|&\n    needs: compile|'
+wf_case gentest 1 "job 'test-gates' lacks the required action(s) actions/setup-java" "test-gates: setup-java removed (the tests of the generators need it)" \
+    "$(job_range test-gates test-gates){/actions\/setup-java@/,/java-version:/d}"
+wf_case gennode 1 "job 'test-gates' lacks the required action(s) actions/setup-node" "test-gates: setup-node removed (the lint test needs it)" \
+    "$(job_range test-gates test-gates){/actions\/setup-node@/,/node-version:/d}"
+wf_case genrecipe 1 "the recipe of the job is \`just generate\`, but it must be \`just check-generated\`" "check-generated: the job starts another recipe" \
+    's|^      - run: just check-generated$|      - run: just generate|'
+wf_case lintrenamed 1 "job 'lint-openapi' is not in required-setup.txt" "lint: the job has another identifier than the recipe" 's|^  lint:$|  lint-openapi:|'
 # the jobs
 wf_case nojobsudo 1 "the job 'check-sudo' of ci.yml is in required-setup.txt, but not in the workflows" "a job of the file is missing" \
     '/^  check-sudo:$/,/^      - run: just check-sudo$/d'
@@ -374,8 +409,8 @@ expect 2 "has no job" "required-setup.txt has no job" run_real_wf "${work}/wf-re
 printf 'ci.yml validate\nci.yml validate\n' >"${work}/required-twice.txt"
 expect 2 "is twice in the file" "required-setup.txt has a job twice" run_real_wf "${work}/wf-real" "${work}/required-twice.txt"
 expect 2 "cannot read" "required-setup.txt does not exist" run_real_wf "${work}/wf-real" "${work}/no-such-required.txt"
-# the data file of the repository is the one that the workflow needs: each of the 7 jobs is in it
-expect 0 "7 run step(s)" "required-setup.txt of the repository has the 7 gate jobs" run_real_wf "${work}/wf-real"
+# the data file of the repository is the one that the workflow needs: each of the 12 jobs is in it
+expect 0 "12 run step(s)" "required-setup.txt of the repository has the 12 gate jobs (7 of feat-5 and 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs)" run_real_wf "${work}/wf-real"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh (Task 130.142)"
@@ -421,6 +456,14 @@ pin_case nodemiss 1 "has no input \`node-version\`" "license-check job: the Node
 pin_case nodever 1 "\`node-version\` is 24.0.0" "license-check job: the Node version is not the one of versions.env" "s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
 pin_case pnpmmiss 1 "pnpm/action-setup has no input \`version\`" "license-check job: the pnpm version is missing" "/version: \"$(version_of PNPM_VERSION)\"/d"
 pin_case pnpmver 1 "PNPM_VERSION in tools/versions.env" "license-check job: the pnpm version is not the one of versions.env" "s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
+# The setup actions of the jobs of feat-6-contracts-openapi-pipeline (Task 130.110): a wrong version in one job only
+pin_case lintpnpm 1 "PNPM_VERSION in tools/versions.env" "lint job: the pnpm version is not the one of versions.env" "$(job_range lint lint)s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
+pin_case lintnode 1 "\`node-version\` is 24.0.0" "lint job: the Node version is not the one of versions.env" "$(job_range lint lint)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case genjava 1 "\`java-version\` is 21," "check-generated job: the Java version is not the one of versions.env" "$(job_range check-generated check-generated)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
+pin_case compilenode 1 "\`node-version\` is 24.0.0" "compile job: the Node version is not the one of versions.env" "$(job_range compile compile)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case docsdist 1 "must be temurin" "api-docs job: the Java distribution is not temurin" "$(job_range api-docs api-docs)s#distribution: temurin#distribution: zulu#"
+pin_case breakinguv 1 "UV_VERSION" "breaking-changes job: the uv version is not the one of versions.env" "$(job_range breaking-changes breaking-changes)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
+pin_case testgatesjava 1 "\`java-version\` is 21," "test-gates job: the Java version is not the one of versions.env" "$(job_range test-gates test-gates)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
 
 # A workflow with each setup action, with the versions of versions.env, and with changes
 all_setup="${work}/pin-all"

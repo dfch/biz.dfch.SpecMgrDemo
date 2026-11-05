@@ -41,6 +41,20 @@ The name of a check is the name of the job in `.github/workflows/ci.yml`. Each j
 | `check-sudo` | `just check-sudo` | A script that uses `sudo` | (feat-5, REQ-008) |
 | `test-gates` | `just test-gates` | A gate that does not stop for bad input (the tests of the gates, and the license gate with its fixtures) | (feat-5) |
 
+#### Jobs that feat-6-contracts-openapi-pipeline added (not yet required)
+
+These five jobs are in `.github/workflows/ci.yml` since phase 130 of feat-6 (the workflow runs them for each pull request to `dev` and `main`), and `tools/gates/required-setup.txt` has a line for each. They are **not set** as required checks in the rulesets: the owner adds them after the first run of the jobs (phase 135 of feat-6, task 135.100), and then changes the column "Set" of this table. `test-gates` (set above) now also runs the tests of these gates, so its run takes longer (about 8 minutes on the machine of the author, with warm caches).
+
+| Check (job) | Recipe | What it stops | Gate in DEC 361678a6 | Set in the rulesets of `dev` and `main` |
+|---|---|---|---|---|
+| `lint` | `just lint` | An OpenAPI file that breaks a rule of `tools/lint/ruleset.yaml` (Problem Details, `x-specmgr-req`, and the rules of Spectral). A warning is a failure | 3 | **No.** The owner sets it in phase 135 |
+| `breaking-changes` | `just breaking-changes` | A breaking change of `contracts/openapi.yaml` against the merge base of the base branch, with no entry in `tools/breaking/breaking-changes-ignore.txt` or with no higher `info.version` | 3 | **No.** The owner sets it in phase 135 |
+| `check-generated` | `just check-generated` | Generated code in `backend/src/generated` or `frontend/src/generated` that is not the code that `just generate` makes now: a file that is changed, deleted, extra, not tracked or ignored, or a missing mark | 4 | **No.** The owner sets it in phase 135 |
+| `compile` | `just compile` | A Maven module or a pnpm module that does not compile with the generated code | (feat-6, ACC-005) | **No.** The owner sets it in phase 135 |
+| `api-docs` | `just api-docs` | An OpenAPI file for which the generator `html2` makes no documentation. The job keeps `build/api-docs/` as the artifact `api-docs` | (feat-6, REQ-015) | **No.** The owner decides in phase 135 if it is required (it is an artifact job, and a plan question: task 120.130) |
+
+When the owner sets the jobs: add the five names to the `contexts` of the call above, and to the `required_status_checks` of the ruleset JSON for `main` and of the real ruleset of `dev` (id 26472506). GitHub shows a check in the list only after it ran once in the last 7 days, so open a pull request first (the throwaway pull request of task 130.120 of feat-6 does this).
+
 ## Steps in the web page
 
 1. Open the repository on GitHub. Go to Settings, Branches (or Settings, Rules, Rulesets).
@@ -262,8 +276,8 @@ allowed actions, and the version file.
 | Gate in DEC 361678a6 | Feature | Status |
 |---|---|---|
 | 2. Traceability check | None. GitHub issue #8 is for it | No feature yet. The owner makes a FEAT later |
-| 3. Linter and check for breaking changes of the OpenAPI file | feat-6-contracts-openapi-pipeline (expected) | Not started |
-| 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline (expected) | Not started |
+| 3. Linter and check for breaking changes of the OpenAPI file | feat-6-contracts-openapi-pipeline | Jobs `lint` and `breaking-changes` exist in `ci.yml` (phase 130). Not yet required checks (the owner, phase 135) |
+| 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline | Job `check-generated` exists in `ci.yml` (phase 130). Not yet a required check (the owner, phase 135) |
 | 5. Architecture tests | feat-7-verification-architecture-tools (expected) | Not started |
 | 6. Unit tests and integration tests with a threshold for coverage | feat-7 (tools) and the walking skeleton (thresholds) (expected) | Not started |
 | 7. Threshold for the mutation score | feat-7 (tools) and the walking skeleton (thresholds) (expected) | Not started |
