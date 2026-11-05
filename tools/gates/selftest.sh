@@ -1023,6 +1023,253 @@ expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oas
     env LINT_TOOL_DIR="${work}/no-such-lint-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 
 # ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the version of the generator plugin in backend/pom.xml (feat-6-contracts-openapi-pipeline, Task 120.105, REQ-009, ACC-011, ACC-012)"
+# OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION of versions.env and the version of the plugin in a pom.xml. The messages start with
+# `Generator plugin:`. The sha256 of the jar has no second place in a file: a changed sha256 stops the gates that start the
+# plugin (the section "the pin of the generator plugin" of this test, and test-generate-gate.sh with the real plugin).
+real_pom="${REPO_ROOT}/backend/pom.xml"
+generator_version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
+generator_sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
+other_generator_version="7.28.0"
+other_generator_sha="$(printf 'c%.0s' {1..64})"
+# mk_generator_root <name>: a tree with a copy of backend/pom.xml and the Maven Wrapper (the pin check of Maven needs it)
+mk_generator_root() {
+    local dir="${work}/genroot-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}/backend"
+    cp "${real_pom}" "${dir}/backend/pom.xml"
+    cp -r "${REPO_ROOT}/backend/.mvn" "${dir}/backend/.mvn"
+    echo "${dir}"
+}
+# run_generator_pins <root> [<versions.env>]: check-pins.sh for another project root
+run_generator_pins() { env GATE_WORK_ROOT="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# generator_pom_case <name> <exit code> <text> <description> <sed expression>: change the copy of pom.xml with sed
+generator_pom_case() {
+    local name="$1" code="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_generator_root "${name}")"
+    sed -i -e "${expression}" "${dir}/backend/pom.xml"
+    if cmp -s "${real_pom}" "${dir}/backend/pom.xml"; then
+        echo "FAIL ${description}: the sed expression did not change pom.xml"
+        failed=$((failed + 1))
+        return
+    fi
+    expect "${code}" "${text}" "${description}" run_generator_pins "${dir}"
+}
+# generator_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+generator_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/genver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/genver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_generator_pins "${REPO_ROOT}" "${work}/genver-${name}.env"
+}
+
+expect 0 "Generator plugin pin: Generator plugin: backend/pom.xml: openapi-generator-maven-plugin ${generator_version}, the version of tools/versions.env" \
+    "the real backend/pom.xml has the version of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+if grep -q "<openapi-generator.version>${generator_version}</openapi-generator.version>" "${real_pom}"; then
+    echo "ok   backend/pom.xml has the property openapi-generator.version ${generator_version}"
+    passed=$((passed + 1))
+else
+    echo "FAIL backend/pom.xml has not the property openapi-generator.version ${generator_version}"
+    failed=$((failed + 1))
+fi
+# The two places, each alone (ACC-011, a changed version)
+generator_versions_case onlyversions "has the plugin openapi-generator-maven-plugin ${generator_version}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION in tools/versions.env is ${other_generator_version}" \
+    "generator plugin, one place only: versions.env has another version" "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#"
+generator_pom_case onlypom 1 "has the plugin openapi-generator-maven-plugin ${other_generator_version}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION in tools/versions.env is ${generator_version}" \
+    "generator plugin, one place only: pom.xml has another version (the property)" \
+    "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#"
+# Both places with the same new version pass
+dir="$(mk_generator_root bothplaces)"
+sed -i -e "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#" "${dir}/backend/pom.xml"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#" "${real_versions}" >"${work}/genver-both.env"
+expect 0 "RESULT: PASS" "generator plugin: both places have the same new version" run_generator_pins "${dir}" "${work}/genver-both.env"
+# The version in other forms
+generator_pom_case literalok 0 "RESULT: PASS" "generator plugin: the version is written in the plugin (the same value)" \
+    "s#<version>\${openapi-generator.version}</version>#<version>${generator_version}</version>#"
+generator_pom_case literalother 1 "has the plugin openapi-generator-maven-plugin ${other_generator_version}, but" "generator plugin: the version is written in the plugin (another value)" \
+    "s#<version>\${openapi-generator.version}</version>#<version>${other_generator_version}</version>#"
+generator_pom_case noversion 1 "has the plugin openapi-generator-maven-plugin with no <version>" "generator plugin: the plugin has no <version>" \
+    "/<version>\${openapi-generator.version}<\/version>/d"
+generator_pom_case unknownproperty 1 "is not a version or a <properties> value of the same pom.xml" "generator plugin: the version is a property that the pom.xml does not have" \
+    "s#<version>\${openapi-generator.version}</version>#<version>\${no.such.property}</version>#"
+generator_pom_case range 1 "has the plugin openapi-generator-maven-plugin [7.27.0,8), but" "generator plugin: the version is a range" \
+    "s#<version>\${openapi-generator.version}</version>#<version>[7.27.0,8)</version>#"
+generator_pom_case latest 1 "has the plugin openapi-generator-maven-plugin LATEST, but" "generator plugin: the version is LATEST" \
+    "s#<version>\${openapi-generator.version}</version>#<version>LATEST</version>#"
+generator_pom_case noplugin 0 "no pom.xml has the plugin openapi-generator-maven-plugin" "generator plugin: a pom.xml with no plugin is no problem for this check" \
+    "s#<artifactId>openapi-generator-maven-plugin</artifactId>#<artifactId>other-plugin</artifactId>#"
+dir="$(mk_generator_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
+expect 1 "cannot read backend/pom.xml as XML" "generator plugin: a pom.xml that is not XML" run_generator_pins "${dir}"
+# The second module has another version
+dir="$(mk_generator_root second)" && mkdir -p "${dir}/backend/svc" && sed -e "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#" \
+    "${real_pom}" >"${dir}/backend/svc/pom.xml"
+expect 1 "backend/svc/pom.xml has the plugin openapi-generator-maven-plugin ${other_generator_version}" "generator plugin: a second pom.xml with another version" run_generator_pins "${dir}"
+# The form of the values in versions.env
+for sha in "abc" "$(printf 'A%.0s' {1..64})" "$(printf 'g%.0s' {1..64})" "${generator_sha}0" "${generator_sha:1}" "sha256:${generator_sha}"; do
+    sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${sha}#" "${real_versions}" >"${work}/genver-shaform.env"
+    expect 1 "it must be a sha256 value (64 lower case hexadecimal characters)" "generator plugin, versions.env: the sha256 is not a sha256 value (${sha:0:20}...)" \
+        run_generator_pins "${REPO_ROOT}" "${work}/genver-shaform.env"
+done
+for range in "^${generator_version}" "latest" "7" "7.27" "v${generator_version}" "${generator_version}.x"; do
+    sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${range}#" "${real_versions}" >"${work}/genver-range.env"
+    expect 1 "it must be an exact version" "generator plugin, versions.env: the version is not an exact version (${range})" run_generator_pins "${REPO_ROOT}" "${work}/genver-range.env"
+done
+grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=' "${real_versions}" >"${work}/genver-nover.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is not in tools/versions.env" "generator plugin, versions.env has no version" run_generator_pins "${REPO_ROOT}" "${work}/genver-nover.env"
+grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=' "${real_versions}" >"${work}/genver-nosha.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not in tools/versions.env" "generator plugin, versions.env has no sha256" run_generator_pins "${REPO_ROOT}" "${work}/genver-nosha.env"
+# The checks are separate: a bad version of the plugin does not hide the result of the other checks
+generator_versions_case separate "Frontend pin: Frontend:" "a bad version of the generator plugin: the check of the frontend still passes (and says so)" \
+    "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#"
+
+section "check-pins.sh: the pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110, REQ-009, ACC-011)"
+# Kubb, Zod and TypeScript: package.json, pnpm-workspace.yaml, the lock file, and the keys KUBB_*, ZOD_* and TYPESCRIPT_* of versions.env.
+# The messages start with `Frontend:`. Each package has a version key and an integrity key, and each case changes one place only.
+real_frontend="${REPO_ROOT}/frontend"
+# mk_frontend_root <name>: a tree with a copy of the three files of frontend/ (the folder is printed)
+mk_frontend_root() {
+    local dir="${work}/feroot-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}/frontend"
+    cp "${real_frontend}/package.json" "${real_frontend}/pnpm-lock.yaml" "${real_frontend}/pnpm-workspace.yaml" "${dir}/frontend/"
+    echo "${dir}"
+}
+run_frontend_pins() { env GATE_WORK_ROOT="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# frontend_file_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
+frontend_file_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_frontend_root "${name}")"
+    sed -i -e "${expression}" "${dir}/frontend/${file}"
+    if cmp -s "${real_frontend}/${file}" "${dir}/frontend/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_frontend_pins "${dir}"
+}
+# frontend_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+frontend_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/fever-${name}.env"
+    if cmp -s "${real_versions}" "${work}/fever-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_frontend_pins "${REPO_ROOT}" "${work}/fever-${name}.env"
+}
+# frontend_append_case <name> <file> <text> <description> <text to append>: add text at the end of <file> in a copy
+frontend_append_case() {
+    local name="$1" file="$2" text="$3" description="$4" dir
+    dir="$(mk_frontend_root "${name}")"
+    printf '%b' "$5" >>"${dir}/frontend/${file}"
+    expect 1 "${text}" "${description}" run_frontend_pins "${dir}"
+}
+fe_new_version="9.9.9"
+fe_new_integrity="${other_integrity}"
+dir="$(mk_frontend_root real)"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod and TypeScript, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod and TypeScript" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
+expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
+mkdir -p "${work}/feroot-none"
+expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_frontend_pins "${work}/feroot-none"
+
+# Each package: the three places, each alone (ACC-011: a changed version and a changed checksum of each tool)
+# <name> <version key> <integrity key>: kubb and @kubb/core have the version key KUBB_VERSION, so a change of it stops both.
+for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
+    "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY"; do
+    IFS='|' read -r package version_key integrity_key <<<"${entry}"
+    version="$(version_of "${version_key}")"
+    integrity="$(version_of "${integrity_key}")"
+    escaped="${package//\//\\/}" # the name in a sed expression
+    slug="${package//[^a-z]/}"
+    frontend_versions_case "v-${slug}" "but ${version_key} in tools/versions.env is ${fe_new_version}" "${package}, one place only: versions.env has another ${version_key}" \
+        "s#^${version_key}=.*#${version_key}=${fe_new_version}#"
+    frontend_versions_case "i-${slug}" "but ${integrity_key} in tools/versions.env is ${fe_new_integrity}" "${package}, one place only: versions.env has another ${integrity_key}" \
+        "s#^${integrity_key}=.*#${integrity_key}=${fe_new_integrity}#"
+    frontend_file_case "p-${slug}" package.json "but ${version_key} in tools/versions.env is ${version}" "${package}, one place only: package.json has another version" \
+        "s#\"${package}\": \"${version}\"#\"${package}\": \"${fe_new_version}\"#"
+    frontend_file_case "l-${slug}" pnpm-lock.yaml "the importer has ${package} \`specifier\` '${fe_new_version}'" "${package}, one place only: the lock file has another version (importer)" \
+        "/^      '\\?${escaped}'\\?:\$/,+2 s#${version}#${fe_new_version}#"
+    frontend_file_case "k-${slug}" pnpm-lock.yaml "\`packages\` has no ${package}@${version}" "${package}, one place only: the lock file has another version (packages)" \
+        "s#^  '\\?${escaped}@${version}'\\?:\$#  '${package}@${fe_new_version}':#"
+    frontend_file_case "g-${slug}" pnpm-lock.yaml "but ${integrity_key} in tools/versions.env is ${integrity}" "${package}, one place only: the lock file has another integrity value" \
+        "s#${integrity}#${fe_new_integrity}#"
+done
+# All three places with the same new value pass (the procedure of frontend/README.md), for Zod
+dir="$(mk_frontend_root allthree)"
+sed -i -e "s#\"zod\": \"4.6.7\"#\"zod\": \"${fe_new_version}\"#" "${dir}/frontend/package.json"
+sed -i -e "/^      zod:\$/,+2 s#4.6.7#${fe_new_version}#" -e "s#^  zod@4.6.7:#  zod@${fe_new_version}:#" -e "s#^  zod@4.6.7: {}#  zod@${fe_new_version}: {}#" \
+    -e "s#$(version_of ZOD_INTEGRITY)#${fe_new_integrity}#" "${dir}/frontend/pnpm-lock.yaml"
+sed -e "s#^ZOD_VERSION=.*#ZOD_VERSION=${fe_new_version}#" -e "s#^ZOD_INTEGRITY=.*#ZOD_INTEGRITY=${fe_new_integrity}#" "${real_versions}" >"${work}/fever-allthree.env"
+expect 0 "RESULT: PASS" "zod: all three places have the same new version and integrity value" run_frontend_pins "${dir}" "${work}/fever-allthree.env"
+
+# The form of the values in versions.env
+for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION; do
+    for range in "^$(version_of "${key}")" "latest" "5"; do
+        sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
+        expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
+    done
+done
+for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY; do
+    sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
+    expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
+    grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
+    expect 1 "${key} is not in tools/versions.env" "frontend, versions.env has no ${key}" run_frontend_pins "${REPO_ROOT}" "${work}/fever-missing.env"
+done
+grep -v "^KUBB_VERSION=" "${real_versions}" >"${work}/fever-missing.env"
+expect 1 "KUBB_VERSION is not in tools/versions.env" "frontend, versions.env has no KUBB_VERSION" run_frontend_pins "${REPO_ROOT}" "${work}/fever-missing.env"
+
+# package.json
+frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env is 5.15.3" "package.json: a range (^) and not an exact version" 's#"kubb": "5.15.3"#"kubb": "^5.15.3"#'
+frontend_file_case pkgtag package.json "but TYPESCRIPT_VERSION in tools/versions.env is 5.9.3" "package.json: a tag and not an exact version" 's#"typescript": "5.9.3"#"typescript": "latest"#'
+frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['zod']" "package.json: a dev dependency in dependencies" \
+    's#"dependencies": {#"dependencies": {\n    "typescript": "5.9.3",#'
+frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d;s#"kubb": "5.15.3",#"kubb": "5.15.3"#'
+frontend_file_case pkgextra package.json "\`devDependencies\` has left-pad. It has only" "package.json: a dependency that is not in the list" 's#"typescript": "5.9.3"#"typescript": "5.9.3",\n    "left-pad": "1.3.0"#'
+frontend_file_case pkgpm package.json "has the key \`packageManager\`" "package.json: a packageManager field (it changes the lock file)" 's#"private": true,#"private": true,\n  "packageManager": "pnpm@12.16.1",#'
+frontend_file_case pkgpnpm package.json "has the key \`pnpm\`" "package.json: a pnpm key (settings)" 's#"private": true,#"private": true,\n  "pnpm": {"overrides": {"zod": "3.0.0"}},#'
+frontend_file_case pkgoverrides package.json "has the key \`overrides\`" "package.json: overrides" 's#"private": true,#"private": true,\n  "overrides": {"zod": "3.0.0"},#'
+frontend_file_case pkgoptional package.json "has the key \`optionalDependencies\`" "package.json: optionalDependencies" 's#"private": true,#"private": true,\n  "optionalDependencies": {},#'
+frontend_file_case pkgpeer package.json "has the key \`peerDependencies\`" "package.json: peerDependencies" 's#"private": true,#"private": true,\n  "peerDependencies": {},#'
+frontend_file_case pkgtwice package.json "the key 'zod' is there two times" "package.json: a key two times" 's#"zod": "4.6.7"#"zod": "4.6.7", "zod": "4.6.7"#'
+frontend_file_case pkgbroken package.json "cannot be read as JSON" "package.json: not JSON" 's#^{#not json {#'
+frontend_append_case pkgarray package.json "" "package.json: text after the JSON object" 'x'
+
+# pnpm-workspace.yaml
+frontend_file_case wsoverrides pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: an extra key (overrides)" 's#^packages:#overrides:\n  zod: 3.0.0\npackages:#'
+frontend_file_case wspackages pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: another package folder" 's#"\."#"packages/*"#'
+frontend_file_case wsregistry pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: a registry setting" 's#^packages:#registry: https://example.com/\npackages:#'
+
+# the lock file
+frontend_file_case lockversion pnpm-lock.yaml "\`lockfileVersion\` is '8.0'" "lock file: another lockfileVersion" "s#^lockfileVersion: '9.0'#lockfileVersion: '8.0'#"
+frontend_file_case lockoverrides pnpm-lock.yaml "has the top-level key \`overrides\`" "lock file: a top-level key overrides" "s#^settings:#overrides:\n  zod: 3.0.0\n\nsettings:#"
+frontend_file_case locktarball pnpm-lock.yaml "has the \`resolution\` keys ['tarball']" "lock file: a package from a tarball URL" \
+    "0,/resolution: {integrity: \\(sha512-[^,}]*\\)}/s#resolution: {integrity: \\(sha512-[^,}]*\\)}#resolution: {integrity: \\1, tarball: https://example.com/x.tgz}#"
+frontend_file_case lockgit pnpm-lock.yaml "is not \`<name>@<exact version>\`" "lock file: a package from git" "0,/^  '@apidevtools\\/json-schema-ref-parser@15.5.2':/s##  '@apidevtools/json-schema-ref-parser@github.com/x/y/z':#"
+frontend_file_case locknointegrity pnpm-lock.yaml "has no integrity value" "lock file: a package with no integrity value" "0,/^    resolution: {integrity: sha512-[^}]*}/s#^    resolution: {integrity: sha512-[^}]*}#    resolution: {}#"
+frontend_file_case lockbadintegrity pnpm-lock.yaml "has an integrity value that is not sha256, sha384 or sha512" "lock file: an integrity value that is not a hash" "0,/integrity: sha512-[^,}]*/s#integrity: sha512-[^,}]*#integrity: md5-abc#"
+frontend_file_case lockimporter pnpm-lock.yaml "the importer has no zod in \`dependencies\` with \`specifier\` and \`version\`" "lock file: the importer has no zod" "/^      zod:\$/,+2d"
+frontend_append_case locktwice pnpm-lock.yaml "has 2 YAML documents" "lock file: a second YAML document" "---\nlockfileVersion: '9.0'\n"
+frontend_append_case lockdup pnpm-lock.yaml "the key 'importers' is there two times" "lock file: a key two times" "importers: {}\n"
+frontend_file_case locksnapshot pnpm-lock.yaml "which is not in \`packages\`" "lock file: a snapshot of a package that is not in packages" "0,/^snapshots:/s#^snapshots:#snapshots:\n\n  nothing@1.0.0: {}#"
+
+# the files of the folder
+for name in .npmrc .pnpmfile.cjs .pnpmfile.mjs pnpmfile.cjs .yarnrc .yarnrc.yml yarn.lock package-lock.json bunfig.toml; do
+    dir="$(mk_frontend_root "file-${name}")" && echo "x" >"${dir}/frontend/${name}"
+    expect 1 "frontend/${name} is not allowed" "frontend/ has the file ${name}" run_frontend_pins "${dir}"
+done
+for name in package.json pnpm-workspace.yaml pnpm-lock.yaml; do
+    dir="$(mk_frontend_root "missing-${name}")" && rm "${dir}/frontend/${name}"
+    expect 1 "frontend/${name} does not exist" "frontend/ has no ${name}" run_frontend_pins "${dir}"
+done
+dir="$(mk_frontend_root files-ok)" && mkdir -p "${dir}/frontend/src" "${dir}/frontend/node_modules" && echo "x" >"${dir}/frontend/tsconfig.json" && echo "x" >"${dir}/frontend/README.md"
+expect 0 "RESULT: PASS" "frontend/ with other files (tsconfig.json, README.md, src, node_modules) passes" run_frontend_pins "${dir}"
+
+# ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
 fix="${GATES_DIR}/fixtures"
 sudo_case() {
@@ -1053,14 +1300,22 @@ mkdir -p "${stubs}"
 cat >"${stubs}/mvnw-stub" <<'STUB'
 #!/usr/bin/env bash
 echo "stub mvnw $*"
-repo="" skip=0
+[[ -n "${STUB_MVN_LOG:-}" ]] && echo "$*" >>"${STUB_MVN_LOG}"
+repo="" skip=0 generator_version=""
 for argument in "$@"; do
     case "${argument}" in
         -Dmaven.repo.local=*) repo="${argument#*=}" ;;
         -Dcyclonedx.skip=true) skip=1 ;;
+        -Dcodegen.skip=true) skip=1 ;;
+        org.openapitools:openapi-generator-maven-plugin:*) generator_version="${argument#org.openapitools:openapi-generator-maven-plugin:}"; generator_version="${generator_version%%:*}" ;;
     esac
 done
-if [[ -n "${repo}" ]]; then
+if [[ -n "${repo}" && -n "${generator_version}" ]]; then
+    # feat-6, Task 120.105: the goal of the generator plugin. Like Maven, the stub writes the plugin jar in the local repository.
+    jar="${repo}/org/openapitools/openapi-generator-maven-plugin/${generator_version}"
+    mkdir -p "${jar}"
+    [[ "${STUB_GENERATOR_NO_JAR:-}" == "1" ]] || printf '%s' "${STUB_GENERATOR_JAR_CONTENT:-stub-generator-jar}" >"${jar}/openapi-generator-maven-plugin-${generator_version}.jar"
+elif [[ -n "${repo}" ]]; then
     jar="${repo}/org/cyclonedx/cyclonedx-maven-plugin/${STUB_PLUGIN_VERSION}"
     mkdir -p "${jar}"
     printf '%s' "${STUB_JAR_CONTENT:-stub-plugin-jar}" >"${jar}/cyclonedx-maven-plugin-${STUB_PLUGIN_VERSION}.jar"
@@ -1432,6 +1687,76 @@ expect 1 "CYCLONEDX_MAVEN_PLUGIN_SHA256 in ${work}/versions-badjar.env is 0000" 
     sbom_run "${root}" VERSIONS_FILE="${work}/versions-badjar.env"
 sed -e "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=abc#" "${stub_versions}" >"${work}/versions-shortjar.env"
 expect 1 "is not a sha256 value" "versions.env has a plugin sha256 that is not a sha256 value" sbom_run "${root}" VERSIONS_FILE="${work}/versions-shortjar.env"
+section "the pin of the generator plugin: verify_generator_plugin with a stub for mvnw (feat-6-contracts-openapi-pipeline, Task 120.105, ACC-012)"
+# The function of _lib.sh that generate.sh, compile.sh and api-docs.sh start first: Maven loads the plugin (the stub writes a jar to
+# the local repository), and the sha256 of the jar must be OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256. The real plugin is in
+# test-generate-gate.sh.
+gen_jar_sha="$(printf 'stub-generator-jar' | sha256sum | cut -d' ' -f1)"
+gen_stub_versions="${work}/versions-genstubs.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${gen_jar_sha}#" "${real_versions}" >"${gen_stub_versions}"
+mvn_log="${work}/mvn-calls.log"
+# verify_run <root> [<VAR=value>...]: verify_generator_plugin for <root>/backend, with the stub of mvnw
+verify_run() {
+    local root="$1"
+    shift
+    : >"${mvn_log}"
+    env PATH="${stubs}:${PATH}" GENERATOR_MAVEN_REPO_LOCAL="${root}/m2" VERSIONS_FILE="${gen_stub_versions}" STUB_MVN_LOG="${mvn_log}" "$@" \
+        bash -c 'source "$1"; verify_generator_plugin "$2"' _ "${GATES_DIR}/_lib.sh" "${root}/backend"
+}
+root="$(new_tree gen-good)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 0 "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256" "the plugin jar has the pinned sha256" verify_run "${root}"
+if grep -q -- "org.openapitools:openapi-generator-maven-plugin:$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION):generate@spring-interfaces" "${mvn_log}" \
+    && grep -q -- "-Dcodegen.skip=true" "${mvn_log}" && grep -q -- "-Dmaven.repo.local=${root}/m2" "${mvn_log}"; then
+    echo "ok   Maven loads the plugin with the version of versions.env, -Dcodegen.skip=true (no generation) and the local repository of the test"
+    passed=$((passed + 1))
+else
+    echo "FAIL the call of mvnw is not the call that loads the plugin without a generation:"
+    sed -e 's/^/     | /' "${mvn_log}"
+    failed=$((failed + 1))
+fi
+expect 1 "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${gen_stub_versions} is ${gen_jar_sha}" "a plugin jar with another sha256 than the pin" \
+    verify_run "${root}" STUB_GENERATOR_JAR_CONTENT=other-jar
+expect 1 "The plugin did not generate." "a plugin jar with another sha256: the message says that the plugin did not generate" verify_run "${root}" STUB_GENERATOR_JAR_CONTENT=other-jar
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=0000000000000000000000000000000000000000000000000000000000000000#" \
+    "${gen_stub_versions}" >"${work}/versions-genbadjar.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${work}/versions-genbadjar.env is 0000" "versions.env has another plugin sha256 than the jar" \
+    verify_run "${root}" VERSIONS_FILE="${work}/versions-genbadjar.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=abc#" "${gen_stub_versions}" >"${work}/versions-genshortjar.env"
+expect 1 "is not a sha256 value" "versions.env has a plugin sha256 that is not a sha256 value" verify_run "${root}" VERSIONS_FILE="${work}/versions-genshortjar.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=7.x#" "${gen_stub_versions}" >"${work}/versions-genrange.env"
+expect 1 "is not an exact version" "versions.env has a plugin version that is not an exact version" verify_run "${root}" VERSIONS_FILE="${work}/versions-genrange.env"
+# Another version in versions.env: Maven loads that version, and the jar of the stub has the same content, so the pin of the version is the one of the call
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=7.28.0#" "${gen_stub_versions}" >"${work}/versions-gen728.env"
+expect 0 "sha256 of the plugin jar is the value" "another version in versions.env: Maven loads that version" verify_run "${root}" VERSIONS_FILE="${work}/versions-gen728.env"
+if grep -q -- "openapi-generator-maven-plugin:7.28.0:generate@spring-interfaces" "${mvn_log}"; then
+    echo "ok   the call of mvnw has the version of versions.env (7.28.0)"
+    passed=$((passed + 1))
+else
+    echo "FAIL the call of mvnw has not the version of versions.env"
+    failed=$((failed + 1))
+fi
+root="$(new_tree gen-nojar)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 1 "The plugin jar is not at" "Maven did not write the plugin jar" verify_run "${root}" STUB_GENERATOR_NO_JAR=1
+root="$(new_tree gen-nomvnw)"
+put "${root}" backend/pom.xml "${pom_xml}"
+expect 1 "backend/mvnw does not exist" "no mvnw: the function does not use the Maven of the PATH" verify_run "${root}"
+root="$(new_tree gen-noexec)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+chmod -x "${root}/backend/mvnw"
+expect 1 "backend/mvnw is not executable" "mvnw is not executable" verify_run "${root}"
+if [[ ! -e "${work}/mvn-of-the-path-was-started" ]]; then
+    echo "ok   verify_generator_plugin did not start the mvn of the PATH (it starts mvnw)"
+    passed=$((passed + 1))
+else
+    echo "FAIL verify_generator_plugin started the mvn of the PATH"
+    failed=$((failed + 1))
+fi
+
 section "sbom.sh: cdxgen runs from the lock file (finding G2, feat-16-cdxgen-lockfile)"
 # no_frontend_sbom <root> <description>: no SBOM file of the frontend (the script stopped before cdxgen made it)
 no_frontend_sbom() {

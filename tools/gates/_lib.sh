@@ -165,3 +165,75 @@ install_oasdiff() {
         || die "${OASDIFF_BIN} says '${installed}', but OASDIFF_VERSION in ${VERSIONS_FILE} is '${version}'."
     log "oasdiff ${version} is in ${target}"
 }
+
+# verify_generator_plugin <module dir>
+#
+# Compares the sha256 of the jar of the generator plugin (openapi-generator-maven-plugin, feat-6-contracts-openapi-pipeline,
+# Task 120.105, REQ-009, ACC-012) with OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 of tools/versions.env, as sbom.sh does for
+# cyclonedx-maven-plugin (rule G2):
+#
+#   1. The function starts the goal `generate` of the plugin (the version is OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION; the
+#      execution `spring-interfaces` of backend/pom.xml gives the input) with -Dcodegen.skip=true through the Maven Wrapper of <module dir> (never the Maven of the PATH). Maven loads the plugin,
+#      and downloads the jar to the local repository if it is not there, but nothing is generated.
+#   2. It compares the sha256 of the jar in the local repository with the pin, and stops (exit code 1) if the value is not
+#      the same. The caller starts the real plugin only after this function returns.
+#
+# The local repository is ~/.m2/repository. GENERATOR_MAVEN_REPO_LOCAL sets another one (for the tests); the function gives
+# it to Maven with -Dmaven.repo.local, so Maven and the function use the same folder. The dependencies of the plugin are NOT
+# checked (GitHub issue #23). The first run needs the network (Maven Central).
+verify_generator_plugin() {
+    local module_dir="$1" version sha repo_local jar actual
+    version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
+    sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
+    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is not an exact version: '${version}'"
+    [[ "${sha}" =~ ^[0-9a-f]{64}$ ]] || die "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not a sha256 value: '${sha}'"
+    [[ -f "${module_dir}/mvnw" ]] || die "${module_dir}/mvnw does not exist. The gates must not use the Maven of the PATH."
+    [[ -x "${module_dir}/mvnw" ]] || die "${module_dir}/mvnw is not executable (chmod +x, and git update-index --chmod=+x)."
+    require_cmd sha256sum
+    repo_local="${GENERATOR_MAVEN_REPO_LOCAL:-${HOME}/.m2/repository}"
+    jar="${repo_local}/org/openapitools/openapi-generator-maven-plugin/${version}/openapi-generator-maven-plugin-${version}.jar"
+    log "Generator plugin: openapi-generator-maven-plugin ${version} (load the plugin, no generation)"
+    (
+        cd "${module_dir}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+            "org.openapitools:openapi-generator-maven-plugin:${version}:generate@spring-interfaces" -Dcodegen.skip=true
+    ) || die "Maven could not load the plugin openapi-generator-maven-plugin ${version} (see above)."
+    [[ -f "${jar}" ]] || die "The plugin jar is not at ${jar} after Maven loaded it."
+    actual="$(sha256sum "${jar}" | cut -d' ' -f1)"
+    [[ "${actual}" == "${sha}" ]] \
+        || die "sha256 of ${jar} is ${actual}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${VERSIONS_FILE} is ${sha}. The plugin did not generate."
+    log "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256"
+}
+
+# install_frontend <frontend dir>
+#
+# Installs the pnpm module frontend/ from its lock file (feat-6-contracts-openapi-pipeline, Task 120.110, REQ-009, ACC-011):
+#
+#   pnpm install --frozen-lockfile --ignore-scripts
+#
+# pnpm stops if package.json and the lock file are not the same, and it compares the integrity value of each tarball (Kubb,
+# Zod, TypeScript and all their dependencies) with the lock file. No package runs an install script. Then the function stops
+# if an installed package has another version than the key of tools/versions.env (`just check-pins` ties package.json and the
+# lock file to these keys, and this is the check of the install itself). Needs Node, pnpm and the network (the first run).
+install_frontend() {
+    local frontend_dir="$1" file
+    [[ -d "${frontend_dir}" ]] || die "The folder of the pnpm module does not exist: ${frontend_dir}"
+    for file in package.json pnpm-lock.yaml pnpm-workspace.yaml; do
+        [[ -f "${frontend_dir}/${file}" ]] || die "${frontend_dir}/${file} does not exist. The module must run from a lock file."
+    done
+    require_cmd node
+    require_cmd pnpm
+    log "Install: pnpm install --frozen-lockfile --ignore-scripts in ${frontend_dir}"
+    (cd "${frontend_dir}" && pnpm install --frozen-lockfile --ignore-scripts >/dev/null) \
+        || die "pnpm install --frozen-lockfile --ignore-scripts failed in ${frontend_dir} (see above). Nothing was generated."
+    local entry package key want installed
+    for entry in kubb:KUBB_VERSION @kubb/core:KUBB_VERSION @kubb/plugin-zod:KUBB_PLUGIN_ZOD_VERSION \
+        @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION; do
+        package="${entry%%:*}" key="${entry##*:}"
+        want="$(version_of "${key}")"
+        installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \
+            || die "Cannot read the version of the installed ${package} in ${frontend_dir}/node_modules/${package}/package.json"
+        [[ "${installed}" == "${want}" ]] \
+            || die "The installed ${package} has the version '${installed}', but ${key} in ${VERSIONS_FILE} is '${want}'."
+    done
+    log "The installed Kubb, Zod and TypeScript have the versions of tools/versions.env"
+}

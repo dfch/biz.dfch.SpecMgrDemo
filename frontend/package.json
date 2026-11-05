@@ -1,0 +1,21 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The TypeScript frontend. This module has no product code. It has the Zod schemas that Kubb makes from contracts/openapi.yaml (feat-6-contracts-openapi-pipeline). Do not use a range for a version: just check-pins compares the versions with tools/versions.env. See README.md.",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "compile": "tsc --noEmit --strict"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@kubb/core": "5.15.3",
+    "@kubb/plugin-ts": "5.4.0",
+    "@kubb/plugin-zod": "5.8.0",
+    "kubb": "5.15.3",
+    "typescript": "5.9.3"
+  }
+}

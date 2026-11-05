@@ -4,7 +4,8 @@
 # feat-5-foundation-monorepo-ci, Task 120.110.
 # The number after the script name is the number of the task that wrote the gate: 130.xxx are the tasks of
 # feat-5-foundation-monorepo-ci, 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate), and
-# 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes).
+# 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes), and 120.120 and 120.130 are the
+# tasks of feat-6-contracts-openapi-pipeline (the generators and the API documentation).
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
 # because a script is missing.
@@ -73,8 +74,24 @@ breaking-changes:
 test-breaking-changes-gate:
     @{{ just_executable() }} _gate test-breaking-changes-gate.sh 115.130
 
-# Test: all gates with good and bad input (the license gate, the lint gate and the gate for breaking changes with their own tests too).
-test-gates: test-license-gate test-lint-gate test-breaking-changes-gate
+# Make all generated code again from contracts/openapi.yaml: the Spring server interfaces in backend/src/generated and the Zod schemas in frontend/src/generated. Two runs one after the other make no change (REQ-004, REQ-011).
+generate:
+    @{{ just_executable() }} _gate generate.sh 120.120 backend frontend
+
+# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, and tsc --noEmit --strict). The generation is part of the Maven build (ACC-005).
+compile:
+    @{{ just_executable() }} _gate compile.sh 120.120 backend frontend
+
+# Make the API documentation (HTML) from contracts/openapi.yaml with the generator html2 of the pinned plugin. The output is in build/api-docs and is not in git (REQ-015).
+api-docs:
+    @{{ just_executable() }} _gate api-docs.sh 120.130 backend build/api-docs
+
+# Test: the generators. Two runs of `just generate` make no change, the lists of error codes in the YAML file, in the Java enum and in the Zod schema are the same, and two runs of `just api-docs` make the same HTML (ACC-008, ACC-013, ACC-018).
+test-generate-gate:
+    @{{ just_executable() }} _gate test-generate-gate.sh 120.120
+
+# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes and the generators with their own tests too).
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Check the install on this machine: each tool has the pinned version.
