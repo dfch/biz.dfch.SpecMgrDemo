@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Gate: the pins in the workflows (ACC-013), the lock files of cdxgen and Spectral, and of the Python tools.
+"""Gate: the pins in the workflows (ACC-013), the lock files of cdxgen and Spectral, the download of oasdiff, and the Python tools.
 
 feat-5-foundation-monorepo-ci, Task 130.142 (REQ-003, REQ-015).
 feat-16-cdxgen-lockfile, Task 110.100 (REQ-003, REQ-005).
 feat-22-python-tools-lockfile, Task 120.100 (REQ-003, REQ-004).
 feat-6-contracts-openapi-pipeline, Task 110.110 (REQ-009): the same check for the lock file of Spectral.
+feat-6-contracts-openapi-pipeline, Task 115.100 (REQ-009, ACC-011): the check of the pin of oasdiff.
 
 Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> <python-lock-dir>
-                     <lint-tool-dir>
+                     <lint-tool-dir> <breaking-tool-dir>
 
 The script stops for each of these:
 
@@ -74,6 +75,23 @@ runs it. The frozen install in sbom.sh does the real check of each tarball again
 ties the lock file to tools/versions.env and stops a lock file that the install would accept but that has a
 source that is not the registry. A change of only one of the three places (versions.env, package.json, the
 lock file) stops the check.
+
+The pin of the tool for breaking changes oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100; REQ-009, ACC-011).
+oasdiff is a binary that the gate downloads (install_oasdiff in _lib.sh), so it has no lock file. tools/versions.env has
+OASDIFF_VERSION and OASDIFF_SHA256 (the sha256 of the file oasdiff_<version>_linux_amd64.tar.gz). <breaking-tool-dir> is
+tools/breaking/, and it has the file oasdiff-checksums.txt: the file `checksums.txt` of the release of the vendor, without
+a change (lines `<sha256>  <file name>`). The vendor file is the second place of the pin. The check is always on, and it
+fails closed. The script stops for each of these:
+
+  * OASDIFF_VERSION is missing or is not an exact version, or OASDIFF_SHA256 is missing or is not 64 lower case
+    hexadecimal characters;
+  * <breaking-tool-dir> or the file oasdiff-checksums.txt is missing, or a line of the file is not
+    `<sha256 value>  <file name>`;
+  * the file has no line for oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz, has more than one such line, or the sha256 of
+    the line is not OASDIFF_SHA256.
+
+A change of only one of the two places (versions.env, oasdiff-checksums.txt) stops the check. The real check of the
+download is in install_oasdiff (the sha256 of the file against OASDIFF_SHA256, before the file is unpacked).
 
 The lock files of the Python tools (the finding G2 of the review, feat-22-python-tools-lockfile; REQ-003, REQ-004).
 <python-lock-dir> is tools/python/. It has one lock file for each tool (PYTHON_LOCKS below), and no other lock
@@ -184,6 +202,15 @@ LOCK_REQUIREMENT = re.compile(
 )
 LOCK_HASH = re.compile(r"--hash=sha256:[0-9a-f]{64}")
 MAX_LOCK_PROBLEMS = 5
+
+# The pin of oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100): the keys of tools/versions.env, the name of the
+# release file for Linux x86_64, and the file of the vendor (checksums.txt of the release) in tools/breaking/.
+OASDIFF_VERSION_KEY = "OASDIFF_VERSION"
+OASDIFF_SHA256_KEY = "OASDIFF_SHA256"
+OASDIFF_ASSET = "oasdiff_{version}_linux_amd64.tar.gz"
+OASDIFF_CHECKSUMS_FILE = "oasdiff-checksums.txt"
+SHA256_VALUE = re.compile(r"[0-9a-f]{64}")
+CHECKSUM_LINE = re.compile(r"([0-9a-f]{64})  (\S+)")
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -588,6 +615,57 @@ def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) ->
     return ("" if problems else note), problems
 
 
+def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of oasdiff (see the header). Return a message for the log and the problems."""
+    label = "Breaking-changes tool"
+    problems: list[str] = []
+    version, sha256 = versions.get(OASDIFF_VERSION_KEY, ""), versions.get(OASDIFF_SHA256_KEY, "")
+    for key in (OASDIFF_VERSION_KEY, OASDIFF_SHA256_KEY):
+        if key not in versions:
+            problems.append(f"{key} is not in tools/versions.env")
+    if version and not EXACT_VERSION.fullmatch(version):
+        problems.append(f"{OASDIFF_VERSION_KEY} in tools/versions.env is {version!r}, but it must be an exact version")
+    if sha256 and not SHA256_VALUE.fullmatch(sha256):
+        problems.append(
+            f"{OASDIFF_SHA256_KEY} in tools/versions.env is {sha256!r}, "
+            "but it must be a sha256 value (64 lower case hexadecimal characters)"
+        )
+    if problems:
+        return "", problems
+    path = tool_dir / OASDIFF_CHECKSUMS_FILE
+    if not tool_dir.is_dir():
+        return "", [f"{label}: the folder {tool_dir} (the checksums of the release of oasdiff) does not exist"]
+    if not path.is_file():
+        return "", [f"{label}: {path} does not exist (it is the file `checksums.txt` of the release of oasdiff)"]
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        return "", [f"{label}: cannot read {path}: {error}"]
+    asset = OASDIFF_ASSET.format(version=version)
+    found: list[str] = []
+    for number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        match = CHECKSUM_LINE.fullmatch(line)
+        if not match:
+            problems.append(f"{label}: {path}, line {number}: the form is not `<sha256 value>  <file name>`")
+        elif match.group(2) == asset:
+            found.append(match.group(1))
+    if not found:
+        problems.append(
+            f"{label}: {path} has no line for {asset}. {OASDIFF_VERSION_KEY} in tools/versions.env is {version}"
+        )
+    elif len(found) > 1:
+        problems.append(f"{label}: {path} has {len(found)} lines for {asset}, but it must have one")
+    elif found[0] != sha256:
+        problems.append(
+            f"{label}: {path} has the sha256 {found[0]} for {asset}, "
+            f"but {OASDIFF_SHA256_KEY} in tools/versions.env is {sha256}"
+        )
+    note = f"{label}: {path}: {asset} has the sha256 of tools/versions.env"
+    return ("" if problems else note), problems
+
+
 def _normalize_name(name: str) -> str:
     """The name of a Python package after the normalization of PEP 503."""
     return re.sub(r"[-_.]+", "-", name).lower()
@@ -681,10 +759,10 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 8:
+    if len(argv) != 9:
         print(
             "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> "
-            "<python-lock-dir> <lint-tool-dir>",
+            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir>",
             file=sys.stderr,
         )
         return 2
@@ -707,6 +785,9 @@ def main(argv: list[str]) -> int:
         note, lint_problems = check_pnpm_tool(SPECTRAL, Path(argv[7]), versions)
         print(f"Lint tool pin: {note or str(len(lint_problems)) + ' problem(s)'}")
         problems += lint_problems
+        note, breaking_problems = check_oasdiff(Path(argv[8]), versions)
+        print(f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}")
+        problems += breaking_problems
         note, python_problems = check_python_locks(Path(argv[6]), versions)
         print(f"Python lock pin: {note or str(len(python_problems)) + ' problem(s)'}")
         problems += python_problems
@@ -720,8 +801,8 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
-        "The lock files of cdxgen and of Spectral and the lock files of the Python tools are the ones of "
-        "tools/versions.env."
+        "The lock files of cdxgen and of Spectral, the checksum of oasdiff and the lock files of the Python tools are "
+        "the ones of tools/versions.env."
     )
     return 0
 

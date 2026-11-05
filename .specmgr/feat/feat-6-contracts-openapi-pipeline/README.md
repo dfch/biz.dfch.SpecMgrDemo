@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: progress
 type: feat
-updated: '2026-11-04T20:02:13.874+01:00'
+updated: '2026-11-05T02:04:41.487+01:00'
 version: 1.0.0
 ---
 
@@ -54,9 +54,9 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [x] ACC-001: `contracts/` has an OpenAPI file with the operation `GET /status`, the schema for Problem Details with the `code` list and the trace identifier, and the extension `x-specmgr-req` with the UUID of a real REQ document in `docs/req/` (REQ-001, REQ-006, REQ-008).
 
-- [ ] ACC-002: `just` has recipes for lint, the check for breaking changes, code generation and the check of generated code, and CI starts only these recipes (REQ-002, REQ-003, REQ-004, REQ-005). Phase 110 did the recipe `lint` (and `test-lint-gate`). Not yet done: the recipes for the check for breaking changes, for code generation and for the check of generated code, and the CI jobs for all of them.
+- [ ] ACC-002: `just` has recipes for lint, the check for breaking changes, code generation and the check of generated code, and CI starts only these recipes (REQ-002, REQ-003, REQ-004, REQ-005). Phase 110 did the recipe `lint` (and `test-lint-gate`), and phase 115 did the recipe `breaking-changes` (and `test-breaking-changes-gate`). Not yet done: the recipes for code generation and for the check of generated code, and the CI jobs for all of them.
 
-- [ ] ACC-003: A change of the OpenAPI file that removes a property of a response causes a failure of the gate for breaking changes. The same change with an entry in the ignore file and a higher version number does not cause a failure. The same change with an entry and the same version number causes a failure. A pull request that adds the OpenAPI file for the first time does not cause a failure (REQ-003, REQ-012).
+- [x] ACC-003: A change of the OpenAPI file that removes a property of a response causes a failure of the gate for breaking changes. The same change with an entry in the ignore file and a higher version number does not cause a failure. The same change with an entry and the same version number causes a failure. A pull request that adds the OpenAPI file for the first time does not cause a failure (REQ-003, REQ-012).
 
 - [ ] ACC-004: Each of these changes causes a failure of the gate for generated code: a change by hand to a generated file, a change of the OpenAPI file with no new generation, a deleted generated file, and an extra file in the folder of generated code (REQ-001, REQ-005).
 
@@ -72,15 +72,15 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [x] ACC-010: `backend/mvnw` is executable (git mode 100755), and `backend/.mvn/wrapper/maven-wrapper.properties` has the Maven version of `tools/versions.env` and a `distributionSha256Sum` that was verified with a source other than the properties file. `just check-pins`, `just sbom` and `just license-check` return exit code 0 with the real `backend/pom.xml` (REQ-010).
 
-- [ ] ACC-011: Each tool of this feature has a version in `tools/versions.env` and a lock file or a checksum. `just check-pins` returns exit code 0 now, and returns exit code 1 in `just test-gates` for a changed version and for a changed checksum of each tool (REQ-009). Phase 110 did Spectral: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` are in `tools/versions.env`, the lock file is `tools/spectral/pnpm-lock.yaml`, and `just test-gates` has the cases for a changed version and a changed integrity value (in `versions.env`, in `package.json` and in the lock file). Not yet done: oasdiff (phase 115), the plugin jar of openapi-generator (phase 120, ACC-012) and Kubb (phase 120).
+- [ ] ACC-011: Each tool of this feature has a version in `tools/versions.env` and a lock file or a checksum. `just check-pins` returns exit code 0 now, and returns exit code 1 in `just test-gates` for a changed version and for a changed checksum of each tool (REQ-009). Phase 110 did Spectral: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` are in `tools/versions.env`, the lock file is `tools/spectral/pnpm-lock.yaml`, and `just test-gates` has the cases for a changed version and a changed integrity value (in `versions.env`, in `package.json` and in the lock file). Phase 115 did oasdiff: `OASDIFF_VERSION` and `OASDIFF_SHA256` are in `tools/versions.env`, the second place is `tools/breaking/oasdiff-checksums.txt` (the file `checksums.txt` of the release), and `just test-gates` has the cases for a changed version and a changed checksum (in `versions.env` alone and in the file alone). Not yet done: the plugin jar of openapi-generator (phase 120, ACC-012) and Kubb (phase 120).
 
 - [ ] ACC-012: The sha256 of the jar of the generator plugin is in `tools/versions.env`, and a gate compares it with the jar in the local Maven repository. `tools/gates/README.md` says that the dependencies of the Maven plugins are not checked. GitHub issue #23 has a comment with this limit, and it stays open for a full pinning of the Maven plugins (REQ-009).
 
 - [ ] ACC-013: Two runs of `just generate` one after the other make no change in the generated files (REQ-011).
 
-- [ ] ACC-014: DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 has an update entry with the format of an entry of the ignore file and the way the gate checks the version number. The ignore file and the rules of the linter are below `tools/`, so CODEOWNERS covers them (REQ-012).
+- [x] ACC-014: DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 has an update entry with the format of an entry of the ignore file and the way the gate checks the version number. The ignore file and the rules of the linter are below `tools/`, so CODEOWNERS covers them (REQ-012).
 
-- [ ] ACC-015: Each new CI job is in `tools/gates/required-setup.txt` and has the name of its recipe. `just test-gates` has negative cases for each new gate. These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check` and `just --fmt --unstable --check`. A throwaway pull request (closed, not merged) with a breaking change fails the new job in real CI (REQ-013).
+- [ ] ACC-015: Each new CI job is in `tools/gates/required-setup.txt` and has the name of its recipe. `just test-gates` has negative cases for each new gate. These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check` and `just --fmt --unstable --check`. A throwaway pull request (closed, not merged) with a breaking change fails the new job in real CI (REQ-013). Phase 115 did the negative cases for the gate for breaking changes (`just test-breaking-changes-gate`, started by `just test-gates`), and the listed recipes returned exit code 0 on the branch at the end of phase 115. Not yet done: the CI jobs and the lines in `tools/gates/required-setup.txt` (phase 130), the gates of phases 120 and 130, and the throwaway pull request.
 
 - [ ] ACC-016: The owner added the new jobs to the required checks of the rulesets of `dev` and `main`, and `branch-protection.md` shows the new rows as set (REQ-013).
 
@@ -170,7 +170,7 @@ License table (the agent fills it from the license file of each tool and not fro
 | Item | Use | License | Result |
 |---|---|---|---|
 | Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter. Pinned in the phase 110: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` in `tools/versions.env` (the integrity value is the one of the registry, and the sha256 of the tarball `fdff6161...39bf` is the one of the phase 100), and the lock file `tools/spectral/pnpm-lock.yaml` (242 packages, installed with `pnpm install --frozen-lockfile --ignore-scripts`). Rule A applies, so the tree of Spectral is not in the SBOM (finding F3) | Apache-2.0 | Permitted |
-| oasdiff 1.35.0 | breaking changes | Apache-2.0 | Permitted |
+| oasdiff 1.35.0 | breaking changes. Pinned in the phase 115: `OASDIFF_VERSION` and `OASDIFF_SHA256` in `tools/versions.env` (the sha256 `a8023002...9140` of `oasdiff_1.35.0_linux_amd64.tar.gz`, the one of the phase 100), and `tools/breaking/oasdiff-checksums.txt` (the file `checksums.txt` of the release). `install_oasdiff` in `tools/gates/_lib.sh` downloads it to `build/tools/` and compares the sha256 before it unpacks the file. Rule A applies, so oasdiff is not in the SBOM | Apache-2.0 | Permitted |
 | openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool) | Apache-2.0 | Permitted |
 | Kubb (`kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0) | client schemas | MIT (all three packages) | Permitted |
 | Zod 4.6.7 | runtime library | MIT | Permitted |
@@ -490,6 +490,63 @@ The agent did the work on 2026-11-04 with the pinned tools of `~/.config/biz.dfc
 - Each status (400, 404, 500, 503) gives its own finding. The ignore file needs one line for each status.
 - The format of a line in the ignore file is `METHOD /path <full message>`. The option `-f singleline` prints the findings with one line for each finding, so a person can copy the message to the ignore file.
 
+#### Result of the Phase 115 (Check for Breaking Changes)
+
+The agent did the work on 2026-11-05 with the pinned tools of `~/.config/biz.dfch.SpecMgrDemo/env.sh` (Node 26.13.0, pnpm 12.16.1, just 1.59.0). The scratch folder was `/tmp/opencode/p115/` (outside of the repository, nothing from it is in git).
+
+**Files**
+
+| Path | Content |
+|---|---|
+| `tools/versions.env` | `OASDIFF_VERSION=1.35.0` and `OASDIFF_SHA256=a8023002...9140`, with a comment (what is checked, the platform) |
+| `tools/breaking/` | `breaking-changes-ignore.txt` (the ignore file, with the header that explains the format, no entry), `oasdiff-checksums.txt` (the file `checksums.txt` of the release v1.35.0, without a change) and `README.md` (the format of an entry, how the gate decides, the pin and the procedure to change the version, the limits) |
+| `tools/gates/breaking-changes.sh` | The gate: `git merge-base`, `git show <merge base>:<file>`, the install of oasdiff, and the start of `breaking_changes.py` in the virtual environment of PyYAML |
+| `tools/gates/breaking_changes.py` | The ignore file, oasdiff, the used and the unused entries, the comparison of the version numbers (Semantic Versioning 2.0.0), and the subcommands `semver` and `rule` for the tests |
+| `tools/gates/_lib.sh` | The new function `install_oasdiff` (download, sha256 before the unpack, `build/tools/`) |
+| `tools/gates/check_pins.py`, `check-pins.sh` | The new function `check_oasdiff` and the new argument `<breaking-tool-dir>` (the variable `BREAKING_TOOL_DIR` in `check-pins.sh`). The output of `just check-pins` has the new line `Breaking-changes tool pin: ...` |
+| `tools/gates/test-breaking-changes-gate.sh`, `selftest.sh` | The test of the gate (147 ok), and the cases of the pin of oasdiff in `selftest.sh` (35 new cases, 575 ok, before 540) |
+| `justfile` | The recipes `breaking-changes` (gate number 115.110) and `test-breaking-changes-gate` (115.130). `test-gates` starts `test-breaking-changes-gate` |
+| `tools/README.md`, `tools/gates/README.md` | The new folder, the new rows, the rows in the tables of the tools and of rule G2, and the note about `fetch-depth: 0` |
+| `docs/dec/dec-93594b2b-...md` | The update entry of 2026-11-05 00:56:45 (the format of an entry, how the gate decides, the check of rule 5). The status is still `draft` |
+
+**The pin (Task 115.100).** The agent got `checksums.txt` of the release v1.35.0 from GitHub, downloaded `oasdiff_1.35.0_linux_amd64.tar.gz`, and compared three values: `sha256sum` of the file, the line in `checksums.txt`, and the digest in the API of GitHub. The three values are `a8023002fcb2eaa7f5758148a9303cb63d33b939886df312268bc0fc7b939140`, the value of the phase 100. The platform is Linux x86_64 only, as the install scripts for just and Node (they hardcode `x86_64-unknown-linux-musl` and `linux-x64`): the gates run on a runner of GitHub (Ubuntu) and on the machine of the author, and `install_oasdiff` stops on another platform. The install location is `build/tools/oasdiff-<version>/` of the repository (the folder `build/` is in `.gitignore`), the test uses the same location. `install_oasdiff` does not use the file that is already there if `.sha256` of the folder is not the pin, and it compares the sha256 before it unpacks the file. `check_pins.py` needs a second place for the pin, or a changed version in `versions.env` would pass `just check-pins` (the check of the form alone does not see it). The second place is the file `checksums.txt` of the release. The check stops if the file has no line for `oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz` with the value of `OASDIFF_SHA256`.
+
+**How the gate decides (Tasks 115.110 and 115.120).**
+
+1. `git merge-base <base> HEAD` (`<base>` is `{{ base }}` of the `justfile`: `origin/dev`, or `origin/<GITHUB_BASE_REF>`). If the merge base has no `contracts/openapi.yaml`, the gate passes ("nothing to compare"). If the merge base has the file and the working tree has not, the gate stops.
+2. `oasdiff breaking <base file> <file> -f json --fail-on ERR` with no ignore file gives the changes of the level `error` (the default levels stay). Then one start for each entry, with that entry as the only line of the ignore file, shows which changes the entry ignores. A last start with all entries must agree (exit code 1 if and only if a change is left), or the gate stops with exit code 2.
+3. A change that no entry ignores: exit code 1, with the line for the entry in the message. Entries that are used and a version that does not go up in the way of rule 5: exit code 1. No change of the level `error`: exit code 0, with entries or without. An entry that matches no change: a WARNING and exit code 0.
+4. Rule 5 is read as: the new version is higher by the order of Semantic Versioning 2.0.0, and in addition, if the first number of the base is 0, the pair (first number, second number) is higher (`0.1.0` to `0.2.0` and to `1.0.0` pass, `0.1.0` to `0.1.1` does not), and if the first number is not 0, the first number goes up (`1.4.2` to `2.0.0` passes, `1.4.2` to `1.5.0` does not). So the DEC is stricter than "a higher version".
+
+**Findings of the work with oasdiff 1.35.0 (tested with the real tool)**
+
+- P1, a comment is an entry. oasdiff reads each line of the ignore file with `strings.Fields`, takes the first field that starts with `/` as the path, and ignores a change if the lower case line has the text `<operation> <path>` and the lower case text of the change anywhere in it. A line that starts with `#` is not a comment for oasdiff: `# GET /status removed the required property ...` ignores the change. A text after the message (a cause, a number) is no problem for oasdiff. So the gate gives oasdiff only the first item of each entry, and writes the other items for the owner.
+- P2, a configuration file in the repository. oasdiff reads `.oasdiff.*` and `oasdiff.*` in the current folder and the variable `OASDIFF_CONFIG` (`err-ignore` is a key). A file like this switches off the check, and a test showed it. The gate starts oasdiff in a new empty folder and without the variables `OASDIFF_*`. The test has the case with the control that shows the file works without this protection.
+- P3, exit codes. A file that oasdiff cannot read gives exit code 102 (also a missing file), and a missing ignore file gives 121. The gate stops with exit code 2 for each code other than 0 and 1. A value `version: 0.2` (a number in YAML) is a file that oasdiff cannot read (exit code 102). A file with no path (for example `a: b`) is read as an interface with no path, so all paths are removed, and the gate stops (a breaking change).
+- P4, `-f json` and `--color`. The option `--color never` is only for the formats `text` and `singleline`, and oasdiff stops with exit code 100 for it with `-f json`. The gate does not use it.
+- P5, the formats. `-f singleline` prints `error at <file>, in API GET /status <text> [<id>]`, and this is not the line for the ignore file. The JSON has `operation`, `path` and `text`, and the line is `<operation> <path> <text>`. The gate prints this line.
+
+**Evidence of the four cases of ACC-003** (`just test-breaking-changes-gate`, temporary git repositories with the real oasdiff 1.35.0):
+
+| Case | Result |
+|---|---|
+| (1) The change removes the required property `checkedAt` of the response 200 | exit code 1: `STOP breaking change that no entry ignores: GET /status removed the required property `checkedAt` from the response with the `200` status [response-required-property-removed]` |
+| (2) The same change, one entry, `info.version` 0.1.0 to 0.2.0 | exit code 0: `RESULT: PASS. 1 breaking change(s) are ignored by 1 entry(ies), and the version goes up.` |
+| (3) The same change, one entry, the same version 0.1.0 | exit code 1: `RESULT: STOP. 1 breaking change(s) are ignored, but the version does not go up.` |
+| (4) The base has no OpenAPI file, the pull request adds it | exit code 0: `The base has no contracts/openapi.yaml, so there is nothing to compare` |
+
+The test has 147 cases in all: the four cases, a lower version, the table of the rule for the version number (21 pairs), the table of the order of Semantic Versioning 2.0.0 (18 pairs and 12 texts that are not versions, each on both sides), the changes that are not breaking (an enum value is removed: pass with no entry, an enum value is added: stop), a stale entry (a WARNING), an entry for another change, two changes with one or two entries, a comment with the text of a change, a cause with the text of another change, nine entries that are not correct, a missing ignore file, the merge base (the base branch moves on, the feature merges the base, a release pull request to `main`), a base that does not exist, a deleted OpenAPI file, a configuration file and `OASDIFF_CONFIG`, a file that oasdiff cannot read, and the install (17 cases, with a small file that the test makes, no network). The agent changed the code three times to see if the test finds the change: a version rule that always passes (10 cases failed), oasdiff started in the folder of the repository (2 cases failed), and the variables `OASDIFF_*` not removed (1 case failed). The three changes are removed.
+
+**Evidence of the gates** on this branch at the end of phase 115 (all with exit code 0): `just breaking-changes` (the base is `origin/dev`, the merge base has no `contracts/openapi.yaml`: "PASS. The base has no contracts/openapi.yaml, so there is nothing to compare"), `just test-breaking-changes-gate` (147 ok), `just check-pins`, `just sbom`, `just license-check` (0 components), `just test-gates` (575 ok), `just test-license-gate` (47 ok), `just check-workflows`, `just check-sudo`, `just lint`, `just validate`, `just commit-check` and `just --fmt --unstable --check`. The agent also started the gate with the real file against `HEAD` (the same file): `RESULT: PASS. No breaking change.`
+
+**Limits and open points**
+
+- L1, CI. The job `breaking-changes` of phase 130 needs `actions/checkout` with `fetch-depth: 0` (the merge base needs the history; `commit-check` has the same rule), `extractions/setup-just` and `astral-sh/setup-uv` (PyYAML from the lock file), and the network (GitHub, for the download of oasdiff). It needs no Node and no Java, so its line in `tools/gates/required-setup.txt` is `ci.yml breaking-changes actions/checkout extractions/setup-just astral-sh/setup-uv`. The job `test-gates` also needs the network now (the test downloads oasdiff once).
+- L2, the file at the merge base is a copy in a temporary folder, so a relative `$ref` to another file does not resolve (the gate stops with exit code 2). The OpenAPI file of this feature is one file.
+- L3, the gate does not check that item 4 of an entry (the release after which it ends) is higher than or equal to the new version.
+- L4, a first-time pull request is not examined: the gate does not read the ignore file when the base has no OpenAPI file.
+- L5, the ignore file is read from the pull request. The owner examines it by CODEOWNERS (`/tools/`), as the DEC says. The agent made no change to `.github/CODEOWNERS` because `/tools/` already covers `tools/breaking/`.
+
 #### First Real Run (Phase 105)
 
 The agent did the work on 2026-11-04 with the pinned tools of `~/.config/biz.dfch.SpecMgrDemo/env.sh` (JDK 21.0.13, Maven 3.10.0, just 1.59.0). The scratch folder was `/tmp/opencode/p105/` (outside of the repository, nothing from it is in git).
@@ -618,13 +675,13 @@ The agent chose these values. The owner can change them at the review.
 
 #### Phase 115: Check for Breaking Changes
 
-- [ ] Task 115.100: Add the selected tool for breaking changes as a download with a sha256 value in `tools/versions.env`. Add the install in the recipe. Change `check_pins.py` and its tests for the new pin (ACC-011)
+- [x] Task 115.100: Add the selected tool for breaking changes as a download with a sha256 value in `tools/versions.env`. Add the install in the recipe. Change `check_pins.py` and its tests for the new pin (ACC-011). Done on 2026-11-05: `OASDIFF_VERSION` and `OASDIFF_SHA256` are in `tools/versions.env`, `install_oasdiff` in `tools/gates/_lib.sh` is the install (the gate starts it), and `check_pins.py` ties the pin to `tools/breaking/oasdiff-checksums.txt` (see the section "Result of the Phase 115")
 
-- [ ] Task 115.110: Write the recipe for the check. It uses `{{ base }}` and the merge base of `git merge-base`. It goes on if the base has no OpenAPI file (ACC-002, ACC-003)
+- [x] Task 115.110: Write the recipe for the check. It uses `{{ base }}` and the merge base of `git merge-base`. It goes on if the base has no OpenAPI file (ACC-002, ACC-003). Done on 2026-11-05: the recipe is `breaking-changes` (`tools/gates/breaking-changes.sh`, gate number 115.110)
 
-- [ ] Task 115.120: Make the ignore file below `tools/` and the check of the version number (REQ-012). Add an update entry to DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 with the format of an entry and the check. The status of the DEC is not changed by the agent (ACC-003, ACC-014)
+- [x] Task 115.120: Make the ignore file below `tools/` and the check of the version number (REQ-012). Add an update entry to DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 with the format of an entry and the check. The status of the DEC is not changed by the agent (ACC-003, ACC-014). Done on 2026-11-05: `tools/breaking/breaking-changes-ignore.txt` (no entry), the check is `tools/gates/breaking_changes.py`, and the DEC has the update entry of 2026-11-05 00:56:45 (the status is still draft)
 
-- [ ] Task 115.130: Add the four cases of ACC-003 to `just test-gates` (ACC-003)
+- [x] Task 115.130: Add the four cases of ACC-003 to `just test-gates` (ACC-003). Done on 2026-11-05: `just test-breaking-changes-gate` (`tools/gates/test-breaking-changes-gate.sh`) has the four cases and more, and `test-gates` starts it
 
 #### Phase 120: Generators
 
@@ -668,11 +725,13 @@ The agent chose these values. The owner can change them at the review.
 
 ### Current Status
 
-**As of 2026-11-04 (phase 110 done)**: The phases 090 (tool selection), 100 (license checks), 105 (Maven Wrapper) and 110 (OpenAPI source and lint) are done. ACC-001, ACC-006, ACC-007, ACC-010 and ACC-017 are met. `contracts/openapi.yaml` (OpenAPI 3.1.0) has `GET /status`, the Problem Details schema with the list `ErrorCode` and `traceId`, and the UUID of the draft REQ `1ca335d7-969a-443e-9392-165fdeea99a0` in `x-specmgr-req`. Spectral 6.17.0 is pinned (`tools/spectral/`, `tools/versions.env`, `just check-pins`), its rules and 49 bad files are in `tools/lint/`, and `just lint` and `just test-lint-gate` return exit code 0. The other recipes of ACC-015 that the phase touches also return exit code 0. Not yet done: the CI jobs (phase 130), the marks in the generated folders (phase 120), the check for breaking changes (phase 115) and ACC-002, ACC-009 and ACC-011 in full (see each criterion). The changes are not committed. The next phase is the phase 115 (check for breaking changes).
+**As of 2026-11-05 (phase 115 done)**: The phases 090, 100, 105, 110 and 115 are done. ACC-001, ACC-003, ACC-006, ACC-007, ACC-010, ACC-014 and ACC-017 are met. Phase 115 added the gate `just breaking-changes` (oasdiff 1.35.0, pinned in `tools/versions.env` and in `tools/breaking/oasdiff-checksums.txt`, installed with a sha256 check). The gate compares `contracts/openapi.yaml` with the file at the merge base, stops for a breaking change that has no entry in `tools/breaking/breaking-changes-ignore.txt`, and for an entry that is used with a version that does not go up (rule 5 of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4, which has the new update entry; its status is still draft). `just test-breaking-changes-gate` (147 ok, started by `just test-gates`, 575 ok) has the four cases of ACC-003. On this branch the base `origin/dev` has no OpenAPI file, so the gate passes as a first-time add. The recipes of ACC-015 that the phase touches return exit code 0. Not yet done: the CI jobs (phase 130), the marks in the generated folders (phase 120), and ACC-002, ACC-009, ACC-011 and ACC-015 in full (see each criterion). The changes are not committed. The next phase is the phase 120 (generators).
 
 ### Blockers
 
-- None for the phase 115. The open question of the phase 100 (`jakarta.annotation-api`) is closed: the owner decided on 2026-11-04 to use `tomcat-annotations-api` 10.1.61.
+- None for the phase 120. The open question of the phase 100 (`jakarta.annotation-api`) is closed: the owner decided on 2026-11-04 to use `tomcat-annotations-api` 10.1.61.
+- Points of phase 115 for the owner (the agent set them, the owner can change them at the review): the gate stops only for an entry that is used with a version that does not go up, and it writes a WARNING (no failure) for an entry that matches no change (rule 6 of the DEC says only that the owner removes it); rule 5 is read as "higher by SemVer 2.0.0, and the pair (first, second number) is higher if the first number is 0" (so `0.1.0` to `0.1.1` fails); the pin of oasdiff has a second place, `tools/breaking/oasdiff-checksums.txt`, which the owner did not ask for (it makes `just check-pins` stop for a changed version, ACC-011). See the section Decisions Made.
+- Points for the phase 130 (CI): the job `breaking-changes` needs `actions/checkout` with `fetch-depth: 0`, `extractions/setup-just` and `astral-sh/setup-uv`, and the network (line in `tools/gates/required-setup.txt`: `ci.yml breaking-changes actions/checkout extractions/setup-just astral-sh/setup-uv`). The job `test-gates` now also needs the network for the download of oasdiff. The agent did not change the CI files in phase 115.
 - One question for the owner (finding L3, phase 110): the fixed values of the task 090.120 give `Problem` the members `title` and `detail` (RFC 9457), which are text for a person, and REQ-006 says that the schema has no text in a language. The agent kept the seven members and wrote that `title` and `detail` are for logs and developers. If the owner wants no text member at all, the file, the rule `problem-members`, the fixtures and the REQ change.
 - One point for the phase 130: `just test-gates` now needs Node and pnpm (it starts `just test-lint-gate`), so the CI job `test-gates` needs two more actions and a new line in `tools/gates/required-setup.txt` (see the task 130.110). The agent did not change the CI files in the phase 110.
 - One point is set by the agent and the owner can change it at the review: the recipe `generate` starts Kubb with a programmatic runner and not with the command `kubb generate`. The details of the mechanism for the source root of the Java code and of the mark "generated, do not change" for the Java code are open for the phase 120.
@@ -680,6 +739,10 @@ The agent chose these values. The owner can change them at the review.
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-05 01:04:20.000Z - Phase 115 done: oasdiff, the gate for breaking changes, the ignore file and the check of the version number
+
+The agent did the tasks 115.100, 115.110, 115.120 and 115.130. oasdiff 1.35.0 is pinned: `OASDIFF_VERSION` and `OASDIFF_SHA256` are in `tools/versions.env` (Linux x86_64 only, as the install scripts for just and Node), the second place is `tools/breaking/oasdiff-checksums.txt` (the file `checksums.txt` of the release), and `check_pins.py` compares the two. The agent compared the sha256 of the download, the line in `checksums.txt` and the digest of GitHub again (all three are the value of the phase 100). `install_oasdiff` in `tools/gates/_lib.sh` downloads the file to `build/tools/` and compares the sha256 before it unpacks the file. The recipe `breaking-changes` (`tools/gates/breaking-changes.sh` with `breaking_changes.py`) finds the merge base with `git merge-base`, reads the OpenAPI file at the merge base, and goes on if the base has no such file. It starts oasdiff with `--fail-on ERR` (default levels), finds the used and the unused entries of the ignore file `tools/breaking/breaking-changes-ignore.txt` (no entry now) with one start of oasdiff for each entry, and checks the version number with rule 5 of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4. The DEC has the update entry with the format of an entry and the check (its status is still draft). The test `just test-breaking-changes-gate` (147 ok, started by `just test-gates`, now 575 ok) uses temporary git repositories and the real oasdiff, and has the four cases of ACC-003 (the evidence is in "Result of the Phase 115"). ACC-003 and ACC-014 are ticked. ACC-002, ACC-011 and ACC-015 are not ticked, because only a part is true (each criterion says what stays). On this branch, `just breaking-changes` passes because `origin/dev` has no OpenAPI file. The work found two points of oasdiff that matter: a line that starts with `#` is a normal entry for oasdiff, and a configuration file `.oasdiff.*` in the current folder or the variable `OASDIFF_CONFIG` can switch off the check, so the gate gives oasdiff only the first item of each entry and starts it in an empty folder without `OASDIFF_*`. The agent did not change the CI files and did not change the status of the DEC. The changes are not committed.
 
 #### 2026-11-04 19:05:00.000Z - Phase 110 done: OpenAPI file, first REQ, Spectral and the lint gate
 
@@ -716,6 +779,17 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-05 01:04:20.000Z - Phase 115: points that the agent set (the owner can change them at the review)
+
+- Folder and names: the files of the gate are in `tools/breaking/` (as `tools/lint/` is for the linter), and the recipes are `breaking-changes` (the name of the CI job in phase 130, REQ-013) and `test-breaking-changes-gate` (as `test-lint-gate`). The gate numbers are `115.110` and `115.130`. The folder has no pnpm project, so the rule of `check_pins.py` for extra files in the folders of the pnpm tools does not apply to it. CODEOWNERS already covers `tools/breaking/` with `/tools/`, so `.github/CODEOWNERS` is not changed.
+- Pin: the keys are `OASDIFF_VERSION` and `OASDIFF_SHA256` in `tools/versions.env` (as `JUST_SHA256`). The pin is for Linux x86_64 only, because the install scripts for just and Node do the same, and the runners and the machine of the author are Linux x86_64. The install stops on another platform. The install location is `build/tools/oasdiff-<version>/` (gitignored). `install_oasdiff` takes the URL from `OASDIFF_URL` and the folder from `OASDIFF_HOME` for the tests, and the sha256 of the pin applies to each URL.
+- Second place of the pin: `tools/breaking/oasdiff-checksums.txt` is the file `checksums.txt` of the release, without a change. The owner chose "a sha256 value in `tools/versions.env`", and a pin in one place alone cannot make `just check-pins` stop for a changed version (ACC-011), because a changed version with its own checksum has no other place to disagree with. The vendor file is the second place, and the procedure to change the version is in `tools/breaking/README.md`. If the owner does not want this file, the check of `check_pins.py` can only check the form of the two values, and a changed version stops at the install in the gate and not in `check-pins`.
+- Format of an entry (rule 4 of the DEC): one line, four items separated by ` | `: `<METHOD> <path> <the change as oasdiff names it> | <cause> | #<issue or pull request> | <release>`. The gate gives oasdiff only item 1 (see finding P1). The release is a Semantic Versioning 2.0.0 version.
+- Rule 5 of the DEC: the check is "higher by the order of SemVer 2.0.0", and in addition: if the first number of the base is 0, the pair (first number, second number) is higher, and if not, the first number is higher. The text of the DEC says "the second number must go up" for a 0 version. The agent reads this as the pair, so `0.1.0` to `1.0.0` passes. This is stricter than "a higher version": `0.1.0` to `0.1.1` fails. The gate checks the version only if an entry is used.
+- Entry that matches no change (rule 6): a WARNING and no failure. The DEC says only that the owner removes it. The cause: after the release, the entry matches nothing in each next pull request, and a failure would stop the pull requests of other authors. The DEC update entry says this.
+- Other: the ignore file is read from the pull request (the revision), the gate stops if the pull request deletes the OpenAPI file (the merge base has it), the gate does not read the ignore file when the base has no OpenAPI file, and the gate uses PyYAML (`make_python_env pyyaml`) to read `info.version`, so the CI job needs `uv`. The comparison of the version numbers is in `breaking_changes.py` (the subcommands `semver` and `rule`), and the test has tables for it.
+- Not done on purpose: the CI job and the line in `tools/gates/required-setup.txt` (phase 130), and a change of the status of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (the owner, task 140.110).
 
 #### 2026-11-04 19:05:00.000Z - Phase 110: points that the agent set (the owner can change them at the review)
 

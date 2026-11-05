@@ -908,6 +908,121 @@ expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral
     env SBOM_TOOL_DIR="${work}/no-such-sbom-tool" LINT_TOOL_DIR="${real_lint}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 
 # ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the pin of oasdiff, tools/breaking/oasdiff-checksums.txt (feat-6-contracts-openapi-pipeline, Task 115.100, REQ-009, ACC-011)"
+# OASDIFF_VERSION and OASDIFF_SHA256 of versions.env, and the file `checksums.txt` of the release (the second place).
+# The messages start with `Breaking-changes tool:`.
+real_breaking="${REPO_ROOT}/tools/breaking"
+oasdiff_version="$(version_of OASDIFF_VERSION)"
+oasdiff_sha="$(version_of OASDIFF_SHA256)"
+oasdiff_asset="oasdiff_${oasdiff_version}_linux_amd64.tar.gz"
+other_oasdiff_version="1.36.0"
+other_oasdiff_sha="$(printf 'b%.0s' {1..64})"
+# run_breaking_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the checksums of oasdiff
+run_breaking_pins() { env BREAKING_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_breaking_tool <name>: a copy of oasdiff-checksums.txt of the repository in a new folder (the folder is printed)
+mk_breaking_tool() {
+    local dir="${work}/breakingtool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_breaking}/oasdiff-checksums.txt" "${dir}/"
+    echo "${dir}"
+}
+# breaking_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+breaking_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/breakingver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/breakingver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_breaking_pins "${real_breaking}" "${work}/breakingver-${name}.env"
+}
+# breaking_file_case <name> <text> <description> <sed expression>: change the copy of oasdiff-checksums.txt with sed (exit code 1)
+breaking_file_case() {
+    local name="$1" text="$2" description="$3" expression="$4" dir
+    dir="$(mk_breaking_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/oasdiff-checksums.txt"
+    if cmp -s "${real_breaking}/oasdiff-checksums.txt" "${dir}/oasdiff-checksums.txt"; then
+        echo "FAIL ${description}: the sed expression did not change oasdiff-checksums.txt"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_breaking_pins "${dir}"
+}
+
+expect 0 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt: ${oasdiff_asset} has the sha256 of tools/versions.env" \
+    "the real tools/breaking/ has the checksum of versions.env" run_breaking_pins "${real_breaking}"
+expect 0 "RESULT: PASS" "the real tools/breaking/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+# The real file has the checksum of the release, and the line for the pinned asset is there once
+if [[ "$(grep -c "  ${oasdiff_asset}\$" "${real_breaking}/oasdiff-checksums.txt")" == "1" ]] \
+    && grep -q "^${oasdiff_sha}  ${oasdiff_asset}\$" "${real_breaking}/oasdiff-checksums.txt"; then
+    echo "ok   oasdiff-checksums.txt has one line for ${oasdiff_asset}, with the value of OASDIFF_SHA256"
+    passed=$((passed + 1))
+else
+    echo "FAIL oasdiff-checksums.txt has not one line for ${oasdiff_asset} with the value of OASDIFF_SHA256"
+    failed=$((failed + 1))
+fi
+
+# The two places, each alone: a change of one place stops the check (ACC-011: a changed version, a changed checksum)
+breaking_versions_case onlyversion "has no line for oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz" "oasdiff, one place only: versions.env has another OASDIFF_VERSION" \
+    "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${other_oasdiff_version}#"
+breaking_versions_case onlysha "but OASDIFF_SHA256 in tools/versions.env is ${other_oasdiff_sha}" "oasdiff, one place only: versions.env has another OASDIFF_SHA256" \
+    "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${other_oasdiff_sha}#"
+breaking_file_case onlyfilesha "but OASDIFF_SHA256 in tools/versions.env is ${oasdiff_sha}" "oasdiff, one place only: oasdiff-checksums.txt has another sha256 for the asset" \
+    "s#^[0-9a-f]\{64\}  ${oasdiff_asset}\$#${other_oasdiff_sha}  ${oasdiff_asset}#"
+breaking_file_case onlyfilename "has no line for ${oasdiff_asset}" "oasdiff, one place only: oasdiff-checksums.txt has no line for the asset (another version)" \
+    "s#  ${oasdiff_asset}\$#  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz#"
+# The sha256 of another platform is not the sha256 of the pinned file
+breaking_file_case onlyplatform "has no line for ${oasdiff_asset}" "oasdiff: the line for the asset is gone, and the value of OASDIFF_SHA256 is on the line of another file" \
+    "s#  ${oasdiff_asset}\$#  oasdiff_${oasdiff_version}_darwin_all.tar.gz#"
+# Both places with the same new value pass (the procedure of tools/breaking/README.md)
+dir="$(mk_breaking_tool bothplaces)"
+sed -i -e "s#^[0-9a-f]\{64\}  ${oasdiff_asset}\$#${other_oasdiff_sha}  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz#" "${dir}/oasdiff-checksums.txt"
+sed -e "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${other_oasdiff_version}#" -e "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${other_oasdiff_sha}#" "${real_versions}" >"${work}/breakingver-both.env"
+expect 0 "RESULT: PASS" "oasdiff, both places changed to the same new value (versions.env and the file): the check passes" run_breaking_pins "${dir}" "${work}/breakingver-both.env"
+
+# The form of the values in versions.env
+for sha in "abc" "$(printf 'A%.0s' {1..64})" "$(printf 'g%.0s' {1..64})" "${oasdiff_sha}0" "${oasdiff_sha:1}" "sha256:${oasdiff_sha}"; do
+    sed -e "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${sha}#" "${real_versions}" >"${work}/breakingver-shaform.env"
+    expect 1 "it must be a sha256 value (64 lower case hexadecimal characters)" "oasdiff, versions.env: OASDIFF_SHA256 is not a sha256 value (${sha:0:20}...)" run_breaking_pins "${real_breaking}" "${work}/breakingver-shaform.env"
+done
+for range in "^${oasdiff_version}" "latest" "1" "1.35" "v${oasdiff_version}" "${oasdiff_version}.x"; do
+    sed -e "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${range}#" "${real_versions}" >"${work}/breakingver-range.env"
+    expect 1 "it must be an exact version" "oasdiff, versions.env: OASDIFF_VERSION is not an exact version (${range})" run_breaking_pins "${real_breaking}" "${work}/breakingver-range.env"
+done
+grep -v '^OASDIFF_VERSION=' "${real_versions}" >"${work}/breakingver-nover.env"
+expect 1 "OASDIFF_VERSION is not in tools/versions.env" "oasdiff, versions.env has no OASDIFF_VERSION" run_breaking_pins "${real_breaking}" "${work}/breakingver-nover.env"
+grep -v '^OASDIFF_SHA256=' "${real_versions}" >"${work}/breakingver-nosha.env"
+expect 1 "OASDIFF_SHA256 is not in tools/versions.env" "oasdiff, versions.env has no OASDIFF_SHA256" run_breaking_pins "${real_breaking}" "${work}/breakingver-nosha.env"
+
+# The file of the vendor
+expect 1 "the folder ${work}/no-such-breaking-tool (the checksums of the release of oasdiff) does not exist" "no folder tools/breaking/" run_breaking_pins "${work}/no-such-breaking-tool"
+mkdir -p "${work}/breakingtool-empty"
+expect 1 "breakingtool-empty/oasdiff-checksums.txt does not exist" "oasdiff, an empty folder: no oasdiff-checksums.txt" run_breaking_pins "${work}/breakingtool-empty"
+dir="$(mk_breaking_tool emptyfile)" && : >"${dir}/oasdiff-checksums.txt"
+expect 1 "has no line for ${oasdiff_asset}" "oasdiff, an empty oasdiff-checksums.txt" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool dupline)" && echo "${other_oasdiff_sha}  ${oasdiff_asset}" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "has 2 lines for ${oasdiff_asset}, but it must have one" "oasdiff, oasdiff-checksums.txt: two lines for the asset (the second one has another value)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool dupsame)" && echo "${oasdiff_sha}  ${oasdiff_asset}" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "has 2 lines for ${oasdiff_asset}, but it must have one" "oasdiff, oasdiff-checksums.txt: two lines for the asset (the same value)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool onespace)" && sed -i -e "s#^\(${oasdiff_sha}\)  #\1 #" "${dir}/oasdiff-checksums.txt"
+expect 1 "line 5: the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: a line with one space and not two" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool garbage)" && echo "this is not a checksum line" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: a line that is not a checksum line" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool upper)" && sed -i -e "s#^${oasdiff_sha}#$(echo "${oasdiff_sha}" | tr 'a-f' 'A-F')#" "${dir}/oasdiff-checksums.txt"
+expect 1 "the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: the value has upper case letters" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool extraline)" && echo "${other_oasdiff_sha}  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz" >>"${dir}/oasdiff-checksums.txt"
+expect 0 "RESULT: PASS" "oasdiff, oasdiff-checksums.txt: lines for other files are no problem (the file of the vendor has them)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool blank)" && printf '\n\n' >>"${dir}/oasdiff-checksums.txt"
+expect 0 "RESULT: PASS" "oasdiff, oasdiff-checksums.txt: blank lines are no problem" run_breaking_pins "${dir}"
+# The checks are separate: a bad file of oasdiff does not hide the result of the other checks, and the other way round
+dir="$(mk_breaking_tool separate)" && sed -i -e "s#^${oasdiff_sha}#${other_oasdiff_sha}#" "${dir}/oasdiff-checksums.txt"
+expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "a bad file of oasdiff: the check of Spectral still passes (and says so)" run_breaking_pins "${dir}"
+expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt" "a bad lock file of Spectral: the check of oasdiff still passes (and says so)" \
+    env LINT_TOOL_DIR="${work}/no-such-lint-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
 fix="${GATES_DIR}/fixtures"
 sudo_case() {

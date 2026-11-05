@@ -4,7 +4,7 @@ created: '2026-11-04T12:13:01.518+01:00'
 id: 93594b2b-be54-4f60-9f53-ec2ce6c84be4
 status: draft
 type: dec
-updated: '2026-11-04T12:13:01.518+01:00'
+updated: '2026-11-05T01:56:53.359+01:00'
 version: 1.0.0
 ---
 
@@ -112,6 +112,41 @@ The ignore file and its tool are not selected at this time. The tool of the DEC 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-05 00:56:45.000Z - Format of an entry and check of the version number (feat-6-contracts-openapi-pipeline, phase 115)
+
+Phase 115 of feat-6-contracts-openapi-pipeline uses oasdiff 1.35.0 as the breaking-change tool. It adds the gate `just breaking-changes` (the script `tools/gates/breaking-changes.sh`, with `tools/gates/breaking_changes.py`). This entry gives the format of an entry and the way the gate checks rule 5, as the last sentence of the decision asks. The agent did not change the status of this DEC. The owner accepts or changes the DEC in task 140.110 of the plan.
+
+**The ignore file.** The path is `tools/breaking/breaking-changes-ignore.txt`. The path is below `tools/`, so CODEOWNERS covers it (`/tools/`). The file has no entry at this time. A coding agent adds an entry only if the owner tells it to do so (rule 3).
+
+**The format of an entry (rule 4).** Blank lines and lines that start with `#` are not read. One entry is one line with four items. A space, a vertical bar and a space (` | `) are between the items:
+
+`<METHOD> <path> <the change as oasdiff names it> | <cause> | #<issue or pull request> | <release>`
+
+- Item 1 is the change: the HTTP method, the path and the text of the change. The gate prints this item when it stops for a breaking change, so the owner can copy it. Each response status is its own change, so each status needs its own line. Example: `GET /status removed the required property `checkedAt` from the response with the `200` status`.
+- Item 2 is the cause. It is one line of text for a person.
+- Item 3 is the number of the issue or of the pull request, with `#` (for example `#123`).
+- Item 4 is the release after which the entry ends (rule 6). It is a version in the form of Semantic Versioning 2.0.0 (for example `0.2.0`).
+
+The gate stops for a line that has not four items, for an item 3 that is not `#<number>`, for an item 4 that is not a version, and for the same change two times. The gate gives only item 1 to oasdiff. oasdiff alone reads a line that starts with `#` as an entry, and it ignores a change if the text of the change is anywhere in the line. With this rule, a comment or a cause cannot ignore a change by chance.
+
+**How the gate decides (rules 1 and 2).**
+
+1. The gate finds the merge base of the base branch and `HEAD` with `git merge-base`. The base branch is the variable `base` of the `justfile`: `origin/dev`, or `origin/<target branch>` in a pull request. A pull request to `dev` is compared with the merge base of `dev`. A release pull request to `main` is compared with `main`.
+2. If the merge base has no `contracts/openapi.yaml`, there is nothing to compare, and the gate passes. If the merge base has the file and the pull request deletes it, the gate stops.
+3. The gate starts oasdiff with `--fail-on ERR`. The default levels of oasdiff stay. A breaking change is a change of the level `error`. A new value of an enum in a property of a response is an error. The removal of a value is only `info`, so it is not a breaking change.
+4. A breaking change that no entry ignores stops the gate. The gate starts oasdiff in a new empty folder and without the variables `OASDIFF_*`, so a configuration file of oasdiff in the repository cannot switch off the check.
+
+**The check of the version number (rule 5).** The gate checks the version only if an entry is used. An entry is used if it ignores a breaking change that oasdiff found. The gate finds the used entries when it starts oasdiff once for each entry. The version of the base is `info.version` of the file at the merge base. The version of the pull request is `info.version` of the file in the pull request. The gate stops if the new version does not go up in this way:
+
+- The new version must be higher than the base version by the order of Semantic Versioning 2.0.0. A pre-release (`1.0.0-rc.1`) is lower than the release (`1.0.0`). The build metadata (`+build.5`) has no order. Equal versions are not higher.
+- If the first number of the base version is 0, the second number must go up. The gate reads this as: the first and the second number together must be higher. So `0.1.0` to `0.2.0` is correct, and `0.1.0` to `1.0.0` is correct. `0.1.0` to `0.1.1` is not correct.
+- If the first number of the base version is not 0, the first number must go up. So `1.4.2` to `2.0.0` is correct. `1.4.2` to `1.5.0` is not correct.
+- A version that is not a Semantic Versioning 2.0.0 version stops the gate.
+
+**An entry that matches no change (rule 6).** The gate does not stop for an entry that matches no breaking change. It writes a WARNING with the line of the entry. The owner removes the entry in the next pull request, as rule 6 says. The agent chose this behavior, and the owner can change it in task 140.110. The cause: after the release that has the change, the entry matches nothing in each next pull request. A gate that stops for it would stop the pull requests of other authors. The risk is small. If the same change comes again, the entry ignores it, but the gate needs a higher version, and the owner examines the pull request. The gate does not check that item 4 of an entry is higher than or equal to the new version. The owner checks this when the owner examines the entry.
+
+**The tests (Confirmation).** `just test-gates` runs `just test-breaking-changes-gate`. The test uses the real oasdiff and temporary git repositories. It has the four cases of the Confirmation: a removed property stops the gate, the same change with an entry and a higher version passes, the same change with an entry and the same version stops the gate, and a pull request that adds the OpenAPI file for the first time passes. It also has the cases for a lower version, for the rule for the version number, for the merge base, for an entry that matches nothing, for an entry with a wrong form, and for a configuration file of oasdiff. `just check-pins` checks the pin of oasdiff (`OASDIFF_VERSION` and `OASDIFF_SHA256` in `tools/versions.env`, and `tools/breaking/oasdiff-checksums.txt`).
 
 ### 2026-11-04 11:13:01.520Z - Created
 

@@ -3,7 +3,8 @@
 #
 # feat-5-foundation-monorepo-ci, Task 120.110.
 # The number after the script name is the number of the task that wrote the gate: 130.xxx are the tasks of
-# feat-5-foundation-monorepo-ci, and 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate).
+# feat-5-foundation-monorepo-ci, 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate), and
+# 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes).
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
 # because a script is missing.
@@ -64,8 +65,16 @@ lint:
 test-lint-gate:
     @{{ just_executable() }} _gate test-lint-gate.sh 110.115
 
-# Test: all gates with good and bad input (the license gate and the lint gate with their fixtures too).
-test-gates: test-license-gate test-lint-gate
+# Gate: oasdiff compares contracts/openapi.yaml with the file at the merge base of the base (a pull request to `dev`: dev, a release pull request to `main`: main). A breaking change needs an entry in the ignore file and a higher version (REQ-003, REQ-012, DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4).
+breaking-changes:
+    @{{ just_executable() }} _gate breaking-changes.sh 115.110 "{{ base }}" contracts/openapi.yaml tools/breaking/breaking-changes-ignore.txt
+
+# Test: the gate for breaking changes with the real oasdiff and temporary git repositories: the four cases of ACC-003 and more.
+test-breaking-changes-gate:
+    @{{ just_executable() }} _gate test-breaking-changes-gate.sh 115.130
+
+# Test: all gates with good and bad input (the license gate, the lint gate and the gate for breaking changes with their own tests too).
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Check the install on this machine: each tool has the pinned version.

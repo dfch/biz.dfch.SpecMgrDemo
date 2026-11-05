@@ -97,3 +97,71 @@ manifest_files() {
             -print | LC_ALL=C sort
     )
 }
+
+# install_oasdiff
+#
+# Installs the tool for breaking changes oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100, REQ-009) and
+# sets OASDIFF_BIN to its path. oasdiff is a Go binary with no package manager, so the install is a download with
+# a checksum, as the install scripts of just and Node:
+#
+#   1. The script stops if the machine is not Linux x86_64. The pin has the checksum of the file
+#      oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz only (the gates run on a runner of GitHub and on the machine
+#      of the author, and both are Linux x86_64).
+#   2. If the folder <home>/oasdiff-<version> has the binary, the version of the binary is OASDIFF_VERSION, and the
+#      file `.sha256` of the folder has the value OASDIFF_SHA256, the script does not download again. A change of
+#      OASDIFF_VERSION or of OASDIFF_SHA256 in tools/versions.env therefore makes a new download.
+#   3. If not, it downloads the file with curl, compares the sha256 of the file with OASDIFF_SHA256 of
+#      tools/versions.env (never with a value from the server) BEFORE it unpacks the file, and stops (the download
+#      is deleted) if the value is not the same. It unpacks only the two files `oasdiff` and `LICENSE`.
+#   4. It stops if `oasdiff --version` does not say `oasdiff version <OASDIFF_VERSION>`.
+#
+# Variables for the tests: OASDIFF_HOME (the folder for the install; the default is build/tools of this repository,
+# and /build/ is in .gitignore) and OASDIFF_URL (another URL for the file, for example a file:// URL; the sha256 is
+# compared with the pin in each case, so another URL gives no other trust). The install needs the network for the
+# first run (curl, GitHub). The tool does not send data and does not write a file when it examines a file. The
+# tool reads a configuration file `.oasdiff.*` or `oasdiff.*` in the current folder, so breaking_changes.py starts it
+# in a new empty folder.
+install_oasdiff() {
+    local version sha home target url work actual installed
+    version="$(version_of OASDIFF_VERSION)"
+    sha="$(version_of OASDIFF_SHA256)"
+    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "OASDIFF_VERSION is not an exact version: '${version}'"
+    [[ "${sha}" =~ ^[0-9a-f]{64}$ ]] || die "OASDIFF_SHA256 is not a sha256 value (64 lower case hexadecimal characters): '${sha}'"
+    [[ "$(uname -s)" == "Linux" && "$(uname -m)" == "x86_64" ]] \
+        || die "oasdiff is pinned for Linux x86_64 only (OASDIFF_SHA256 is the checksum of the linux_amd64 file). This machine is $(uname -s) $(uname -m)."
+    require_cmd tar
+    require_cmd sha256sum
+    home="${OASDIFF_HOME:-${REPO_ROOT}/build/tools}"
+    target="${home}/oasdiff-${version}"
+    OASDIFF_BIN="${target}/oasdiff"
+
+    if [[ -x "${OASDIFF_BIN}" && -f "${target}/.sha256" && "$(cat "${target}/.sha256")" == "${sha}" ]] \
+        && [[ "$("${OASDIFF_BIN}" --version 2>/dev/null)" == "oasdiff version ${version}" ]]; then
+        log "oasdiff ${version} is already installed in ${target}"
+        return 0
+    fi
+
+    require_cmd curl
+    url="${OASDIFF_URL:-https://github.com/oasdiff/oasdiff/releases/download/v${version}/oasdiff_${version}_linux_amd64.tar.gz}"
+    mkdir -p "${home}"
+    work="$(mktemp -d "${home}/.oasdiff.XXXXXX")"
+    log "Download ${url}"
+    curl -fsSL --retry 3 -o "${work}/archive.tar.gz" "${url}" || { rm -rf "${work}"; die "Download failed: ${url}"; }
+    actual="$(sha256sum "${work}/archive.tar.gz" | cut -d' ' -f1)"
+    if [[ "${actual}" != "${sha}" ]]; then
+        rm -rf "${work}"
+        die "sha256 of the oasdiff download is ${actual}, but OASDIFF_SHA256 in ${VERSIONS_FILE} is ${sha}. The download is deleted. oasdiff did not start."
+    fi
+    log "sha256 is correct for the oasdiff download"
+    mkdir -p "${work}/unpacked"
+    tar -xzf "${work}/archive.tar.gz" -C "${work}/unpacked" oasdiff LICENSE \
+        || { rm -rf "${work}"; die "The oasdiff download has not the files oasdiff and LICENSE."; }
+    printf '%s\n' "${sha}" >"${work}/unpacked/.sha256"
+    rm -rf "${target}"
+    mv "${work}/unpacked" "${target}"
+    rm -rf "${work}"
+    installed="$("${OASDIFF_BIN}" --version 2>/dev/null)" || die "${OASDIFF_BIN} does not start."
+    [[ "${installed}" == "oasdiff version ${version}" ]] \
+        || die "${OASDIFF_BIN} says '${installed}', but OASDIFF_VERSION in ${VERSIONS_FILE} is '${version}'."
+    log "oasdiff ${version} is in ${target}"
+}
