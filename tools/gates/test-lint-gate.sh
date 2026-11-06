@@ -15,9 +15,10 @@
 # PASS: lint.sh returns exit code 0. STOP: lint.sh returns exit code 1, and the rules that Spectral reports for the
 # file (the column `code` of the output) are exactly the rules of the list. So a bad fixture fails with the right
 # rule and not with another one, and a rule that stops to work makes the test fail. The cases of ACC-007 are:
-#   - a response 4xx or 5xx that does not use application/problem+json with the schema Problem: 01 to 10 and 43;
+#   - a response 4xx or 5xx that does not use application/problem+json with the schema Problem: 01 to 10, 43, 49 and
+#     51 (49 and 51 are in a webhook and a callback);
 #   - a schema Problem with no `code`: 11 and 12; with no trace identifier: 13 and 14;
-#   - an operation with no `x-specmgr-req`: 26, 27, 33 and 35 to 41 (each HTTP method);
+#   - an operation with no `x-specmgr-req`: 26, 27, 33, 35 to 41 (each HTTP method), 50 and 52 (a webhook and a callback);
 #   - a value of `x-specmgr-req` that is not a UUID: 28 to 32 and 42.
 # The other fixtures are for the other rules (the list ErrorCode, a text in a language, a `$ref`, the version of the
 # interface, a file that is not OpenAPI). The script also checks that each fixture has a line in expected.txt, and

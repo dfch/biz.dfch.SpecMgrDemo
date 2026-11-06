@@ -18,10 +18,11 @@
   be the same: `just check-pins` checks it.
 
   The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
-    - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
-      with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
-      for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
-      the artifact is named here (10.1.61). `./mvnw dependency:tree` must not show jakarta.annotation-api.
+     - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
+       with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
+       for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
+       the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
+       retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
     - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
       swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
 -->
@@ -92,11 +93,14 @@
       <version>${jackson-annotations.version}</version>
     </dependency>
     <!-- jakarta.annotation.Generated (Jakarta Annotations 2.1) in place of jakarta.annotation-api. Decision of the
-         owner of 2026-11-04. The version is named here, and no BOM gives it. -->
+          owner of 2026-11-04. The version is named here, and no BOM gives it. The scope is provided: the annotation
+          has SOURCE retention (it is read at compile time only), so the jar stays off the runtime class path, and a
+          later Spring Boot starter cannot bring jakarta.annotation-api in again with a duplicate class. -->
     <dependency>
       <groupId>org.apache.tomcat</groupId>
       <artifactId>tomcat-annotations-api</artifactId>
       <version>${tomcat-annotations-api.version}</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 

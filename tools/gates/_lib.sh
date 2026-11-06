@@ -78,15 +78,19 @@ make_python_env() {
 # files that are not yet committed, for example a new gate script, are in the copy, and node_modules, target and build are not),
 # in one commit on the branch `work` with the tag `base`. The tests of the gates for generated code and for the build use it, so
 # they never change the real work tree. The modes of the files (mvnw, the scripts) stay. A file that the index has and the work
-# tree has deleted is not in the copy.
+# tree has deleted is not in the copy. A tar error stops the copy, and the copy must have the files that the tests need
+# (justfile, .gitignore, tools/versions.env, contracts/openapi.yaml, backend/pom.xml and frontend/pnpm-lock.yaml), or the
+# function dies.
 copy_work_tree() {
-    local dest="$1"
+    local dest="$1" file
     [[ $# -eq 1 && -n "${dest}" ]] || die "copy_work_tree: usage: copy_work_tree <dest>"
     require_cmd git
     require_cmd tar
     mkdir -p "${dest}"
+    # A tar error (a file that git listed and that is not readable any more) stops the copy: the error of tar is shown,
+    # and a copy that is not complete must not be used by a test.
     git -C "${REPO_ROOT}" ls-files -z --cached --others --exclude-standard --deduplicate \
-        | tar --null --ignore-failed-read -C "${REPO_ROOT}" -T - -cf - 2>/dev/null | tar -C "${dest}" -xf -
+        | tar --null -C "${REPO_ROOT}" -T - -cf - | tar -C "${dest}" -xf -
     (
         cd "${dest}"
         git init --quiet --initial-branch=work
@@ -97,6 +101,12 @@ copy_work_tree() {
         git commit --quiet --no-verify -m "base"
         git tag base
     ) || die "copy_work_tree: could not make the temporary repository in ${dest}"
+    # The files that the tests of the gates of feat-6-contracts-openapi-pipeline need. A copy without one of them is
+    # not a copy of this repository.
+    for file in justfile .gitignore tools/versions.env contracts/openapi.yaml backend/pom.xml frontend/pnpm-lock.yaml; do
+        [[ -f "${dest}/${file}" ]] \
+            || die "copy_work_tree: the copy in ${dest} has no ${file}. The copy of the work tree is not complete."
+    done
 }
 
 # manifest_files <root> -- print the manifests of the project (one path for each line, relative to
@@ -205,12 +215,17 @@ install_oasdiff() {
 #      and downloads the jar to the local repository if it is not there, but nothing is generated.
 #   2. It compares the sha256 of the jar in the local repository with the pin, and stops (exit code 1) if the value is not
 #      the same. The caller starts the real plugin only after this function returns.
+#   3. It compares the sha256 of the jar with the reference file tools/generate/openapi-generator-maven-plugin.sha256
+#      (the second place of the pin, ACC-011; GENERATOR_PLUGIN_SHA_FILE sets another file for the tests) and stops if the
+#      value is not the same. The pin is now in two committed places (tools/versions.env and the file), so a change of
+#      only one of them stops `just check-pins` (the comparison of the two places) or this function (the comparison of
+#      the jar with both).
 #
 # The local repository is ~/.m2/repository. GENERATOR_MAVEN_REPO_LOCAL sets another one (for the tests); the function gives
 # it to Maven with -Dmaven.repo.local, so Maven and the function use the same folder. The dependencies of the plugin are NOT
 # checked (GitHub issue #23). The first run needs the network (Maven Central).
 verify_generator_plugin() {
-    local module_dir="$1" version sha repo_local jar actual
+    local module_dir="$1" version sha repo_local jar actual ref_file ref_sha
     version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
     sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
     [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is not an exact version: '${version}'"
@@ -229,7 +244,14 @@ verify_generator_plugin() {
     actual="$(sha256sum "${jar}" | cut -d' ' -f1)"
     [[ "${actual}" == "${sha}" ]] \
         || die "sha256 of ${jar} is ${actual}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${VERSIONS_FILE} is ${sha}. The plugin did not generate."
-    log "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256"
+    # The second place of the pin (ACC-011): the reference file must have the sha256 of the jar.
+    ref_file="${GENERATOR_PLUGIN_SHA_FILE:-${REPO_ROOT}/tools/generate/openapi-generator-maven-plugin.sha256}"
+    [[ -f "${ref_file}" ]] || die "The reference file of the sha256 of the plugin jar does not exist: ${ref_file}"
+    ref_sha="$(head -n 1 "${ref_file}" | tr -d '[:space:]')"
+    [[ "${ref_sha}" =~ ^[0-9a-f]{64}$ ]] || die "${ref_file} has no sha256 value (64 lower case hexadecimal characters)."
+    [[ "${actual}" == "${ref_sha}" ]] \
+        || die "sha256 of ${jar} is ${actual}, but ${ref_file} has ${ref_sha}. The plugin did not generate."
+    log "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 and the value of ${ref_file}"
 }
 
 # install_frontend <frontend dir>

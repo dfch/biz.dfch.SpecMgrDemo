@@ -30,7 +30,7 @@ decision about the organization and not about the interface: `info-contact`, `op
 
 | Rule | Requirement | What it stops |
 |---|---|---|
-| `problem-response-media-type-and-schema` | REQ-006, ACC-007 | A response with a status 4xx or 5xx (also `4XX`, `5XX` and `default`) that is not `$ref: '#/components/responses/ProblemResponse'`, and does not have exactly one media type, `application/problem+json`, with the schema `$ref: '#/components/schemas/Problem'`. This includes another media type, another schema, two media types and a response with no content |
+| `problem-response-media-type-and-schema` | REQ-006, ACC-007 | A response with a status 4xx or 5xx (also `4XX`, `5XX` and `default`) that is not `$ref: '#/components/responses/ProblemResponse'`, and does not have exactly one media type, `application/problem+json`, with the schema `$ref: '#/components/schemas/Problem'`. This includes another media type, another schema, two media types and a response with no content. The rule is for each operation of `paths`, of `webhooks` (a webhook is a path item) and of a callback (a member of an operation, that maps a runtime expression to a path item) |
 | `problem-response-component` | REQ-006 | The same rule for the shared response `components.responses.ProblemResponse` |
 | `problem-schema-exists`, `error-code-schema-exists` | REQ-006 | A file with no schema `Problem` or no schema `ErrorCode` (a rule on a part that is not there does not fail, so these rules look for the parts) |
 | `problem-code-required` | REQ-006, ACC-007 | A schema `Problem` with no member `code`, or with `code` that is not in `required` |
@@ -38,8 +38,8 @@ decision about the organization and not about the interface: `info-contact`, `op
 | `problem-code-uses-shared-list` | REQ-006 | `Problem.code` that is not `$ref: '#/components/schemas/ErrorCode'` (an inline list is a second list, and the generators would make two types) |
 | `problem-members` | REQ-006, DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698 | A schema `Problem` that does not have exactly the members `type`, `title`, `status`, `detail`, `instance`, `code` and `traceId`. Another member, for example `message` or `localizedMessage`, is a text in a language. A new member needs a change of this rule |
 | `error-code-list` | REQ-006 | A schema `ErrorCode` that is not a string enum with at least one value, with values that are not unique, or with a value that is not in lower snake case (`^[a-z][a-z0-9_]*$`) |
-| `operation-req-present` | REQ-008, ACC-007 | An operation (each HTTP method: `get`, `put`, `post`, `delete`, `options`, `head`, `patch`, `trace`) with no value in `x-specmgr-req` |
-| `operation-req-uuid` | REQ-008, ACC-007 | A value of `x-specmgr-req` that is not a text in the form of a UUID. An operation with no value has both findings |
+| `operation-req-present` | REQ-008, ACC-007 | An operation (each HTTP method: `get`, `put`, `post`, `delete`, `options`, `head`, `patch`, `trace`) with no value in `x-specmgr-req`. The rule is for each operation of `paths`, of `webhooks` (a webhook is a path item) and of a callback (a member of an operation, that maps a runtime expression to a path item) |
+| `operation-req-uuid` | REQ-008, ACC-007 | A value of `x-specmgr-req` that is not a text in the form of a UUID. An operation with no value has both findings. The rule is for the same operations as `operation-req-present` |
 | `info-version-semver` | DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 | An `info.version` that is not a Semantic Versioning 2.0.0 version |
 
 Points that the rules must handle (see the header of `ruleset.yaml`):
@@ -59,11 +59,13 @@ GitHub issue #8 (the traceability check).
 file with one change. The test (`tools/gates/test-lint-gate.sh`) starts `lint.sh` for each fixture and compares
 the exit code and the set of rules that Spectral reports with `expected.txt`. So a bad file must fail with the
 rules of its line and with no other rule, and a rule that does not work any more makes the test fail. The cases of
-ACC-007 are: the media type and the schema of a response 4xx and 5xx (01 to 10 and 43), no `code` (11 and 12), no
-trace identifier (13 and 14), no `x-specmgr-req` (26, 27, 33 and 35 to 41) and a value that is not a UUID (28 to 32
-and 42). Some lines have a second rule that Spectral reports for the same change (for example
-`oas3-unused-component` for a schema that nothing uses any more). A new Spectral version can change this set, and
-`just test-lint-gate` shows it.
+ACC-007 are: the media type and the schema of a response 4xx and 5xx (01 to 10, 43, 49 and 51), no `code` (11 and
+12), no trace identifier (13 and 14), no `x-specmgr-req` (26, 27, 33, 35 to 41, 50 and 52) and a value that is not a
+UUID (28 to 32 and 42). The fixtures 49 to 53 have a webhook and a callback: a webhook is a path item (it has
+operations), and a callback is a member of an operation (an object that maps a callback name to an object that maps
+a runtime expression to a path item). `53-good-webhook-callback.yaml` passes with both forms. Some lines have a
+second rule that Spectral reports for the same change (for example `oas3-unused-component` for a schema that nothing
+uses any more). A new Spectral version can change this set, and `just test-lint-gate` shows it.
 
 To add a rule: write the rule in `ruleset.yaml`, add a fixture that must fail with it, add a line in
 `expected.txt`, and run `just lint` and `just test-lint-gate`. Each fixture has a line in `expected.txt` and each

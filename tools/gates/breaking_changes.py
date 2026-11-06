@@ -6,16 +6,18 @@ feat-6-contracts-openapi-pipeline, Task 115.120 (ACC-003, ACC-014). The policy i
 oasdiff and starts this script.
 
 Usage:
-  breaking_changes.py check <oasdiff> <base file> <revision file> <ignore file>
+  breaking_changes.py check <oasdiff> <base file> <revision file> <ignore file> <severity-levels file>
   breaking_changes.py semver <version> <version>      print -1, 0 or 1 (Semantic Versioning 2.0.0 precedence)
   breaking_changes.py rule <base version> <new version>   exit code 0 if rule 5 of the DEC is met (for the tests)
 
 What `check` does:
 
   1. It reads the ignore file (the format is below). A line that is not correct stops the gate (exit code 1).
-  2. It starts oasdiff (`oasdiff breaking <base> <revision> --fail-on ERR`) with no ignore file, and takes the
-     changes of the level `error` (the default levels of oasdiff are kept: a new value of an enum in a property of a
-     response is an error, and the removal of a value is only `info`).
+  2. It starts oasdiff (`oasdiff breaking <base> <revision> --fail-on ERR --severity-levels <file>`) with no ignore
+     file, and takes the changes of the level `error`. The severity-levels file (tools/breaking/oasdiff-severity-levels.txt)
+     sets the level `err` for the removal of a response property (required or optional), the removal of a response, and
+     the removal of an enum value of a response property; all other levels are the defaults of oasdiff (for example, a
+     new value of an enum in a property of a response is an error by default).
   3. For each entry it starts oasdiff again with that one entry as the ignore file. The changes that go away are the
      changes that the entry ignores. So the script knows which entry is used and which change is ignored, and it uses
      the matching of oasdiff itself and not its own copy of the rule.
@@ -230,11 +232,14 @@ def oasdiff_env() -> dict[str, str]:
     return {name: value for name, value in os.environ.items() if not name.upper().startswith("OASDIFF_")}
 
 
-def run_oasdiff(oasdiff: str, base: Path, revision: Path, ignore_lines: list[str] | None) -> tuple[int, list[Change]]:
+def run_oasdiff(
+    oasdiff: str, base: Path, revision: Path, severity_levels: Path, ignore_lines: list[str] | None
+) -> tuple[int, list[Change]]:
     """Start `oasdiff breaking` and return the exit code and the changes of the level error.
 
     ignore_lines is None (no ignore file) or the lines for --err-ignore. The exit code is 0 or 1 (the option
-    --fail-on ERR). Another exit code of oasdiff (it cannot read a file: 102) is a GateError.
+    --fail-on ERR). Another exit code of oasdiff (it cannot read a file: 102) is a GateError. severity_levels is the
+    file for --severity-levels (the level err for the removals of ACC-003, all other levels the defaults of oasdiff).
     """
     with tempfile.TemporaryDirectory() as folder:
         command = [
@@ -248,6 +253,8 @@ def run_oasdiff(oasdiff: str, base: Path, revision: Path, ignore_lines: list[str
             "ERR",
             "--lang",
             "en",
+            "--severity-levels",
+            str(severity_levels.resolve()),
         ]
         if ignore_lines is not None:
             ignore_file = Path(folder) / "ignore.txt"
@@ -318,7 +325,7 @@ def suggested_line(change: Change) -> str:
     return f"{change.operation} {change.path} {change.text}"
 
 
-def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path) -> int:
+def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path, severity_levels: Path) -> int:
     """The gate. See the header. Return the exit code."""
     entries, problems = parse_ignore_file(ignore_file)
     if problems:
@@ -327,7 +334,7 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path) -> int:
         print(f"STOP: the ignore file {ignore_file} has {len(problems)} line(s) that are not correct.")
         return 1
 
-    _, found = run_oasdiff(oasdiff, base, revision, None)
+    _, found = run_oasdiff(oasdiff, base, revision, severity_levels, None)
     print(f"oasdiff: {len(found)} breaking change(s) (level error) between the base and the revision")
     for change in found:
         print(f"  {suggested_line(change)} [{change.id}]")
@@ -337,7 +344,7 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path) -> int:
     stale: list[Entry] = []
     if found:
         for entry in entries:
-            _, remaining = run_oasdiff(oasdiff, base, revision, [entry.change])
+            _, remaining = run_oasdiff(oasdiff, base, revision, severity_levels, [entry.change])
             ignored = set(found) - set(remaining)
             if ignored:
                 used |= ignored
@@ -348,7 +355,7 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path) -> int:
         stale = list(entries)
 
     unignored = [change for change in found if change not in used]
-    all_code, all_remaining = run_oasdiff(oasdiff, base, revision, [entry.change for entry in entries])
+    all_code, all_remaining = run_oasdiff(oasdiff, base, revision, severity_levels, [entry.change for entry in entries])
     if (all_code == 1) != bool(unignored) or len(all_remaining) != len(unignored):
         raise GateError(
             "oasdiff with all entries does not agree with the check of each entry "
@@ -408,7 +415,7 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path) -> int:
 
 
 USAGE = (
-    "Usage: breaking_changes.py check <oasdiff> <base file> <revision file> <ignore file>\n"
+    "Usage: breaking_changes.py check <oasdiff> <base file> <revision file> <ignore file> <severity-levels file>\n"
     "       breaking_changes.py semver <version> <version>\n"
     "       breaking_changes.py rule <base version> <new version>"
 )
@@ -416,8 +423,8 @@ USAGE = (
 
 def main(argv: list[str]) -> int:
     try:
-        if len(argv) == 6 and argv[1] == "check":
-            return check(argv[2], Path(argv[3]), Path(argv[4]), Path(argv[5]))
+        if len(argv) == 7 and argv[1] == "check":
+            return check(argv[2], Path(argv[3]), Path(argv[4]), Path(argv[5]), Path(argv[6]))
         if len(argv) == 4 and argv[1] in ("semver", "rule"):
             left, right = parse_semver(argv[2]), parse_semver(argv[3])
             if left is None or right is None:

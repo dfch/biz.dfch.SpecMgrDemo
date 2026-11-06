@@ -47,3 +47,8 @@
 46-good-info-version-prerelease.yaml | PASS | Good: `info.version` with a pre-release and a build part (1.0.0-rc.1+build.5).
 47-not-yaml.yaml | STOP parser,unrecognized-format | The file is not YAML. The linter must not pass it.
 48-not-openapi.yaml | STOP unrecognized-format | The file is YAML, but it is not an OpenAPI file.
+49-webhook-400-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | An operation of a webhook (webhooks is a path item) has a response 400 with the media type application/json.
+50-webhook-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | An operation of a webhook has no extension `x-specmgr-req`.
+51-callback-500-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | An operation of a callback (a callback maps a runtime expression to a path item) has a response 500 with the media type application/json.
+52-callback-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | An operation of a callback has no extension `x-specmgr-req`.
+53-good-webhook-callback.yaml | PASS | Good: a webhook and a callback with the correct responses and the extension `x-specmgr-req`.

@@ -94,7 +94,9 @@ if [[ -n "${flagged}" ]]; then
     echo "${flagged}" | sed -e 's/^/    | /' >&2
     stopped=1
 fi
-before="$(status_lines)"
+# A failure of git (a corrupted index, a file that git cannot read) must stop the gate with a message, and not exit
+# without one (the assignment in $(...) would give the exit code of git, and set -e would end the script here).
+before="$(status_lines)" || die "git status failed before the generation (the gate cannot see the state of the folders)."
 if [[ -n "${before}" ]]; then
     stop "the generated folders are not the same as HEAD before the generation (a change by hand, an untracked or an ignored file, or a change that is not committed). The gate compares HEAD with a new generation, and the generation would overwrite this state:"
     echo "${before}" | sed -e 's/^/    | /' >&2
@@ -149,7 +151,7 @@ if ! "${GATES_DIR}/generate.sh" "${backend}" "${frontend}" >"${generate_log}" 2>
 fi
 
 # --- 5. Compare with HEAD ------------------------------------------------------------------------------------------------------
-after="$(status_lines)"
+after="$(status_lines)" || die "git status failed after the generation (the gate cannot compare with HEAD)."
 if [[ -n "${after}" ]]; then
     stop "the code that the generators make now is not the code of HEAD:"
     echo "${after}" | sed -e 's/^/    | /' >&2
@@ -163,5 +165,5 @@ if [[ -n "${after}" ]]; then
     echo "RESULT: STOP. The generated code in the repository is not the generated code of contracts/openapi.yaml." >&2
     exit 1
 fi
-tracked="$(g ls-files -- "${folders[@]}" | wc -l)"
+tracked="$(g ls-files -- "${folders[@]}" | wc -l)" || die "git ls-files failed in the generated folders (the gate cannot count the files)."
 log "PASS. The generated code (${tracked} files in ${folders[*]}) is the same as the new generation: no file is changed, deleted, extra, not tracked or ignored."

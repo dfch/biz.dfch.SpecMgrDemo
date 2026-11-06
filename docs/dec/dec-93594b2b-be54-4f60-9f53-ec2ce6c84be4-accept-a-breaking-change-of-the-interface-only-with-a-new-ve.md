@@ -4,7 +4,7 @@ created: '2026-11-04T12:13:01.518+01:00'
 id: 93594b2b-be54-4f60-9f53-ec2ce6c84be4
 status: draft
 type: dec
-updated: '2026-11-05T01:56:53.359+01:00'
+updated: '2026-11-05T17:29:40.235+01:00'
 version: 1.0.0
 ---
 
@@ -112,6 +112,29 @@ The ignore file and its tool are not selected at this time. The tool of the DEC 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-05 08:45:00.000Z - The severity levels of oasdiff for the removals of responses (feat-6-contracts-openapi-pipeline, the review)
+
+The review of feat-6-contracts-openapi-pipeline found a gap in the gate for breaking changes. The criterion ACC-003 of the plan says that a change that removes a property of a response stops the gate. oasdiff 1.35.0 gives the default level `info` to the removal of an optional property of a response, to the removal of a response with a status 4xx or 5xx, and to the removal of an enum value of a property of a response. The gate stops only for the level `error`, so these removals did not stop the gate. This entry records the fix.
+
+**The file.** The path is `tools/breaking/oasdiff-severity-levels.txt`. The file has one line for each check, in the form `<check id> <level>` (no comment, no blank line). The gate starts oasdiff with `--severity-levels` and this file. The file sets the level `err` for these checks of oasdiff 1.35.0:
+
+- `response-required-property-removed`: the removal of a required property of a response (already `err` by default; the line is explicit).
+- `response-optional-property-removed`: the removal of an optional property of a response.
+- `response-required-write-only-property-removed`: the removal of a required write-only property of a response.
+- `response-optional-write-only-property-removed`: the removal of an optional write-only property of a response.
+- `response-success-status-removed`: the removal of a response with a status 2xx (already `err` by default; the line is explicit).
+- `response-non-success-status-removed`: the removal of a response with a status 4xx or 5xx.
+- `response-property-enum-value-removed`: the removal of an enum value of a property of a response.
+- `response-mediatype-enum-value-removed`: the removal of an enum value of the schema of a response media type.
+
+**The levels that stay.** All other checks keep the default level of oasdiff. The removal of a property of a request, and the other changes of a request, are not in the file. A new value of an enum in a property of a response is already `err` by default. The agent chose the list of checks, and the owner can change it in task 140.110.
+
+**The behavior of the gate with the file.** If the file is not there, the gate stops. If the file has a check id that oasdiff does not know, oasdiff stops, and the gate gives exit code 2 (it cannot decide). A change of the oasdiff version can change the id, and this is the case that the exit code 2 finds. A removal that the file makes `err` is a breaking change: it stops the gate without an entry, and it passes with an entry in the ignore file and a higher version of the interface, as rules 2, 4 and 5 say.
+
+**The tests.** `just test-breaking-changes-gate` has these cases: the removal of the optional property `detail` of a response 500 stops the gate, the same change with an entry and a higher version passes, the removal of the response 503 stops the gate, the removal of a value of an enum of a response stops the gate, the same change with an entry and a higher version passes, the removal of a required property stops the gate, and a change that is not breaking (a new description) passes with no entry.
+
+The agent did not change the status of this DEC. The owner accepts or changes the DEC in task 140.110 of the plan.
 
 ### 2026-11-05 00:56:45.000Z - Format of an entry and check of the version number (feat-6-contracts-openapi-pipeline, phase 115)
 

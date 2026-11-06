@@ -55,6 +55,8 @@ These five jobs are in `.github/workflows/ci.yml` since phase 130 of feat-6 (the
 
 When the owner sets the jobs: add the five names to the `contexts` of the call above, and to the `required_status_checks` of the ruleset JSON for `main` and of the real ruleset of `dev` (id 26472506). GitHub shows a check in the list only after it ran once in the last 7 days, so open a pull request first (the throwaway pull request of task 130.120 of feat-6 does this).
 
+`compile` and `check-generated` must be added as required checks **together**: `compile` alone does not stop a broken committed generated Java file, because the Maven build makes the Java code again (from `contracts/openapi.yaml`) before it compiles it, and `check-generated` stops the same file (it compares the committed code with a new generation, before and after the build).
+
 ## Steps in the web page
 
 1. Open the repository on GitHub. Go to Settings, Branches (or Settings, Rules, Rulesets).

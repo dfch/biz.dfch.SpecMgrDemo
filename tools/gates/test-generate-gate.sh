@@ -9,8 +9,9 @@
 # Part 1, ACC-013 (two runs of `just generate` make no change). The script defines "no change" as the same files in the two
 # generated folders (backend/src/generated and frontend/src/generated), with the same content and the same mode. It does not
 # need a clean tree: it compares the runs with each other, and not with git (the comparison with git is the gate of the
-# task 130.100). Run 1 and run 2 are one after the other in the folder of the repository. Run 3 starts in another working
-# folder, with another time zone and another locale (the result must not depend on them). Then:
+# task 130.100). The runs are on the temporary copy of the work tree, and never on the real work tree. Run 1 and run 2 are
+# one after the other in the copy. Run 3 starts in another working folder, with another time zone and another locale (the
+# result must not depend on them). Then:
 #   - the files of the three runs must be the same (the list of files, the sha256 and the mode of each file);
 #   - no file has a time stamp, or the path of the repository, of the home folder or of the temporary folder (REQ-011);
 #   - each folder has the README.md with the mark, each Java file has @Generated, and each TypeScript file has the banner of
@@ -36,21 +37,13 @@
 # the output folder of the recipe (build/api-docs) is not in git. The gate for generated code does not check it.
 #
 # The script needs JDK 21 (JAVA_HOME or the PATH), Node, pnpm, uv and the network for the first run (Maven Central, the npm
-# registry; the Maven Wrapper downloads Maven). It changes the two generated folders (it makes them again, so the files are
-# the same as before if the OpenAPI file did not change) and build/api-docs. It stops (exit code 1) if one case fails.
+# registry; the Maven Wrapper downloads Maven). It runs on a temporary copy of the work tree (copy_work_tree in _lib.sh,
+# as test-check-generated-gate.sh does), so it never changes the real work tree: the two generated folders of the copy are
+# made again (the files are the same as before if the OpenAPI file did not change), and the output of the API documentation
+# goes to the temporary folder. It stops (exit code 1) if one case fails.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
-
-generate="${GATES_DIR}/generate.sh"
-compile="${GATES_DIR}/compile.sh"
-api_docs="${GATES_DIR}/api-docs.sh"
-backend="${REPO_ROOT}/backend"
-frontend="${REPO_ROOT}/frontend"
-contract="${REPO_ROOT}/contracts/openapi.yaml"
-java_dir="${backend}/src/generated"
-ts_dir="${frontend}/src/generated"
-helpers="${REPO_ROOT}/tools/generate"
 
 require_cmd git
 require_cmd uv
@@ -60,6 +53,23 @@ require_cmd sha256sum
 make_python_env pyyaml
 work="$(mktemp -d)"
 trap 'rm -rf "${work}" "${GATE_ENV_DIR}"' EXIT
+
+# The test runs on a temporary copy of the work tree (copy_work_tree in _lib.sh, as test-check-generated-gate.sh does),
+# so it never changes the real work tree. The copy is a git repository (one commit, tag base), and the gate scripts of the
+# copy see the copy as their REPO_ROOT (they source their own _lib.sh).
+repo="${work}/repo"
+copy_work_tree "${repo}"
+
+generate="${repo}/tools/gates/generate.sh"
+compile="${repo}/tools/gates/compile.sh"
+api_docs="${repo}/tools/gates/api-docs.sh"
+versions="${repo}/tools/versions.env"
+backend="${repo}/backend"
+frontend="${repo}/frontend"
+contract="${repo}/contracts/openapi.yaml"
+java_dir="${backend}/src/generated"
+ts_dir="${frontend}/src/generated"
+helpers="${repo}/tools/generate"
 
 passed=0
 failed=0
@@ -99,7 +109,7 @@ check() {
 # snapshot <file>: the list of the files of the two generated folders with the mode and the sha256 of each file
 snapshot() {
     (
-        cd "${REPO_ROOT}"
+        cd "${repo}"
         find backend/src/generated frontend/src/generated -type f -print0 | LC_ALL=C sort -z \
             | xargs -0 stat -c '%a %n' | while read -r mode path; do
             printf '%s %s  %s\n' "${mode}" "$(sha256sum "${path}" | cut -d' ' -f1)" "${path}"
@@ -119,7 +129,7 @@ same() {
     fi
 }
 
-dirty_before="$(git -C "${REPO_ROOT}" status --porcelain -- backend/src/generated frontend/src/generated)"
+dirty_before="$(git -C "${repo}" status --porcelain -- backend/src/generated frontend/src/generated)"
 
 echo "== ACC-013: two runs of generate.sh one after the other"
 "${generate}" "${backend}" "${frontend}" >"${work}/run1.log" 2>&1 || { cat "${work}/run1.log"; die "run 1 of generate.sh failed"; }
@@ -142,7 +152,7 @@ passed=$((passed + 1))
 
 # No machine value (REQ-011).
 machine_values=0
-for value in "${REPO_ROOT}" "${HOME}" "/tmp/"; do
+for value in "${repo}" "${HOME}" "/tmp/"; do
     if grep -rIlF -e "${value}" "${java_dir}" "${ts_dir}" >"${work}/found.txt" 2>/dev/null; then
         echo "FAIL a generated file has the path '${value}':"
         sed -e 's/^/     | /' "${work}/found.txt"
@@ -189,7 +199,7 @@ fi
 
 # The folders had no change in git at the start: they have none now.
 if [[ -z "${dirty_before}" ]]; then
-    after="$(git -C "${REPO_ROOT}" status --porcelain -- backend/src/generated frontend/src/generated)"
+    after="$(git -C "${repo}" status --porcelain -- backend/src/generated frontend/src/generated)"
     if [[ -z "${after}" ]]; then
         echo "ok   the generated folders had no change in git at the start, and they have none after the runs (the committed code is the generated code)"
         passed=$((passed + 1))
@@ -284,7 +294,7 @@ expect 2 "ERROR" "the comparison stops (exit code 2) for a file that has not the
 echo
 echo "== ACC-012: another sha256 of the plugin jar stops the generators"
 sed -e 's#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=0000000000000000000000000000000000000000000000000000000000000000#' \
-    "${VERSIONS_FILE}" >"${work}/versions-badjar.env"
+    "${versions}" >"${work}/versions-badjar.env"
 snapshot "${work}/snap6"
 expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${work}/versions-badjar.env is 0000" "generate.sh with another sha256 of the plugin jar" \
     env VERSIONS_FILE="${work}/versions-badjar.env" "${generate}" "${backend}" "${frontend}"
@@ -296,7 +306,7 @@ expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${work}/versions-badjar.env i
     env VERSIONS_FILE="${work}/versions-badjar.env" "${api_docs}" "${backend}" "${work}/docs-badjar"
 [[ ! -e "${work}/docs-badjar" ]] && { echo "ok   api-docs.sh with another sha256 made no output"; passed=$((passed + 1)); } \
     || { echo "FAIL api-docs.sh with another sha256 made an output"; failed=$((failed + 1)); }
-grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=' "${VERSIONS_FILE}" >"${work}/versions-nojar.env"
+grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=' "${versions}" >"${work}/versions-nojar.env"
 expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not set" "generate.sh with no sha256 in versions.env" \
     env VERSIONS_FILE="${work}/versions-nojar.env" "${generate}" "${backend}" "${frontend}"
 
@@ -312,7 +322,7 @@ cp "${frontend}/pnpm-lock.yaml" "${frontend}/pnpm-workspace.yaml" "${work}/front
 sed -e 's#"zod": "[^"]*"#"zod": "4.0.0"#' "${frontend}/package.json" >"${work}/frontend-outdated/package.json"
 expect 1 "Nothing was generated" "a lock file that does not fit package.json: the frozen install stops" \
     bash -c 'source "$1"; install_frontend "$2"' _ "${GATES_DIR}/_lib.sh" "${work}/frontend-outdated"
-sed -e 's#^ZOD_VERSION=.*#ZOD_VERSION=4.0.0#' "${VERSIONS_FILE}" >"${work}/versions-zod.env"
+sed -e 's#^ZOD_VERSION=.*#ZOD_VERSION=4.0.0#' "${versions}" >"${work}/versions-zod.env"
 expect 1 "The installed zod has the version '4.6.7', but ZOD_VERSION in ${work}/versions-zod.env is '4.0.0'" "the installed Zod is not the version of versions.env" \
     env VERSIONS_FILE="${work}/versions-zod.env" bash -c 'source "$1"; install_frontend "$2"' _ "${GATES_DIR}/_lib.sh" "${frontend}"
 
@@ -335,7 +345,7 @@ fi
 check "the HTML has the title of the OpenAPI file" grep -q 'SpecMgr Demo API' "${work}/docs-1/index.html"
 check "the HTML has the operation GET /status" grep -q '/status' "${work}/docs-1/index.html"
 machine_values=0
-for value in "${REPO_ROOT}" "${HOME}" "${work}"; do
+for value in "${repo}" "${HOME}" "${work}"; do
     grep -rIlF -e "${value}" "${work}/docs-1" >/dev/null 2>&1 && { echo "FAIL the documentation has the path '${value}'"; machine_values=$((machine_values + 1)); }
 done
 # The HTML has the scripts of third parties (jQuery and others). One of them has a header with a fixed date of 2015, so the
@@ -349,7 +359,7 @@ if [[ ${machine_values} -eq 0 ]]; then
 else
     failed=$((failed + 1))
 fi
-if git -C "${REPO_ROOT}" check-ignore -q build/api-docs/index.html; then
+if git -C "${repo}" check-ignore -q build/api-docs/index.html; then
     echo "ok   build/api-docs (the output folder of the recipe) is not in git"
     passed=$((passed + 1))
 else

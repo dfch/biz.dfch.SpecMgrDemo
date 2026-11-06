@@ -328,7 +328,7 @@ wf_case jobpermok 0 "RESULT: PASS" "job: permissions: contents: read (the same a
 wf_case nojava 1 "lacks the required action(s) actions/setup-java" "license-check: setup-java removed" '/actions\/setup-java@/,/java-version:/d'
 wf_case nonode 1 "lacks the required action(s) actions/setup-node" "license-check: setup-node removed" '/actions\/setup-node@/,/node-version:/d'
 wf_case nopnpm 1 "lacks the required action(s) pnpm/action-setup" "license-check: pnpm/action-setup removed" '/pnpm\/action-setup@/,/version: "12.16.1"/d'
-wf_case noupload 1 "lacks the required action(s) actions/upload-artifact" "license-check: upload-artifact removed" '/actions\/upload-artifact@/,/if-no-files-found: error/d'
+wf_case noupload 1 "lacks the required action(s) actions/upload-artifact" "license-check: upload-artifact removed" '/actions\/upload-artifact@/,/retention-days: 90/d'
 wf_case nojust 1 "lacks the required action(s) extractions/setup-just" "all jobs: setup-just removed" '/extractions\/setup-just@/,/just-version:/d'
 wf_case nouv 1 "lacks the required action(s) astral-sh/setup-uv" "all jobs with uv: setup-uv removed" '/astral-sh\/setup-uv@/,/version: "0.13.7"/d'
 wf_case nocheckout 1 "lacks the required action(s) actions/checkout" "all jobs: checkout removed" '/actions\/checkout@/,/persist-credentials: false/d'
@@ -358,7 +358,7 @@ wf_case nocompilepnpm 1 "job 'compile' lacks the required action(s) pnpm/action-
 wf_case nodocsjava 1 "job 'api-docs' lacks the required action(s) actions/setup-java" "api-docs: setup-java removed (only in this job)" \
     "$(job_range api-docs api-docs){/actions\/setup-java@/,/java-version:/d}"
 wf_case nodocsupload 1 "job 'api-docs' lacks the required action(s) actions/upload-artifact" "api-docs: the upload of the artifact removed" \
-    '/^      - run: just api-docs$/,/if-no-files-found: error/{/^      - uses: actions\/upload-artifact@/,/if-no-files-found: error/d}'
+    '/^      - run: just api-docs$/,/retention-days: 90/{/^      - uses: actions\/upload-artifact@/,/retention-days: 90/d}'
 wf_case docsupnode 1 "job 'api-docs' has the action(s) actions/setup-node, which are not in required-setup.txt" "api-docs: an extra action (Node)" \
     's|^      - run: just api-docs$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
 wf_case docsif 1 "\`if: \${{ !cancelled() }}\` is not allowed" "api-docs: the upload step has the if of the SBOM upload (it is allowed in license-check only)" \
@@ -616,15 +616,18 @@ section "check-pins.sh: the lock file of cdxgen in tools/sbom/ (finding G2, feat
 real_tool="${REPO_ROOT}/tools/sbom"
 cdxgen_version="$(version_of CDXGEN_VERSION)"
 cdxgen_integrity="$(version_of CDXGEN_INTEGRITY)"
+cyclonedx_sha="$(version_of CYCLONEDX_MAVEN_PLUGIN_SHA256)"
 other_version="0.0.1"
 other_integrity="sha512-$(printf 'A%.0s' {1..86})=="
+other_cyclonedx_sha="$(printf 'd%.0s' {1..64})"
 # run_sbom_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the cdxgen project
 run_sbom_pins() { env SBOM_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
-# mk_tool <name>: a copy of package.json and pnpm-lock.yaml of the repository in a new folder (the folder is printed)
+# mk_tool <name>: a copy of package.json, pnpm-lock.yaml and cyclonedx-maven-plugin.sha256 of the repository in a new folder
+# (the folder is printed)
 mk_tool() {
     local dir="${work}/sbomtool-$1"
     rm -rf "${dir}" && mkdir -p "${dir}"
-    cp "${real_tool}/package.json" "${real_tool}/pnpm-lock.yaml" "${dir}/"
+    cp "${real_tool}/package.json" "${real_tool}/pnpm-lock.yaml" "${real_tool}/cyclonedx-maven-plugin.sha256" "${dir}/"
     echo "${dir}"
 }
 # sbom_pin_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
@@ -676,6 +679,19 @@ sbom_pin_case onlylockpackages pnpm-lock.yaml "\`packages\` must have exactly on
     "0,/^  '@cyclonedx\\/cdxgen@${cdxgen_version}':/s##  '@cyclonedx/cdxgen@${other_version}':#"
 sbom_pin_case onlylockintegrity pnpm-lock.yaml "but CDXGEN_INTEGRITY in tools/versions.env is ${cdxgen_integrity}" "one place only: the lock file has another integrity value of cdxgen" \
     "s#${cdxgen_integrity}#${other_integrity}#"
+# The sha256 of the jar of the SBOM plugin: the second place is tools/sbom/cyclonedx-maven-plugin.sha256 (ACC-011).
+# A change of only one of the two places (versions.env, the file) stops the check.
+versions_case onlyjarsha "but CYCLONEDX_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${other_cyclonedx_sha}" "one place only: versions.env has another CYCLONEDX_MAVEN_PLUGIN_SHA256" \
+    "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=${other_cyclonedx_sha}#"
+dir="$(mk_tool onlyjarfile)"
+echo "${other_cyclonedx_sha}" >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "but CYCLONEDX_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${cyclonedx_sha}" "one place only: cyclonedx-maven-plugin.sha256 has another sha256" run_sbom_pins "${dir}"
+dir="$(mk_tool nojarfile)" && rm "${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "does not exist (it is the second place of CYCLONEDX_MAVEN_PLUGIN_SHA256, the sha256 of the plugin jar)" "no cyclonedx-maven-plugin.sha256 in the folder" run_sbom_pins "${dir}"
+dir="$(mk_tool emptyjarfile)" && : >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "an empty cyclonedx-maven-plugin.sha256" run_sbom_pins "${dir}"
+dir="$(mk_tool badjarfile)" && echo "not a sha256 value" >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "a cyclonedx-maven-plugin.sha256 with no sha256 value" run_sbom_pins "${dir}"
 # All three places with the same new value pass (this is the update procedure of tools/sbom/README.md; the lock file here is a copy with the value changed by sed)
 dir="$(mk_tool allthree)"
 sed -i -e "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${other_version}\"#" "${dir}/package.json"
@@ -1066,15 +1082,18 @@ expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oas
     env LINT_TOOL_DIR="${work}/no-such-lint-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 
 # ---------------------------------------------------------------------------------------------
-section "check-pins.sh: the version of the generator plugin in backend/pom.xml (feat-6-contracts-openapi-pipeline, Task 120.105, REQ-009, ACC-011, ACC-012)"
-# OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION of versions.env and the version of the plugin in a pom.xml. The messages start with
-# `Generator plugin:`. The sha256 of the jar has no second place in a file: a changed sha256 stops the gates that start the
-# plugin (the section "the pin of the generator plugin" of this test, and test-generate-gate.sh with the real plugin).
+section "check-pins.sh: the pin of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105, REQ-009, ACC-011, ACC-012)"
+# OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION of versions.env and the version of the plugin in a pom.xml, and the sha256 of the
+# jar in versions.env and in tools/generate/openapi-generator-maven-plugin.sha256 (the second place, ACC-011). The messages
+# start with `Generator plugin:`. A changed sha256 stops this check (the section "the pin of the generator plugin" of this
+# test with the stub of mvnw, and test-generate-gate.sh with the real plugin).
 real_pom="${REPO_ROOT}/backend/pom.xml"
+real_generator_files="${REPO_ROOT}/tools/generate"
 generator_version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
 generator_sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
 other_generator_version="7.28.0"
 other_generator_sha="$(printf 'c%.0s' {1..64})"
+other_generator_file_sha="$(printf 'e%.0s' {1..64})"
 # mk_generator_root <name>: a tree with a copy of backend/pom.xml and the Maven Wrapper (the pin check of Maven needs it)
 mk_generator_root() {
     local dir="${work}/genroot-$1"
@@ -1167,6 +1186,27 @@ expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not in tools/versions.env" "g
 # The checks are separate: a bad version of the plugin does not hide the result of the other checks
 generator_versions_case separate "Frontend pin: Frontend:" "a bad version of the generator plugin: the check of the frontend still passes (and says so)" \
     "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#"
+# The sha256 of the jar: the second place is tools/generate/openapi-generator-maven-plugin.sha256 (ACC-011). A change of
+# only one of the two places (versions.env, the file) stops the check.
+generator_versions_case onlyjarsha "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${other_generator_file_sha}" \
+    "generator plugin, one place only: versions.env has another sha256 of the jar" \
+    "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${other_generator_file_sha}#"
+# run_generator_files_pins <files dir> [<versions.env>]: check-pins.sh with another folder for the reference file
+run_generator_files_pins() { env GENERATOR_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_generator_files <name>: a copy of the reference file in a new folder (the folder is printed)
+mk_generator_files() {
+    local dir="${work}/genfiles-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_generator_files}/openapi-generator-maven-plugin.sha256" "${dir}/"
+    echo "${dir}"
+}
+dir="$(mk_generator_files onlyjarfile)"
+echo "${other_generator_file_sha}" >"${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${generator_sha}" "generator plugin, one place only: the reference file has another sha256" run_generator_files_pins "${dir}"
+dir="$(mk_generator_files nojarfile)" && rm "${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "does not exist (it is the second place of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256, the sha256 of the plugin jar)" "generator plugin: no reference file" run_generator_files_pins "${dir}"
+dir="$(mk_generator_files badjarfile)" && echo "not a sha256 value" >"${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "generator plugin: a reference file with no sha256 value" run_generator_files_pins "${dir}"
 
 section "check-pins.sh: the pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110, REQ-009, ACC-011)"
 # Kubb, Zod and TypeScript: package.json, pnpm-workspace.yaml, the lock file, and the keys KUBB_*, ZOD_* and TYPESCRIPT_* of versions.env.
@@ -1737,13 +1777,17 @@ section "the pin of the generator plugin: verify_generator_plugin with a stub fo
 gen_jar_sha="$(printf 'stub-generator-jar' | sha256sum | cut -d' ' -f1)"
 gen_stub_versions="${work}/versions-genstubs.env"
 sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${gen_jar_sha}#" "${real_versions}" >"${gen_stub_versions}"
+# The reference file (the second place of the pin, ACC-011) with the sha256 of the stub jar.
+gen_stub_ref="${work}/gen-plugin-ref.sha256"
+echo "${gen_jar_sha}" >"${gen_stub_ref}"
 mvn_log="${work}/mvn-calls.log"
 # verify_run <root> [<VAR=value>...]: verify_generator_plugin for <root>/backend, with the stub of mvnw
 verify_run() {
     local root="$1"
     shift
     : >"${mvn_log}"
-    env PATH="${stubs}:${PATH}" GENERATOR_MAVEN_REPO_LOCAL="${root}/m2" VERSIONS_FILE="${gen_stub_versions}" STUB_MVN_LOG="${mvn_log}" "$@" \
+    env PATH="${stubs}:${PATH}" GENERATOR_MAVEN_REPO_LOCAL="${root}/m2" VERSIONS_FILE="${gen_stub_versions}" \
+        GENERATOR_PLUGIN_SHA_FILE="${gen_stub_ref}" STUB_MVN_LOG="${mvn_log}" "$@" \
         bash -c 'source "$1"; verify_generator_plugin "$2"' _ "${GATES_DIR}/_lib.sh" "${root}/backend"
 }
 root="$(new_tree gen-good)"
@@ -1778,8 +1822,19 @@ if grep -q -- "openapi-generator-maven-plugin:7.28.0:generate@spring-interfaces"
     passed=$((passed + 1))
 else
     echo "FAIL the call of mvnw has not the version of versions.env"
+    sed -e 's/^/     | /' "${mvn_log}"
     failed=$((failed + 1))
 fi
+# The reference file (the second place of the pin, ACC-011): the sha256 of the jar must be the value of the file.
+echo "${other_generator_file_sha}" >"${work}/gen-ref-bad.sha256"
+expect 1 "but ${work}/gen-ref-bad.sha256 has ${other_generator_file_sha}. The plugin did not generate." \
+    "the reference file has another sha256 than the jar" verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/gen-ref-bad.sha256"
+expect 1 "The reference file of the sha256 of the plugin jar does not exist" "the reference file does not exist" \
+    verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/no-such-ref.sha256"
+mkdir -p "${work}/gen-ref-badform"
+echo "not a sha256 value" >"${work}/gen-ref-badform/ref.sha256"
+expect 1 "has no sha256 value (64 lower case hexadecimal characters)" "the reference file has no sha256 value" \
+    verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/gen-ref-badform/ref.sha256"
 root="$(new_tree gen-nojar)"
 put "${root}" backend/pom.xml "${pom_xml}"
 put_mvnw "${root}" backend

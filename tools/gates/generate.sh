@@ -28,6 +28,11 @@
 # version value that changes, and no path of the machine (just test-generate-gate checks this, ACC-013). The marks are in this
 # script and not in a file of tools/, so the script is the one place for their text.
 #
+# The ORDER of the import lines in the generated Java files comes from a hash set iteration in the JDK (the pinned JDK of
+# tools/versions.env, see the generated files: the imports are not alphabetical). A change of the JDK can reorder the
+# imports, and then the new files are not the same as the committed files, so `just check-generated` stops. In this case,
+# run `just generate` with the new JDK and commit the result (and the owner changes the pin of the JDK).
+#
 # Needs JDK 21 (JAVA_HOME or the PATH; the wrapper downloads Maven), Node, pnpm and the network for the first run (Maven Central
 # and the npm registry). The script changes only the two generated folders and, as the install, the folders
 # <frontend dir>/node_modules and ~/.m2 (the first is in .gitignore).

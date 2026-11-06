@@ -92,13 +92,15 @@ jobs:
         with:
           version: "12.16.1"
       - run: just license-check
-      # The SBOM files are an artifact of each run, also if the gate stops (REQ-006, NOTICE).
+      # The SBOM files are an artifact of each run, also if the gate stops (REQ-006, NOTICE). The retention is 90 days
+      # (the default of GitHub, written out).
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: sbom
           path: build/sbom/
           if-no-files-found: error
+          retention-days: 90
 
   check-workflows:
     name: check-workflows
@@ -269,6 +271,7 @@ jobs:
           name: api-docs
           path: build/api-docs/
           if-no-files-found: error
+          retention-days: 90
 
   # The tests of the gates themselves: the license gate with its fixtures, and the other
   # gates with good and bad input.

@@ -3,6 +3,11 @@
 # REQ-006: Problem Details (RFC 9457) with the media type application/problem+json, one list of error codes,
 #          the trace identifier, and no text in a language.
 # REQ-008: each operation has the identifier of its REQ document (a UUID) in `x-specmgr-req`.
+#
+# An operation is in one of these places in OpenAPI 3.1: under `paths` (a path item), under `webhooks` (a webhook is
+# a path item too), or in a callback (a callback is a member of an operation: an object that maps a callback name
+# to an object that maps a runtime expression to a path item). The rules for the responses (REQ-006) and for
+# `x-specmgr-req` (REQ-008) are for each of these places, so a webhook or a callback cannot avoid them.
 # DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4: `info.version` is a Semantic Versioning 2.0.0 version.
 #
 # `just lint` starts Spectral with this file and with contracts/openapi.yaml (tools/gates/lint.sh). The folder
@@ -38,6 +43,10 @@ rules:
   # exactly one media type, application/problem+json, with the schema `#/components/schemas/Problem`. This
   # stops another media type, another schema, two media types, and a response with no content. The range
   # keys 4XX and 5XX and the key `default` are in the rule: a `default` response is an error response too.
+  # The rule is for all the forms of an operation in OpenAPI 3.1: the operations of `paths`, the operations of
+  # `webhooks` (a webhook is a path item), and the operations of a callback. A callback is a member of an
+  # operation: an object that maps a callback name to an object that maps a runtime expression to a path item.
+  # So a callback or a webhook cannot use another response.
   problem-response-media-type-and-schema:
     description: Each response 4xx and 5xx must use application/problem+json with the schema Problem.
     message: >-
@@ -46,7 +55,11 @@ rules:
       '#/components/schemas/Problem' (REQ-006)
     severity: error
     resolved: false
-    given: "$.paths[*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
+    given:
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace].responses[?(@property.match(/^([45][0-9X]{2}|default)$/))]"
     then:
       function: schema
       functionOptions:
@@ -235,11 +248,19 @@ rules:
   # REQ-008: x-specmgr-req on each operation, for each HTTP method
   # ---------------------------------------------------------------------------------------------------
 
+  # The rule is for all the forms of an operation in OpenAPI 3.1: the operations of `paths`, the operations of
+  # `webhooks` (a webhook is a path item), and the operations of a callback (a member of an operation: an object
+  # that maps a callback name to an object that maps a runtime expression to a path item). So a callback or a
+  # webhook cannot avoid the extension.
   operation-req-present:
     description: Each operation must have the extension x-specmgr-req with a value.
     message: The operation must have the extension `x-specmgr-req` with the identifier of its REQ document (REQ-008)
     severity: error
-    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    given:
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace]"
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace]"
     then:
       field: x-specmgr-req
       function: truthy
@@ -248,7 +269,11 @@ rules:
     description: The value of x-specmgr-req must be a UUID.
     message: The value of `x-specmgr-req` must be a text that is a UUID (the identifier of a REQ document) (REQ-008)
     severity: error
-    given: "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+    given:
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace]"
+      - "$.paths[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace]"
+      - "$.webhooks[*][get,put,post,delete,options,head,patch,trace].callbacks[*][*][get,put,post,delete,options,head,patch,trace]"
     then:
       field: x-specmgr-req
       function: schema

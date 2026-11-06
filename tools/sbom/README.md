@@ -15,6 +15,7 @@ lock file pins cdxgen and each package that it needs.
 |---|---|
 | `package.json` | One dependency: `@cyclonedx/cdxgen` in the exact version `CDXGEN_VERSION` of `tools/versions.env` (no range). It has no other key that changes the install: no other dependency, no `overrides`, no `pnpm` settings and no `packageManager` field (this field changes the layout of the lock file). |
 | `pnpm-lock.yaml` | The lock file (`lockfileVersion: '9.0'`) that the pinned pnpm (`PNPM_VERSION` of `tools/versions.env`) writes. It has one YAML document. Each package has a `resolution.integrity` value, and no package comes from another place than the npm registry. |
+| `cyclonedx-maven-plugin.sha256` | The second place of the pin of the jar of the SBOM plugin (feat-6-contracts-openapi-pipeline, ACC-011). One line with the sha256 of `cyclonedx-maven-plugin-<CYCLONEDX_MAVEN_PLUGIN_VERSION>.jar` on Maven Central (the value of `CYCLONEDX_MAVEN_PLUGIN_SHA256` in `tools/versions.env`). |
 | `README.md` | This file. |
 
 No other file is allowed in this folder (`node_modules/` is the install, and it is in `.gitignore`: do not
@@ -36,6 +37,18 @@ other two are copies, and `just check-pins` (it runs in CI for each pull request
 place does not pass. It also stops for a second dependency or another key in `package.json`, for a package in
 the lock file that has no integrity value or has a source that is not the registry (a tarball URL, git, a
 folder), and for another file in this folder. See `tools/gates/README.md` (rule G2) for the full list.
+
+## The jar of the SBOM plugin (the second place of the pin)
+
+The jar of `cyclonedx-maven-plugin` is pinned by `CYCLONEDX_MAVEN_PLUGIN_VERSION` and
+`CYCLONEDX_MAVEN_PLUGIN_SHA256` in `tools/versions.env`. The file `cyclonedx-maven-plugin.sha256` in this
+folder is the second place of the sha256 (feat-6-contracts-openapi-pipeline, ACC-011, the same way as
+`oasdiff-checksums.txt` is the second place of the pin of oasdiff). `just check-pins` compares the file with
+`tools/versions.env`, so a change of only one of the two places stops the check. `sbom.sh` compares the jar
+in the local Maven repository with `CYCLONEDX_MAVEN_PLUGIN_SHA256` before the plugin makes the SBOM. To
+change the version of the plugin: change `CYCLONEDX_MAVEN_PLUGIN_VERSION` and `CYCLONEDX_MAVEN_PLUGIN_SHA256`
+in `tools/versions.env` and the file in this folder in one commit (the value is the sha256 of the jar on
+Maven Central, verified against the `.sha1` file of Maven Central).
 
 ## Install
 

@@ -9,8 +9,8 @@ feat-6-contracts-openapi-pipeline, Task 115.100 (REQ-009, ACC-011): the check of
 feat-6-contracts-openapi-pipeline, Task 120.105 (REQ-009, ACC-011, ACC-012): the pin of the generator plugin.
 feat-6-contracts-openapi-pipeline, Task 120.110 (REQ-009, ACC-011): the pnpm module frontend/ (Kubb, Zod, TypeScript).
 
-Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> <python-lock-dir>
-                     <lint-tool-dir> <breaking-tool-dir>
+Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>
+                      <python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir>
 
 The script stops for each of these:
 
@@ -50,7 +50,8 @@ script stops for each of these:
 
   * <sbom-tool-dir>, its package.json or its pnpm-lock.yaml is missing, or the folder has a file that pnpm
     could read as a setting (for example `.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`): only package.json,
-    pnpm-lock.yaml, README.md and node_modules are allowed (PNPM_TOOL_FILES below);
+    pnpm-lock.yaml, README.md, node_modules and cyclonedx-maven-plugin.sha256 (the second place of the pin of
+    the jar of the SBOM plugin) are allowed (PNPM_TOOL_FILES below);
   * CDXGEN_VERSION is not an exact version (a range, a tag), or CDXGEN_INTEGRITY is not a sha512 value;
   * package.json: it has a key that is not in PACKAGE_JSON_KEYS (this stops devDependencies,
     optionalDependencies, peerDependencies, overrides, `pnpm`, `packageManager` and every other key), its
@@ -64,7 +65,11 @@ script stops for each of these:
   * a package in the lock file with no integrity value, with an integrity value that is not sha256, sha384 or
     sha512, with a `resolution` that has another key than `integrity` (`tarball`, `repo`, `commit`,
     `directory`, `type`: a package from another place than the registry), or with a key that is not
-    `<name>@<exact version>`; a `snapshots` entry for a package that is not in `packages`.
+    `<name>@<exact version>`; a `snapshots` entry for a package that is not in `packages`;
+  * the file `<sbom-tool-dir>/cyclonedx-maven-plugin.sha256` is missing, has no line, has a line that is not a
+    sha256 value, or has a value that is not `CYCLONEDX_MAVEN_PLUGIN_SHA256` (feat-6-contracts-openapi-pipeline,
+    the second place of the pin of the jar of the SBOM plugin, as `oasdiff-checksums.txt` is the second place of
+    the pin of oasdiff).
 
 The lock file of the OpenAPI linter Spectral (feat-6-contracts-openapi-pipeline, Task 110.110; REQ-009) has the
 same check, with the function check_pnpm_tool and the data SPECTRAL: SPECTRAL_VERSION and SPECTRAL_INTEGRITY of
@@ -107,11 +112,16 @@ same folders as the Maven check) and stops for each of these:
   * a pom.xml has the plugin `org.openapitools:openapi-generator-maven-plugin` with a version that is not
     OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION (the version can be a `${property}` of the same pom.xml), with no version, or with
     a version that this script cannot resolve;
-  * a pom.xml cannot be read as XML.
+  * a pom.xml cannot be read as XML;
+  * the file `<generator-tool-dir>/openapi-generator-maven-plugin.sha256` is missing, has no line, has a line
+    that is not a sha256 value, or has a value that is not OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 (the second
+    place of the pin of the jar, as `oasdiff-checksums.txt` is the second place of the pin of oasdiff).
 
-A pom.xml with no such plugin is no problem for this check. A change of only one of the two places (versions.env, pom.xml)
-stops the check; the sha256 has no second place in a file, so a changed sha256 stops the gates `generate`, `compile` and
-`api-docs` (and their test) and not this check.
+A pom.xml with no such plugin is no problem for this check. A change of only one of the two places (versions.env,
+pom.xml) stops the check for the version, and a change of only one of the two places (versions.env, the
+`openapi-generator-maven-plugin.sha256` file) stops the check for the sha256 of the jar. The real check of the
+jar is in verify_generator_plugin (the sha256 of the jar in the local Maven repository against versions.env and
+against the file, before the plugin generates).
 
 The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011): the Zod generator Kubb, Zod and
 TypeScript. <project-root>/frontend has package.json, pnpm-workspace.yaml and pnpm-lock.yaml. The module has six direct packages
@@ -203,7 +213,10 @@ class PnpmTool(NamedTuple):
     """A tool of the gates that is one npm package in a small pnpm project with a lock file.
 
     label: the start of each message of the check. name: the name of the tool in a text. package: the npm package.
-    version_key, integrity_key: the keys of tools/versions.env.
+    version_key, integrity_key: the keys of tools/versions.env. jar_sha_file, jar_sha_key: the second place of the
+    pin of the jar of a Maven plugin that the folder may have (None if the folder has no such file: the check of
+    cdxgen compares the jar of cyclonedx-maven-plugin with versions.env, as the check of oasdiff compares the
+    download with the file of the release).
     """
 
     label: str
@@ -211,15 +224,33 @@ class PnpmTool(NamedTuple):
     package: str
     version_key: str
     integrity_key: str
+    jar_sha_file: str | None = None
+    jar_sha_key: str | None = None
 
 
 # The lock file of cdxgen (feat-16-cdxgen-lockfile) and the lock file of Spectral
 # (feat-6-contracts-openapi-pipeline, Task 110.110). The same check is for both. See the header.
-CDXGEN = PnpmTool("SBOM tool", "cdxgen", "@cyclonedx/cdxgen", "CDXGEN_VERSION", "CDXGEN_INTEGRITY")
+CDXGEN = PnpmTool(
+    "SBOM tool",
+    "cdxgen",
+    "@cyclonedx/cdxgen",
+    "CDXGEN_VERSION",
+    "CDXGEN_INTEGRITY",
+    "cyclonedx-maven-plugin.sha256",
+    "CYCLONEDX_MAVEN_PLUGIN_SHA256",
+)
 SPECTRAL = PnpmTool("Lint tool", "Spectral", "@stoplight/spectral-cli", "SPECTRAL_VERSION", "SPECTRAL_INTEGRITY")
 # The files that tools/sbom/ may have. A settings file (.npmrc, pnpm-workspace.yaml, .pnpmfile.cjs, ...) could
-# change where pnpm gets the packages, so each other file stops the check (node_modules is the install).
-PNPM_TOOL_FILES = {"package.json", "pnpm-lock.yaml", "README.md", "node_modules"}
+# change where pnpm gets the packages, so each other file stops the check (node_modules is the install). The file
+# cyclonedx-maven-plugin.sha256 is the second place of the pin of the jar of the SBOM plugin
+# (feat-6-contracts-openapi-pipeline, ACC-011).
+PNPM_TOOL_FILES = {
+    "package.json",
+    "pnpm-lock.yaml",
+    "README.md",
+    "node_modules",
+    "cyclonedx-maven-plugin.sha256",
+}
 # The keys that package.json may have. All of them are text that does not change the install.
 PACKAGE_JSON_KEYS = {"name", "private", "description", "dependencies"}
 # The top-level keys of pnpm-lock.yaml (lockfileVersion 9) that the check knows. `overrides`,
@@ -250,6 +281,8 @@ MAX_LOCK_PROBLEMS = 5
 # plugin in the pom.xml.
 GENERATOR_VERSION_KEY = "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION"
 GENERATOR_SHA256_KEY = "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256"
+# The second place of the pin of the jar, in <generator-tool-dir> (tools/generate, the folder of the generators).
+GENERATOR_SHA_FILE = "openapi-generator-maven-plugin.sha256"
 GENERATOR_GROUP_ID = "org.openapitools"
 GENERATOR_ARTIFACT_ID = "openapi-generator-maven-plugin"
 POM_NAMESPACE = "{http://maven.apache.org/POM/4.0.0}"
@@ -707,7 +740,40 @@ def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) ->
     problems += check_package_json(tool, package_json, version)
     problems += check_lock(tool, lock, version, integrity)
     note = f"{tool.label}: {tool_dir}: {tool.package} {version}, package.json and lock file as in tools/versions.env"
+    if tool.jar_sha_file and tool.jar_sha_key:
+        problems += check_jar_sha_file(tool.label, tool_dir / tool.jar_sha_file, tool.jar_sha_key, versions)
+        note += f", and the sha256 of the plugin jar in {tool.jar_sha_file} as in tools/versions.env"
     return ("" if problems else note), problems
+
+
+def check_jar_sha_file(label: str, path: Path, key: str, versions: dict[str, str]) -> list[str]:
+    """The second place of the pin of the jar of a Maven plugin (ACC-011): the file has the value of <key>.
+
+    The file has exactly one line, a sha256 value (64 lower case hexadecimal characters). <label> is the start of
+    the message (for example `SBOM tool` or `Generator plugin`). See the header.
+    """
+    where = f"{label}: {path}"
+    if key not in versions:
+        return [f"{key} is not in tools/versions.env"]
+    value = versions[key]
+    if not SHA256_VALUE.fullmatch(value):
+        return [
+            (
+                f"{key} in tools/versions.env is {value!r}, "
+                "but it must be a sha256 value (64 lower case hexadecimal characters)"
+            )
+        ]
+    if not path.is_file():
+        return [f"{where} does not exist (it is the second place of {key}, the sha256 of the plugin jar)"]
+    try:
+        lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, UnicodeDecodeError) as error:
+        return [f"cannot read {where}: {error}"]
+    if len(lines) != 1 or not SHA256_VALUE.fullmatch(lines[0]):
+        return [f"{where} has one line with the sha256 value only (64 lower case hexadecimal characters)"]
+    if lines[0] != value:
+        return [f"{where} has the sha256 {lines[0]} for the plugin jar, but {key} in tools/versions.env is {value}"]
+    return []
 
 
 def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
@@ -770,8 +836,12 @@ def _resolve_pom_value(text: str, properties: dict[str, str]) -> str | None:
     return None if "${" in text else text
 
 
-def check_generator_plugin(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
-    """Check the pin of the generator plugin (see the header). Return a message for the log and the problems."""
+def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of the generator plugin (see the header). Return a message for the log and the problems.
+
+    tool_dir is the folder that has the file GENERATOR_SHA_FILE, the second place of the pin of the jar
+    (tools/generate, the folder of the generators).
+    """
     label = "Generator plugin"
     problems: list[str] = []
     version, sha256 = versions.get(GENERATOR_VERSION_KEY, ""), versions.get(GENERATOR_SHA256_KEY, "")
@@ -825,11 +895,14 @@ def check_generator_plugin(root: Path, versions: dict[str, str]) -> tuple[str, l
                 )
             else:
                 checked.append(str(pom))
+    # The version and the sha256 are in the right form here, or the problems above stopped.
+    problems += check_jar_sha_file(label, tool_dir / GENERATOR_SHA_FILE, GENERATOR_SHA256_KEY, versions)
     note = (
         f"{label}: {', '.join(checked)}: {GENERATOR_ARTIFACT_ID} {version}, the version of tools/versions.env"
         if checked
         else f"{label}: no pom.xml has the plugin {GENERATOR_ARTIFACT_ID}"
     )
+    note += f", and the sha256 of the jar in {tool_dir / GENERATOR_SHA_FILE} as in tools/versions.env"
     return ("" if problems else note), problems
 
 
@@ -1112,10 +1185,10 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 9:
+    if len(argv) != 10:
         print(
             "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> "
-            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir>",
+            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir>",
             file=sys.stderr,
         )
         return 2
@@ -1141,7 +1214,7 @@ def main(argv: list[str]) -> int:
         note, breaking_problems = check_oasdiff(Path(argv[8]), versions)
         print(f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}")
         problems += breaking_problems
-        note, generator_problems = check_generator_plugin(Path(argv[4]), versions)
+        note, generator_problems = check_generator_plugin(Path(argv[4]), Path(argv[9]), versions)
         print(f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}")
         problems += generator_problems
         note, frontend_problems = check_frontend(Path(argv[4]), versions)
@@ -1160,8 +1233,9 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
-        "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version of the generator plugin, the "
-        "module frontend/ and the lock files of the Python tools are the ones of tools/versions.env."
+        "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version and the jar checksum of the "
+        "generator plugin, the jar checksum of the SBOM plugin, the module frontend/ and the lock files of the Python "
+        "tools are the ones of tools/versions.env."
     )
     return 0
 
