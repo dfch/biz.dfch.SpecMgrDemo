@@ -108,3 +108,4 @@ components:
         - rate_limited
         - internal_error
         - service_unavailable
+  broken: [
