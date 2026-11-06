@@ -23,7 +23,6 @@ paths:
       summary: Get the status of the system
       description: Gives the state of the system and the time of the check.
       # The identifier of the REQ document "The System Gives Its Status" (docs/req/).
-      x-specmgr-req: 1ca335d7-969a-443e-9392-165fdeea99a0
       responses:
         "200":
           description: The system gives its status.
