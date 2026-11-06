@@ -58,3 +58,4 @@ public enum ErrorCode {
   }
 }
 
+// by hand
