@@ -20,11 +20,4 @@ export type Status = {
    * @type string
    */
   state: StatusStateEnumKey;
-  /**
-   * @description The time of the check.
-   *
-   * Format: `date-time`
-   * @type string
-   */
-  checkedAt: string;
 };
