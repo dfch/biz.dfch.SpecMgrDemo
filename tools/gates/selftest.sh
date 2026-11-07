@@ -10,10 +10,10 @@
 # The sections of the findings of the review of feat-5 (E1: manifests outside the scanned paths, E2: the
 # rest of the workflow, G1: the Maven pin, G2: the checksums of the tools) have their own cases below.
 #
-# The bad input is made in a temporary folder. Only the fixtures for check-sudo.sh are files
-# (tools/gates/fixtures/*.fixture). They have the extension .fixture, so that no gate reads
-# them as a script. The script stops (exit code 1) if one case does not give the expected
-# result. It does not change the repository.
+# The bad input is made in a temporary folder. The file fixtures (tools/gates/fixtures/*.fixture) are for
+# check-sudo.sh and for the ignore file without entry of test-breaking-changes-gate.sh. They have the extension
+# .fixture, so that no gate reads them as a script. The script stops (exit code 1) if one case does not give the
+# expected result. It does not change the repository.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"

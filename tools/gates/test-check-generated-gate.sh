@@ -137,7 +137,12 @@ check "the test changed the OpenAPI file (a new error code teapot)" grep -q '^  
 commit_all
 expect 1 "M ${java_file}" "a new error code in the OpenAPI file with no new generation stops the gate (the Java enum is not the new one)" gate_run
 reset
-sed -i -e 's/^  version: 0.1.0$/  version: 0.1.1/' "${repo}/contracts/openapi.yaml"
+# The case bumps the patch component of whatever info.version the copy has (the test makes no assumption about the
+# value, so it passes before and after an accepted breaking change of the interface). The line has two leading spaces.
+old_version="$(sed -n -E 's/^  version: ([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' "${repo}/contracts/openapi.yaml")"
+[[ -n "${old_version}" ]] || die "The test cannot find a line  version: X.Y.Z in ${repo}/contracts/openapi.yaml"
+new_version="${old_version%.*}.$(( ${old_version##*.} + 1 ))"
+sed -i -E "s/^  version: ${old_version//./\\.}\$/  version: ${new_version}/" "${repo}/contracts/openapi.yaml"
 commit_all
 expect 1 "M backend/src/generated/.openapi-generator/openapi.yaml-spring-interfaces.sha256" \
     "a new version of the interface with no new generation stops the gate (only the marker with the hash of the OpenAPI file changes)" gate_run

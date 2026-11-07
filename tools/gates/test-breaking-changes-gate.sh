@@ -8,6 +8,9 @@
 # Each case makes a temporary git repository with a branch `dev` (the base commit), the reference
 # refs/remotes/origin/dev, and a branch `feature` with the change. The test does not use the history of the real
 # repository. The gate runs with GATE_WORK_ROOT on that repository, as in `just breaking-changes`.
+# The ignore file of the base commit is the fixture tools/gates/fixtures/breaking-changes-ignore.txt.fixture (no
+# entry): the test does not depend on the entries of the committed ignore file (the owner adds them, and the test
+# passes with entries or without).
 #
 # The four cases of ACC-003 (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4, "Confirmation"), marked "ACC-003 (1)" to
 # "ACC-003 (4)" below:
@@ -38,11 +41,15 @@ require_cmd uv
 
 gate="${GATES_DIR}/breaking-changes.sh"
 script="${GATES_DIR}/breaking_changes.py"
+fixture_ignore="${GATES_DIR}/fixtures/breaking-changes-ignore.txt.fixture"
 real_ignore="${REPO_ROOT}/tools/breaking/breaking-changes-ignore.txt"
 real_severity="${REPO_ROOT}/tools/breaking/oasdiff-severity-levels.txt"
 real_openapi="${REPO_ROOT}/contracts/openapi.yaml"
+real_codeowners="${REPO_ROOT}/.github/CODEOWNERS"
+[[ -f "${fixture_ignore}" ]] || die "No file ${fixture_ignore}"
 [[ -f "${real_ignore}" ]] || die "No file ${real_ignore}"
 [[ -f "${real_severity}" ]] || die "No file ${real_severity}"
+[[ -f "${real_codeowners}" ]] || die "No file ${real_codeowners}"
 
 # The Python of the gate (PyYAML from the lock file), for the tests of the version numbers. make_python_env sets
 # the trap for its folder, so this script sets the trap again for both folders.
@@ -180,14 +187,14 @@ git_in() { local repo="$1"; shift; git -C "${repo}" -c user.name=test -c user.em
 
 # new_repo <name> [<base version> [<base values> [<extra in the base> [<detail500 in the base> [<resp503 in the base>]]]]]:
 # a repository with the base commit on `dev` (contracts/openapi.yaml with the version, the member checkedAt, and the
-# values up and degraded; the ignore file of the project, which has no entry, and the severity levels file of the
-# project), the reference origin/dev, and the branch `feature` (no change yet). Prints the path.
+# values up and degraded; the fixture ignore file without entry, and the severity levels file of the project), the
+# reference origin/dev, and the branch `feature` (no change yet). Prints the path.
 new_repo() {
     local repo="${work}/$1"
     git init -q -b dev "${repo}"
     mkdir -p "${repo}/contracts" "${repo}/tools/breaking"
     openapi_yaml "${2:-0.1.0}" yes "${3:-up,degraded}" "${4:-no}" "${5:-no}" "${6:-no}" no >"${repo}/contracts/openapi.yaml"
-    cp "${real_ignore}" "${repo}/tools/breaking/breaking-changes-ignore.txt"
+    cp "${fixture_ignore}" "${repo}/tools/breaking/breaking-changes-ignore.txt"
     cp "${real_severity}" "${repo}/tools/breaking/oasdiff-severity-levels.txt"
     git_in "${repo}" add -A
     git_in "${repo}" commit -q -m "base"
@@ -210,15 +217,54 @@ change() {
 
 run_gate() { env GATE_WORK_ROOT="$1" "${gate}" "${2:-origin/dev}" contracts/openapi.yaml tools/breaking/breaking-changes-ignore.txt; }
 
+# ignore_file_verdict <file>: the report of the ignore file with the rules of the gate (parse_ignore_file of
+# breaking_changes.py): `ok <n>` (n the number of entries) if every line is a comment, a blank line or an entry
+# with four items, and one line per problem otherwise.
+ignore_file_verdict() {
+    "${GATE_PYTHON}" - "${GATES_DIR}" "$1" <<'PY'
+import pathlib
+import sys
+
+sys.path.insert(0, sys.argv[1])
+from breaking_changes import parse_ignore_file
+
+entries, problems = parse_ignore_file(pathlib.Path(sys.argv[2]))
+if problems:
+    for problem in problems:
+        print(problem)
+else:
+    print(f"ok {len(entries)}")
+PY
+}
+
 # ============================================================================================================
 section "The real files"
-# The real ignore file of the project has no entry (the owner adds entries). It must be readable.
-if grep -qvE '^[[:space:]]*(#|$)' "${real_ignore}"; then
-    echo "FAIL ${real_ignore} has an entry. The file of the phase 115 has none."
-    failed=$((failed + 1))
-else
-    echo "ok   tools/breaking/breaking-changes-ignore.txt has no entry"
+# The committed ignore file is examined with the rules of the gate (the test does not look at the number of
+# entries, the owner adds them). The fixture without entry is the base of the temporary repositories.
+verdict="$(ignore_file_verdict "${fixture_ignore}")"
+if [[ "${verdict}" == "ok 0" ]]; then
+    echo "ok   the fixture ${fixture_ignore} has no entry (the base of the temporary repositories)"
     passed=$((passed + 1))
+else
+    echo "FAIL the fixture ${fixture_ignore} has an entry or a line that is not correct:"
+    echo "${verdict}" | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+verdict="$(ignore_file_verdict "${real_ignore}")"
+if [[ "${verdict}" == ok* ]]; then
+    echo "ok   the committed ignore file has no line that is not correct (the rules of the gate)"
+    passed=$((passed + 1))
+else
+    echo "FAIL ${real_ignore} has a line that is not correct:"
+    echo "${verdict}" | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+if grep -q '^/tools/' "${real_codeowners}"; then
+    echo "ok   CODEOWNERS covers /tools/ (the owner examines each new entry of the ignore file)"
+    passed=$((passed + 1))
+else
+    echo "FAIL CODEOWNERS has no line for /tools/"
+    failed=$((failed + 1))
 fi
 repo="$(new_repo real-unchanged)"
 cp "${real_openapi}" "${repo}/contracts/openapi.yaml"
@@ -247,7 +293,7 @@ expect 1 "the new version is not higher than the version of the base" "ACC-003 (
 repo="${work}/acc3-4"
 git init -q -b dev "${repo}"
 mkdir -p "${repo}/tools/breaking"
-cp "${real_ignore}" "${repo}/tools/breaking/breaking-changes-ignore.txt"
+cp "${fixture_ignore}" "${repo}/tools/breaking/breaking-changes-ignore.txt"
 git_in "${repo}" add -A && git_in "${repo}" commit -q -m "base: no OpenAPI file"
 git_in "${repo}" update-ref refs/remotes/origin/dev dev && git_in "${repo}" switch -q -c feature
 mkdir -p "${repo}/contracts"
