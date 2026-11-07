@@ -29,3 +29,6 @@ replay_pid*
 
 # Install of the SBOM tool (feat-16-cdxgen-lockfile)
 node_modules/
+
+# Output of the Maven build (feat-6-contracts-openapi-pipeline)
+target/

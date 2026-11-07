@@ -1,0 +1,8 @@
+response-required-property-removed err
+response-optional-property-removed err
+response-required-write-only-property-removed err
+response-optional-write-only-property-removed err
+response-success-status-removed err
+response-non-success-status-removed err
+response-property-enum-value-removed err
+response-mediatype-enum-value-removed err

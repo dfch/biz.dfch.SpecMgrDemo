@@ -1,0 +1,8 @@
+{
+  "name": "spectral-tool",
+  "private": true,
+  "description": "The OpenAPI linter Spectral with a lock file (feat-6-contracts-openapi-pipeline). Do not add a dependency or a packageManager field. See README.md.",
+  "dependencies": {
+    "@stoplight/spectral-cli": "6.17.0"
+  }
+}

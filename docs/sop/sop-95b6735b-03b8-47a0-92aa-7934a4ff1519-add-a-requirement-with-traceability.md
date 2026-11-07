@@ -82,6 +82,6 @@ Do the validation of the documents, the STE check and the traceability check. Co
 
 ## Updates
 
-### 2026-11-02 00:00:00.000Z - Draft written
+### 2026-11-02T14:17:51.797Z - Draft written
 
 The first version of this SOP is written.

@@ -328,7 +328,7 @@ wf_case jobpermok 0 "RESULT: PASS" "job: permissions: contents: read (the same a
 wf_case nojava 1 "lacks the required action(s) actions/setup-java" "license-check: setup-java removed" '/actions\/setup-java@/,/java-version:/d'
 wf_case nonode 1 "lacks the required action(s) actions/setup-node" "license-check: setup-node removed" '/actions\/setup-node@/,/node-version:/d'
 wf_case nopnpm 1 "lacks the required action(s) pnpm/action-setup" "license-check: pnpm/action-setup removed" '/pnpm\/action-setup@/,/version: "12.16.1"/d'
-wf_case noupload 1 "lacks the required action(s) actions/upload-artifact" "license-check: upload-artifact removed" '/actions\/upload-artifact@/,/if-no-files-found: error/d'
+wf_case noupload 1 "lacks the required action(s) actions/upload-artifact" "license-check: upload-artifact removed" '/actions\/upload-artifact@/,/retention-days: 90/d'
 wf_case nojust 1 "lacks the required action(s) extractions/setup-just" "all jobs: setup-just removed" '/extractions\/setup-just@/,/just-version:/d'
 wf_case nouv 1 "lacks the required action(s) astral-sh/setup-uv" "all jobs with uv: setup-uv removed" '/astral-sh\/setup-uv@/,/version: "0.13.7"/d'
 wf_case nocheckout 1 "lacks the required action(s) actions/checkout" "all jobs: checkout removed" '/actions\/checkout@/,/persist-credentials: false/d'
@@ -336,6 +336,41 @@ wf_case extraaction 1 "has the action(s) actions/setup-node, which are not in re
     's|^      - run: just commit-check$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
 wf_case twocheckout 1 "has the action(s) actions/checkout" "commit-check: the checkout twice" \
     's|^      - run: just commit-check$|      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1\n&|'
+# the jobs of feat-6-contracts-openapi-pipeline (Task 130.110): each has its own line in required-setup.txt. job_range <job> <recipe>
+# is the sed address of the lines of one job (from its identifier to its run step), so a case changes this job only.
+job_range() { printf '/^  %s:$/,/^      - run: just %s$/' "$1" "$2"; }
+wf_case nolintnode 1 "job 'lint' lacks the required action(s) actions/setup-node" "lint: setup-node removed (only in this job)" \
+    "$(job_range lint lint){/actions\/setup-node@/,/node-version:/d}"
+wf_case nolintpnpm 1 "job 'lint' lacks the required action(s) pnpm/action-setup" "lint: pnpm/action-setup removed (only in this job)" \
+    "$(job_range lint lint){/pnpm\/action-setup@/,/version: \"12.16.1\"/d}"
+wf_case nobreakinguv 1 "job 'breaking-changes' lacks the required action(s) astral-sh/setup-uv" "breaking-changes: setup-uv removed (only in this job)" \
+    "$(job_range breaking-changes breaking-changes){/astral-sh\/setup-uv@/,/version: \"0.13.7\"/d}"
+wf_case breakingjava 1 "job 'breaking-changes' has the action(s) actions/setup-java, which are not in required-setup.txt" "breaking-changes: an extra action (Java)" \
+    's|^      - run: just breaking-changes$|      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0\n        with:\n          distribution: temurin\n          java-version: "21.0.13+9"\n&|'
+wf_case nogenjava 1 "job 'check-generated' lacks the required action(s) actions/setup-java" "check-generated: setup-java removed (only in this job)" \
+    "$(job_range check-generated check-generated){/actions\/setup-java@/,/java-version:/d}"
+wf_case nogennode 1 "job 'check-generated' lacks the required action(s) actions/setup-node" "check-generated: setup-node removed (only in this job)" \
+    "$(job_range check-generated check-generated){/actions\/setup-node@/,/node-version:/d}"
+wf_case nocompilejava 1 "job 'compile' lacks the required action(s) actions/setup-java" "compile: setup-java removed (only in this job)" \
+    "$(job_range compile compile){/actions\/setup-java@/,/java-version:/d}"
+wf_case nocompilepnpm 1 "job 'compile' lacks the required action(s) pnpm/action-setup" "compile: pnpm/action-setup removed (only in this job)" \
+    "$(job_range compile compile){/pnpm\/action-setup@/,/version: \"12.16.1\"/d}"
+wf_case nodocsjava 1 "job 'api-docs' lacks the required action(s) actions/setup-java" "api-docs: setup-java removed (only in this job)" \
+    "$(job_range api-docs api-docs){/actions\/setup-java@/,/java-version:/d}"
+wf_case nodocsupload 1 "job 'api-docs' lacks the required action(s) actions/upload-artifact" "api-docs: the upload of the artifact removed" \
+    '/^      - run: just api-docs$/,/retention-days: 90/{/^      - uses: actions\/upload-artifact@/,/retention-days: 90/d}'
+wf_case docsupnode 1 "job 'api-docs' has the action(s) actions/setup-node, which are not in required-setup.txt" "api-docs: an extra action (Node)" \
+    's|^      - run: just api-docs$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
+wf_case docsif 1 "\`if: \${{ !cancelled() }}\` is not allowed" "api-docs: the upload step has the if of the SBOM upload (it is allowed in license-check only)" \
+    '/^  api-docs:$/,/^  # The tests of the gates/{/^      - uses: actions\/upload-artifact@/s|$|\n        if: ${{ !cancelled() }}|}'
+wf_case docsneeds 1 "job 'api-docs' has the key \`needs\`" "api-docs: needs" 's|^  api-docs:$|&\n    needs: compile|'
+wf_case gentest 1 "job 'test-gates' lacks the required action(s) actions/setup-java" "test-gates: setup-java removed (the tests of the generators need it)" \
+    "$(job_range test-gates test-gates){/actions\/setup-java@/,/java-version:/d}"
+wf_case gennode 1 "job 'test-gates' lacks the required action(s) actions/setup-node" "test-gates: setup-node removed (the lint test needs it)" \
+    "$(job_range test-gates test-gates){/actions\/setup-node@/,/node-version:/d}"
+wf_case genrecipe 1 "the recipe of the job is \`just generate\`, but it must be \`just check-generated\`" "check-generated: the job starts another recipe" \
+    's|^      - run: just check-generated$|      - run: just generate|'
+wf_case lintrenamed 1 "job 'lint-openapi' is not in required-setup.txt" "lint: the job has another identifier than the recipe" 's|^  lint:$|  lint-openapi:|'
 # the jobs
 wf_case nojobsudo 1 "the job 'check-sudo' of ci.yml is in required-setup.txt, but not in the workflows" "a job of the file is missing" \
     '/^  check-sudo:$/,/^      - run: just check-sudo$/d'
@@ -374,8 +409,8 @@ expect 2 "has no job" "required-setup.txt has no job" run_real_wf "${work}/wf-re
 printf 'ci.yml validate\nci.yml validate\n' >"${work}/required-twice.txt"
 expect 2 "is twice in the file" "required-setup.txt has a job twice" run_real_wf "${work}/wf-real" "${work}/required-twice.txt"
 expect 2 "cannot read" "required-setup.txt does not exist" run_real_wf "${work}/wf-real" "${work}/no-such-required.txt"
-# the data file of the repository is the one that the workflow needs: each of the 7 jobs is in it
-expect 0 "7 run step(s)" "required-setup.txt of the repository has the 7 gate jobs" run_real_wf "${work}/wf-real"
+# the data file of the repository is the one that the workflow needs: each of the 12 jobs is in it
+expect 0 "12 run step(s)" "required-setup.txt of the repository has the 12 gate jobs (7 of feat-5 and 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs)" run_real_wf "${work}/wf-real"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh (Task 130.142)"
@@ -421,6 +456,14 @@ pin_case nodemiss 1 "has no input \`node-version\`" "license-check job: the Node
 pin_case nodever 1 "\`node-version\` is 24.0.0" "license-check job: the Node version is not the one of versions.env" "s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
 pin_case pnpmmiss 1 "pnpm/action-setup has no input \`version\`" "license-check job: the pnpm version is missing" "/version: \"$(version_of PNPM_VERSION)\"/d"
 pin_case pnpmver 1 "PNPM_VERSION in tools/versions.env" "license-check job: the pnpm version is not the one of versions.env" "s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
+# The setup actions of the jobs of feat-6-contracts-openapi-pipeline (Task 130.110): a wrong version in one job only
+pin_case lintpnpm 1 "PNPM_VERSION in tools/versions.env" "lint job: the pnpm version is not the one of versions.env" "$(job_range lint lint)s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
+pin_case lintnode 1 "\`node-version\` is 24.0.0" "lint job: the Node version is not the one of versions.env" "$(job_range lint lint)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case genjava 1 "\`java-version\` is 21," "check-generated job: the Java version is not the one of versions.env" "$(job_range check-generated check-generated)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
+pin_case compilenode 1 "\`node-version\` is 24.0.0" "compile job: the Node version is not the one of versions.env" "$(job_range compile compile)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case docsdist 1 "must be temurin" "api-docs job: the Java distribution is not temurin" "$(job_range api-docs api-docs)s#distribution: temurin#distribution: zulu#"
+pin_case breakinguv 1 "UV_VERSION" "breaking-changes job: the uv version is not the one of versions.env" "$(job_range breaking-changes breaking-changes)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
+pin_case testgatesjava 1 "\`java-version\` is 21," "test-gates job: the Java version is not the one of versions.env" "$(job_range test-gates test-gates)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
 
 # A workflow with each setup action, with the versions of versions.env, and with changes
 all_setup="${work}/pin-all"
@@ -501,7 +544,7 @@ distributionType=only-script
 distributionUrl=${good_url}
 distributionSha256Sum=${good_sha}"
 
-expect 0 "no Maven project" "no pom.xml and no wrapper (the real repository)" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+expect 0 "Maven Wrapper: 1 file(s), Maven $(version_of MAVEN_VERSION)" "backend/pom.xml and the wrapper with the pinned Maven version and a sha256 (the real repository, feat-6 Task 105.100)" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/mv-none"
 expect 0 "no Maven project" "no pom.xml and no wrapper (an empty tree)" run_maven "${work}/mv-none"
 mkdir -p "${work}/mv-pom" && echo "${pom_xml}" >"${work}/mv-pom/pom.xml"
@@ -573,15 +616,18 @@ section "check-pins.sh: the lock file of cdxgen in tools/sbom/ (finding G2, feat
 real_tool="${REPO_ROOT}/tools/sbom"
 cdxgen_version="$(version_of CDXGEN_VERSION)"
 cdxgen_integrity="$(version_of CDXGEN_INTEGRITY)"
+cyclonedx_sha="$(version_of CYCLONEDX_MAVEN_PLUGIN_SHA256)"
 other_version="0.0.1"
 other_integrity="sha512-$(printf 'A%.0s' {1..86})=="
+other_cyclonedx_sha="$(printf 'd%.0s' {1..64})"
 # run_sbom_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the cdxgen project
 run_sbom_pins() { env SBOM_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
-# mk_tool <name>: a copy of package.json and pnpm-lock.yaml of the repository in a new folder (the folder is printed)
+# mk_tool <name>: a copy of package.json, pnpm-lock.yaml and cyclonedx-maven-plugin.sha256 of the repository in a new folder
+# (the folder is printed)
 mk_tool() {
     local dir="${work}/sbomtool-$1"
     rm -rf "${dir}" && mkdir -p "${dir}"
-    cp "${real_tool}/package.json" "${real_tool}/pnpm-lock.yaml" "${dir}/"
+    cp "${real_tool}/package.json" "${real_tool}/pnpm-lock.yaml" "${real_tool}/cyclonedx-maven-plugin.sha256" "${dir}/"
     echo "${dir}"
 }
 # sbom_pin_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
@@ -633,6 +679,19 @@ sbom_pin_case onlylockpackages pnpm-lock.yaml "\`packages\` must have exactly on
     "0,/^  '@cyclonedx\\/cdxgen@${cdxgen_version}':/s##  '@cyclonedx/cdxgen@${other_version}':#"
 sbom_pin_case onlylockintegrity pnpm-lock.yaml "but CDXGEN_INTEGRITY in tools/versions.env is ${cdxgen_integrity}" "one place only: the lock file has another integrity value of cdxgen" \
     "s#${cdxgen_integrity}#${other_integrity}#"
+# The sha256 of the jar of the SBOM plugin: the second place is tools/sbom/cyclonedx-maven-plugin.sha256 (ACC-011).
+# A change of only one of the two places (versions.env, the file) stops the check.
+versions_case onlyjarsha "but CYCLONEDX_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${other_cyclonedx_sha}" "one place only: versions.env has another CYCLONEDX_MAVEN_PLUGIN_SHA256" \
+    "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=${other_cyclonedx_sha}#"
+dir="$(mk_tool onlyjarfile)"
+echo "${other_cyclonedx_sha}" >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "but CYCLONEDX_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${cyclonedx_sha}" "one place only: cyclonedx-maven-plugin.sha256 has another sha256" run_sbom_pins "${dir}"
+dir="$(mk_tool nojarfile)" && rm "${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "does not exist (it is the second place of CYCLONEDX_MAVEN_PLUGIN_SHA256, the sha256 of the plugin jar)" "no cyclonedx-maven-plugin.sha256 in the folder" run_sbom_pins "${dir}"
+dir="$(mk_tool emptyjarfile)" && : >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "an empty cyclonedx-maven-plugin.sha256" run_sbom_pins "${dir}"
+dir="$(mk_tool badjarfile)" && echo "not a sha256 value" >"${dir}/cyclonedx-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "a cyclonedx-maven-plugin.sha256 with no sha256 value" run_sbom_pins "${dir}"
 # All three places with the same new value pass (this is the update procedure of tools/sbom/README.md; the lock file here is a copy with the value changed by sed)
 dir="$(mk_tool allthree)"
 sed -i -e "s#\"@cyclonedx/cdxgen\": \"${cdxgen_version}\"#\"@cyclonedx/cdxgen\": \"${other_version}\"#" "${dir}/package.json"
@@ -755,6 +814,545 @@ grep -v '^CDXGEN_INTEGRITY=' "${real_versions}" >"${work}/sbomver-noint.env"
 expect 1 "CDXGEN_INTEGRITY is not in tools/versions.env" "versions.env has no CDXGEN_INTEGRITY" run_sbom_pins "${real_tool}" "${work}/sbomver-noint.env"
 
 # ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the lock file of Spectral in tools/spectral/ (feat-6-contracts-openapi-pipeline, Task 110.110, REQ-009)"
+# The same check as for cdxgen (check_pnpm_tool), with SPECTRAL_VERSION, SPECTRAL_INTEGRITY and the package
+# @stoplight/spectral-cli. The messages start with `Lint tool:`.
+real_lint="${REPO_ROOT}/tools/spectral"
+spectral_version="$(version_of SPECTRAL_VERSION)"
+spectral_integrity="$(version_of SPECTRAL_INTEGRITY)"
+# run_lint_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the Spectral project
+run_lint_pins() { env LINT_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_lint_tool <name>: a copy of package.json and pnpm-lock.yaml of the repository in a new folder (the folder is printed)
+mk_lint_tool() {
+    local dir="${work}/linttool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_lint}/package.json" "${real_lint}/pnpm-lock.yaml" "${dir}/"
+    echo "${dir}"
+}
+# lint_pin_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
+lint_pin_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_lint_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/${file}"
+    if cmp -s "${real_lint}/${file}" "${dir}/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_lint_pins "${dir}"
+}
+# lint_pin_append_case <name> <file> <text> <description> <text to append>: add text at the end of <file> in a copy
+lint_pin_append_case() {
+    local name="$1" file="$2" text="$3" description="$4" dir
+    dir="$(mk_lint_tool "${name}")"
+    printf '%b' "$5" >>"${dir}/${file}"
+    expect 1 "${text}" "${description}" run_lint_pins "${dir}"
+}
+# lint_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+lint_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/lintver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/lintver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_lint_pins "${real_lint}" "${work}/lintver-${name}.env"
+}
+spectral_package="@stoplight/spectral-cli"
+
+expect 0 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "the real tools/spectral/ is the one of versions.env" run_lint_pins "${real_lint}"
+expect 0 "RESULT: PASS" "the real tools/spectral/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# The three places, each alone: a change of one place stops the check
+lint_versions_case onlyversions "SPECTRAL_VERSION in tools/versions.env is ${other_version}" "Spectral, one place only: versions.env has another SPECTRAL_VERSION" \
+    "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${other_version}#"
+lint_versions_case onlyintegrity "but SPECTRAL_INTEGRITY in tools/versions.env is ${other_integrity}" "Spectral, one place only: versions.env has another SPECTRAL_INTEGRITY" \
+    "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=${other_integrity}#"
+lint_pin_case onlypackage package.json "but SPECTRAL_VERSION in tools/versions.env is ${spectral_version}" "Spectral, one place only: package.json has another version" \
+    "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#"
+lint_pin_case onlylock pnpm-lock.yaml "the importer has ${spectral_package} \`version\` '${other_version}'" "Spectral, one place only: the lock file has another version (importer)" \
+    "s#^\\(        version: \\)${spectral_version}\$#\\1${other_version}#"
+lint_pin_case onlylockpackages pnpm-lock.yaml "\`packages\` must have exactly one ${spectral_package}" "Spectral, one place only: the lock file has another version (packages)" \
+    "0,/^  '@stoplight\\/spectral-cli@${spectral_version}':/s##  '${spectral_package}@${other_version}':#"
+lint_pin_case onlylockintegrity pnpm-lock.yaml "but SPECTRAL_INTEGRITY in tools/versions.env is ${spectral_integrity}" "Spectral, one place only: the lock file has another integrity value" \
+    "s#${spectral_integrity}#${other_integrity}#"
+# All three places with the same new value pass (the procedure of tools/spectral/README.md)
+dir="$(mk_lint_tool allthree)"
+sed -i -e "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#" "${dir}/package.json"
+sed -i -e "s#${spectral_package}@${spectral_version}#${spectral_package}@${other_version}#" \
+    -e "s#^\\(        \\(specifier\\|version\\): \\)${spectral_version}\$#\\1${other_version}#" \
+    -e "s#${spectral_integrity}#${other_integrity}#" "${dir}/pnpm-lock.yaml"
+sed -e "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${other_version}#" -e "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=${other_integrity}#" \
+    "${real_versions}" >"${work}/lintver-allthree.env"
+expect 0 "RESULT: PASS" "Spectral: all three places have the same new version and integrity value" run_lint_pins "${dir}" "${work}/lintver-allthree.env"
+
+# package.json: ranges and tags
+for range in "^${spectral_version}" "~${spectral_version}" ">=${spectral_version}" "${spectral_version}.x" "6.x" "*" "latest" "next" "npm:${spectral_package}@${spectral_version}" "file:../x" "git+https://example.invalid/x.git"; do
+    lint_pin_case "range-${range//[^A-Za-z0-9]/_}" package.json "but SPECTRAL_VERSION in tools/versions.env is ${spectral_version}" "Spectral, package.json: the version is a range or a tag (${range})" \
+        "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${range}\"#"
+done
+# package.json: other dependencies and other keys
+lint_pin_case extradep package.json "has the dependency left-pad" "Spectral, package.json: one more dependency" \
+    "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${spectral_version}\",\n    \"left-pad\": \"1.3.0\"#"
+lint_pin_case otherdep package.json "has the dependency @cyclonedx/cdxgen" "Spectral, package.json: another dependency (the one of cdxgen) and not Spectral" \
+    "s#\"${spectral_package}\"#\"@cyclonedx/cdxgen\"#"
+lint_pin_case nodeps package.json "has no \`dependencies\` object" "Spectral, package.json: no dependencies key" \
+    "s#\"dependencies\"#\"x-dependencies\"#"
+for key in devDependencies optionalDependencies peerDependencies overrides resolutions pnpm packageManager scripts; do
+    lint_pin_case "key-${key}" package.json "has the key \`${key}\`" "Spectral, package.json: ${key}" \
+        "s#\"private\": true,#\"private\": true,\n  \"${key}\": {},#"
+done
+lint_pin_case dupkey package.json "there two times" "Spectral, package.json: a key two times" \
+    "s#\"private\": true,#\"private\": true,\n  \"private\": false,#"
+lint_pin_append_case jsonbad package.json "cannot be read as JSON" "Spectral, package.json: not JSON" "{"
+
+# The lock file
+lint_pin_case lockextradep pnpm-lock.yaml "must have exactly one dependency, ${spectral_package}" "Spectral, lock file: a second direct dependency of the importer" \
+    "s#^\\(        version: ${spectral_version}\\)\$#\\1\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+lint_pin_case lockdevdep pnpm-lock.yaml "must have \`dependencies\` and nothing else" "Spectral, lock file: devDependencies in the importer" \
+    "s#^\\(        version: ${spectral_version}\\)\$#\\1\n    devDependencies:\n      left-pad:\n        specifier: 1.3.0\n        version: 1.3.0#"
+lint_pin_case lockspecifier pnpm-lock.yaml "the importer has ${spectral_package} \`specifier\` '^${spectral_version}'" "Spectral, lock file: the specifier is a range" \
+    "s#^\\(        specifier: \\)${spectral_version}\$#\\1^${spectral_version}#"
+lint_pin_case lockversion pnpm-lock.yaml "must be a text that starts with \`9.\`" "Spectral, lock file: lockfileVersion 8.0" \
+    "s#^lockfileVersion: '9.0'#lockfileVersion: '8.0'#"
+lint_pin_case locknoint pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package with no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {}#"
+lint_pin_case locksha1 pnpm-lock.yaml "has an integrity value that is not sha256, sha384 or sha512" "Spectral, lock file: a package with an integrity value of sha1" \
+    "${first_package}s#integrity: [^}]*}#integrity: sha1-AAAAAAAAAAAAAAAAAAAAAAAAAAA=}#"
+lint_pin_case locktarball pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package with a tarball URL and no integrity value" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {tarball: https://example.invalid/x.tgz}#"
+lint_pin_case locktarballint pnpm-lock.yaml "has the \`resolution\` keys ['tarball']" "Spectral, lock file: a package with an integrity value and a tarball URL" \
+    "${first_package}s#resolution: {\\([^}]*\\)}#resolution: {\\1, tarball: https://example.invalid/x.tgz}#"
+lint_pin_case lockgit pnpm-lock.yaml "has no integrity value" "Spectral, lock file: a package from git" \
+    "${first_package}s#resolution: {[^}]*}#resolution: {commit: 0123456789abcdef0123456789abcdef01234567, repo: https://example.invalid/x.git, type: git}#"
+lint_pin_case lockurlkey pnpm-lock.yaml "is not \`<name>@<exact version>\`" "Spectral, lock file: a package with a URL and no version in the key" \
+    "${first_package}s#^  '\\([^']*\\)@[0-9][^']*':\$#  '\\1@https://example.invalid/x.tgz':#"
+lint_pin_case locksnapshot pnpm-lock.yaml "which is not in \`packages\`" "Spectral, lock file: a snapshot of a package that is not in packages" \
+    "s#^snapshots:#&\n  'left-pad@1.3.0': {}#"
+lint_pin_append_case lockoverrides pnpm-lock.yaml "has the top-level key \`overrides\`" "Spectral, lock file: overrides" "\noverrides:\n  yargs: 1.0.0\n"
+lint_pin_append_case locksecond pnpm-lock.yaml "has 2 YAML documents" "Spectral, lock file: a second YAML document (a packageManager field makes one)" "\n---\nlockfileVersion: '9.0'\n"
+lint_pin_append_case lockbroken pnpm-lock.yaml "cannot be read as YAML" "Spectral, lock file: not YAML" "\n  bad: [\n"
+
+# The folder
+expect 1 "the folder ${work}/no-such-lint-tool (the lock file of Spectral) does not exist" "no folder tools/spectral/" run_lint_pins "${work}/no-such-lint-tool"
+mkdir -p "${work}/linttool-empty"
+expect 1 "linttool-empty/package.json does not exist" "Spectral, an empty folder: no package.json" run_lint_pins "${work}/linttool-empty"
+dir="$(mk_lint_tool nolock)" && rm "${dir}/pnpm-lock.yaml"
+expect 1 "linttool-nolock/pnpm-lock.yaml does not exist" "Spectral: no lock file (package.json is there)" run_lint_pins "${dir}"
+for extra in .npmrc pnpm-workspace.yaml .pnpmfile.cjs yarn.lock package-lock.json ruleset.yaml; do
+    dir="$(mk_lint_tool "extra-${extra//./_}")" && echo "x" >"${dir}/${extra}"
+    expect 1 "/${extra} is not allowed" "Spectral: the folder has the file ${extra}" run_lint_pins "${dir}"
+done
+dir="$(mk_lint_tool readme)" && echo "# x" >"${dir}/README.md" && mkdir -p "${dir}/node_modules/x"
+expect 0 "RESULT: PASS" "Spectral: README.md and node_modules are allowed in the folder" run_lint_pins "${dir}"
+
+# versions.env
+sed -e "s#^SPECTRAL_INTEGRITY=.*#SPECTRAL_INTEGRITY=sha512-abc#" "${real_versions}" >"${work}/lintver-integrityform.env"
+expect 1 "it must be a sha512 integrity value of npm" "Spectral, versions.env: the form of SPECTRAL_INTEGRITY is checked" run_lint_pins "${real_lint}" "${work}/lintver-integrityform.env"
+for range in "^${spectral_version}" "latest" "6"; do
+    sed -e "s#^SPECTRAL_VERSION=.*#SPECTRAL_VERSION=${range}#" "${real_versions}" >"${work}/lintver-range.env"
+    expect 1 "it must be an exact version (no range, no tag)" "Spectral, versions.env: SPECTRAL_VERSION is not an exact version (${range})" run_lint_pins "${real_lint}" "${work}/lintver-range.env"
+done
+grep -v '^SPECTRAL_VERSION=' "${real_versions}" >"${work}/lintver-nover.env"
+expect 1 "SPECTRAL_VERSION is not in tools/versions.env" "Spectral, versions.env has no SPECTRAL_VERSION" run_lint_pins "${real_lint}" "${work}/lintver-nover.env"
+grep -v '^SPECTRAL_INTEGRITY=' "${real_versions}" >"${work}/lintver-noint.env"
+expect 1 "SPECTRAL_INTEGRITY is not in tools/versions.env" "Spectral, versions.env has no SPECTRAL_INTEGRITY" run_lint_pins "${real_lint}" "${work}/lintver-noint.env"
+# The two checks are separate: a bad lock file of Spectral does not make the check of cdxgen stop, and the other way round
+dir="$(mk_lint_tool separate)"
+sed -i -e "s#\"${spectral_package}\": \"${spectral_version}\"#\"${spectral_package}\": \"${other_version}\"#" "${dir}/package.json"
+expect 1 "SBOM tool pin: SBOM tool: ${real_tool}: @cyclonedx/cdxgen ${cdxgen_version}" "a bad lock file of Spectral: the check of cdxgen still passes (and says so)" run_lint_pins "${dir}"
+expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "a bad lock file of cdxgen: the check of Spectral still passes (and says so)" \
+    env SBOM_TOOL_DIR="${work}/no-such-sbom-tool" LINT_TOOL_DIR="${real_lint}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the pin of oasdiff, tools/breaking/oasdiff-checksums.txt (feat-6-contracts-openapi-pipeline, Task 115.100, REQ-009, ACC-011)"
+# OASDIFF_VERSION and OASDIFF_SHA256 of versions.env, and the file `checksums.txt` of the release (the second place).
+# The messages start with `Breaking-changes tool:`.
+real_breaking="${REPO_ROOT}/tools/breaking"
+oasdiff_version="$(version_of OASDIFF_VERSION)"
+oasdiff_sha="$(version_of OASDIFF_SHA256)"
+oasdiff_asset="oasdiff_${oasdiff_version}_linux_amd64.tar.gz"
+other_oasdiff_version="1.36.0"
+other_oasdiff_sha="$(printf 'b%.0s' {1..64})"
+# run_breaking_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the checksums of oasdiff
+run_breaking_pins() { env BREAKING_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_breaking_tool <name>: a copy of oasdiff-checksums.txt of the repository in a new folder (the folder is printed)
+mk_breaking_tool() {
+    local dir="${work}/breakingtool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_breaking}/oasdiff-checksums.txt" "${dir}/"
+    echo "${dir}"
+}
+# breaking_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+breaking_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/breakingver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/breakingver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_breaking_pins "${real_breaking}" "${work}/breakingver-${name}.env"
+}
+# breaking_file_case <name> <text> <description> <sed expression>: change the copy of oasdiff-checksums.txt with sed (exit code 1)
+breaking_file_case() {
+    local name="$1" text="$2" description="$3" expression="$4" dir
+    dir="$(mk_breaking_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/oasdiff-checksums.txt"
+    if cmp -s "${real_breaking}/oasdiff-checksums.txt" "${dir}/oasdiff-checksums.txt"; then
+        echo "FAIL ${description}: the sed expression did not change oasdiff-checksums.txt"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_breaking_pins "${dir}"
+}
+
+expect 0 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt: ${oasdiff_asset} has the sha256 of tools/versions.env" \
+    "the real tools/breaking/ has the checksum of versions.env" run_breaking_pins "${real_breaking}"
+expect 0 "RESULT: PASS" "the real tools/breaking/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+# The real file has the checksum of the release, and the line for the pinned asset is there once
+if [[ "$(grep -c "  ${oasdiff_asset}\$" "${real_breaking}/oasdiff-checksums.txt")" == "1" ]] \
+    && grep -q "^${oasdiff_sha}  ${oasdiff_asset}\$" "${real_breaking}/oasdiff-checksums.txt"; then
+    echo "ok   oasdiff-checksums.txt has one line for ${oasdiff_asset}, with the value of OASDIFF_SHA256"
+    passed=$((passed + 1))
+else
+    echo "FAIL oasdiff-checksums.txt has not one line for ${oasdiff_asset} with the value of OASDIFF_SHA256"
+    failed=$((failed + 1))
+fi
+
+# The two places, each alone: a change of one place stops the check (ACC-011: a changed version, a changed checksum)
+breaking_versions_case onlyversion "has no line for oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz" "oasdiff, one place only: versions.env has another OASDIFF_VERSION" \
+    "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${other_oasdiff_version}#"
+breaking_versions_case onlysha "but OASDIFF_SHA256 in tools/versions.env is ${other_oasdiff_sha}" "oasdiff, one place only: versions.env has another OASDIFF_SHA256" \
+    "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${other_oasdiff_sha}#"
+breaking_file_case onlyfilesha "but OASDIFF_SHA256 in tools/versions.env is ${oasdiff_sha}" "oasdiff, one place only: oasdiff-checksums.txt has another sha256 for the asset" \
+    "s#^[0-9a-f]\{64\}  ${oasdiff_asset}\$#${other_oasdiff_sha}  ${oasdiff_asset}#"
+breaking_file_case onlyfilename "has no line for ${oasdiff_asset}" "oasdiff, one place only: oasdiff-checksums.txt has no line for the asset (another version)" \
+    "s#  ${oasdiff_asset}\$#  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz#"
+# The sha256 of another platform is not the sha256 of the pinned file
+breaking_file_case onlyplatform "has no line for ${oasdiff_asset}" "oasdiff: the line for the asset is gone, and the value of OASDIFF_SHA256 is on the line of another file" \
+    "s#  ${oasdiff_asset}\$#  oasdiff_${oasdiff_version}_darwin_all.tar.gz#"
+# Both places with the same new value pass (the procedure of tools/breaking/README.md)
+dir="$(mk_breaking_tool bothplaces)"
+sed -i -e "s#^[0-9a-f]\{64\}  ${oasdiff_asset}\$#${other_oasdiff_sha}  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz#" "${dir}/oasdiff-checksums.txt"
+sed -e "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${other_oasdiff_version}#" -e "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${other_oasdiff_sha}#" "${real_versions}" >"${work}/breakingver-both.env"
+expect 0 "RESULT: PASS" "oasdiff, both places changed to the same new value (versions.env and the file): the check passes" run_breaking_pins "${dir}" "${work}/breakingver-both.env"
+
+# The form of the values in versions.env
+for sha in "abc" "$(printf 'A%.0s' {1..64})" "$(printf 'g%.0s' {1..64})" "${oasdiff_sha}0" "${oasdiff_sha:1}" "sha256:${oasdiff_sha}"; do
+    sed -e "s#^OASDIFF_SHA256=.*#OASDIFF_SHA256=${sha}#" "${real_versions}" >"${work}/breakingver-shaform.env"
+    expect 1 "it must be a sha256 value (64 lower case hexadecimal characters)" "oasdiff, versions.env: OASDIFF_SHA256 is not a sha256 value (${sha:0:20}...)" run_breaking_pins "${real_breaking}" "${work}/breakingver-shaform.env"
+done
+for range in "^${oasdiff_version}" "latest" "1" "1.35" "v${oasdiff_version}" "${oasdiff_version}.x"; do
+    sed -e "s#^OASDIFF_VERSION=.*#OASDIFF_VERSION=${range}#" "${real_versions}" >"${work}/breakingver-range.env"
+    expect 1 "it must be an exact version" "oasdiff, versions.env: OASDIFF_VERSION is not an exact version (${range})" run_breaking_pins "${real_breaking}" "${work}/breakingver-range.env"
+done
+grep -v '^OASDIFF_VERSION=' "${real_versions}" >"${work}/breakingver-nover.env"
+expect 1 "OASDIFF_VERSION is not in tools/versions.env" "oasdiff, versions.env has no OASDIFF_VERSION" run_breaking_pins "${real_breaking}" "${work}/breakingver-nover.env"
+grep -v '^OASDIFF_SHA256=' "${real_versions}" >"${work}/breakingver-nosha.env"
+expect 1 "OASDIFF_SHA256 is not in tools/versions.env" "oasdiff, versions.env has no OASDIFF_SHA256" run_breaking_pins "${real_breaking}" "${work}/breakingver-nosha.env"
+
+# The file of the vendor
+expect 1 "the folder ${work}/no-such-breaking-tool (the checksums of the release of oasdiff) does not exist" "no folder tools/breaking/" run_breaking_pins "${work}/no-such-breaking-tool"
+mkdir -p "${work}/breakingtool-empty"
+expect 1 "breakingtool-empty/oasdiff-checksums.txt does not exist" "oasdiff, an empty folder: no oasdiff-checksums.txt" run_breaking_pins "${work}/breakingtool-empty"
+dir="$(mk_breaking_tool emptyfile)" && : >"${dir}/oasdiff-checksums.txt"
+expect 1 "has no line for ${oasdiff_asset}" "oasdiff, an empty oasdiff-checksums.txt" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool dupline)" && echo "${other_oasdiff_sha}  ${oasdiff_asset}" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "has 2 lines for ${oasdiff_asset}, but it must have one" "oasdiff, oasdiff-checksums.txt: two lines for the asset (the second one has another value)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool dupsame)" && echo "${oasdiff_sha}  ${oasdiff_asset}" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "has 2 lines for ${oasdiff_asset}, but it must have one" "oasdiff, oasdiff-checksums.txt: two lines for the asset (the same value)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool onespace)" && sed -i -e "s#^\(${oasdiff_sha}\)  #\1 #" "${dir}/oasdiff-checksums.txt"
+expect 1 "line 5: the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: a line with one space and not two" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool garbage)" && echo "this is not a checksum line" >>"${dir}/oasdiff-checksums.txt"
+expect 1 "the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: a line that is not a checksum line" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool upper)" && sed -i -e "s#^${oasdiff_sha}#$(echo "${oasdiff_sha}" | tr 'a-f' 'A-F')#" "${dir}/oasdiff-checksums.txt"
+expect 1 "the form is not \`<sha256 value>  <file name>\`" "oasdiff, oasdiff-checksums.txt: the value has upper case letters" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool extraline)" && echo "${other_oasdiff_sha}  oasdiff_${other_oasdiff_version}_linux_amd64.tar.gz" >>"${dir}/oasdiff-checksums.txt"
+expect 0 "RESULT: PASS" "oasdiff, oasdiff-checksums.txt: lines for other files are no problem (the file of the vendor has them)" run_breaking_pins "${dir}"
+dir="$(mk_breaking_tool blank)" && printf '\n\n' >>"${dir}/oasdiff-checksums.txt"
+expect 0 "RESULT: PASS" "oasdiff, oasdiff-checksums.txt: blank lines are no problem" run_breaking_pins "${dir}"
+# The checks are separate: a bad file of oasdiff does not hide the result of the other checks, and the other way round
+dir="$(mk_breaking_tool separate)" && sed -i -e "s#^${oasdiff_sha}#${other_oasdiff_sha}#" "${dir}/oasdiff-checksums.txt"
+expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "a bad file of oasdiff: the check of Spectral still passes (and says so)" run_breaking_pins "${dir}"
+expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt" "a bad lock file of Spectral: the check of oasdiff still passes (and says so)" \
+    env LINT_TOOL_DIR="${work}/no-such-lint-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the pin of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105, REQ-009, ACC-011, ACC-012)"
+# OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION of versions.env and the version of the plugin in a pom.xml, and the sha256 of the
+# jar in versions.env and in tools/generate/openapi-generator-maven-plugin.sha256 (the second place, ACC-011). The messages
+# start with `Generator plugin:`. A changed sha256 stops this check (the section "the pin of the generator plugin" of this
+# test with the stub of mvnw, and test-generate-gate.sh with the real plugin).
+real_pom="${REPO_ROOT}/backend/pom.xml"
+real_generator_files="${REPO_ROOT}/tools/generate"
+generator_version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
+generator_sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
+other_generator_version="7.28.0"
+other_generator_sha="$(printf 'c%.0s' {1..64})"
+other_generator_file_sha="$(printf 'e%.0s' {1..64})"
+# mk_generator_root <name>: a tree with a copy of backend/pom.xml and the Maven Wrapper (the pin check of Maven needs it)
+mk_generator_root() {
+    local dir="${work}/genroot-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}/backend"
+    cp "${real_pom}" "${dir}/backend/pom.xml"
+    cp -r "${REPO_ROOT}/backend/.mvn" "${dir}/backend/.mvn"
+    echo "${dir}"
+}
+# run_generator_pins <root> [<versions.env>]: check-pins.sh for another project root
+run_generator_pins() { env GATE_WORK_ROOT="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# generator_pom_case <name> <exit code> <text> <description> <sed expression>: change the copy of pom.xml with sed
+generator_pom_case() {
+    local name="$1" code="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_generator_root "${name}")"
+    sed -i -e "${expression}" "${dir}/backend/pom.xml"
+    if cmp -s "${real_pom}" "${dir}/backend/pom.xml"; then
+        echo "FAIL ${description}: the sed expression did not change pom.xml"
+        failed=$((failed + 1))
+        return
+    fi
+    expect "${code}" "${text}" "${description}" run_generator_pins "${dir}"
+}
+# generator_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+generator_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/genver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/genver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_generator_pins "${REPO_ROOT}" "${work}/genver-${name}.env"
+}
+
+expect 0 "Generator plugin pin: Generator plugin: backend/pom.xml: openapi-generator-maven-plugin ${generator_version}, the version of tools/versions.env" \
+    "the real backend/pom.xml has the version of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+if grep -q "<openapi-generator.version>${generator_version}</openapi-generator.version>" "${real_pom}"; then
+    echo "ok   backend/pom.xml has the property openapi-generator.version ${generator_version}"
+    passed=$((passed + 1))
+else
+    echo "FAIL backend/pom.xml has not the property openapi-generator.version ${generator_version}"
+    failed=$((failed + 1))
+fi
+# The two places, each alone (ACC-011, a changed version)
+generator_versions_case onlyversions "has the plugin openapi-generator-maven-plugin ${generator_version}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION in tools/versions.env is ${other_generator_version}" \
+    "generator plugin, one place only: versions.env has another version" "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#"
+generator_pom_case onlypom 1 "has the plugin openapi-generator-maven-plugin ${other_generator_version}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION in tools/versions.env is ${generator_version}" \
+    "generator plugin, one place only: pom.xml has another version (the property)" \
+    "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#"
+# Both places with the same new version pass
+dir="$(mk_generator_root bothplaces)"
+sed -i -e "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#" "${dir}/backend/pom.xml"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#" "${real_versions}" >"${work}/genver-both.env"
+expect 0 "RESULT: PASS" "generator plugin: both places have the same new version" run_generator_pins "${dir}" "${work}/genver-both.env"
+# The version in other forms
+generator_pom_case literalok 0 "RESULT: PASS" "generator plugin: the version is written in the plugin (the same value)" \
+    "s#<version>\${openapi-generator.version}</version>#<version>${generator_version}</version>#"
+generator_pom_case literalother 1 "has the plugin openapi-generator-maven-plugin ${other_generator_version}, but" "generator plugin: the version is written in the plugin (another value)" \
+    "s#<version>\${openapi-generator.version}</version>#<version>${other_generator_version}</version>#"
+generator_pom_case noversion 1 "has the plugin openapi-generator-maven-plugin with no <version>" "generator plugin: the plugin has no <version>" \
+    "/<version>\${openapi-generator.version}<\/version>/d"
+generator_pom_case unknownproperty 1 "is not a version or a <properties> value of the same pom.xml" "generator plugin: the version is a property that the pom.xml does not have" \
+    "s#<version>\${openapi-generator.version}</version>#<version>\${no.such.property}</version>#"
+generator_pom_case range 1 "has the plugin openapi-generator-maven-plugin [7.27.0,8), but" "generator plugin: the version is a range" \
+    "s#<version>\${openapi-generator.version}</version>#<version>[7.27.0,8)</version>#"
+generator_pom_case latest 1 "has the plugin openapi-generator-maven-plugin LATEST, but" "generator plugin: the version is LATEST" \
+    "s#<version>\${openapi-generator.version}</version>#<version>LATEST</version>#"
+generator_pom_case noplugin 0 "no pom.xml has the plugin openapi-generator-maven-plugin" "generator plugin: a pom.xml with no plugin is no problem for this check" \
+    "s#<artifactId>openapi-generator-maven-plugin</artifactId>#<artifactId>other-plugin</artifactId>#"
+dir="$(mk_generator_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
+expect 1 "cannot read backend/pom.xml as XML" "generator plugin: a pom.xml that is not XML" run_generator_pins "${dir}"
+# The second module has another version
+dir="$(mk_generator_root second)" && mkdir -p "${dir}/backend/svc" && sed -e "s#<openapi-generator.version>${generator_version}<#<openapi-generator.version>${other_generator_version}<#" \
+    "${real_pom}" >"${dir}/backend/svc/pom.xml"
+expect 1 "backend/svc/pom.xml has the plugin openapi-generator-maven-plugin ${other_generator_version}" "generator plugin: a second pom.xml with another version" run_generator_pins "${dir}"
+# The form of the values in versions.env
+for sha in "abc" "$(printf 'A%.0s' {1..64})" "$(printf 'g%.0s' {1..64})" "${generator_sha}0" "${generator_sha:1}" "sha256:${generator_sha}"; do
+    sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${sha}#" "${real_versions}" >"${work}/genver-shaform.env"
+    expect 1 "it must be a sha256 value (64 lower case hexadecimal characters)" "generator plugin, versions.env: the sha256 is not a sha256 value (${sha:0:20}...)" \
+        run_generator_pins "${REPO_ROOT}" "${work}/genver-shaform.env"
+done
+for range in "^${generator_version}" "latest" "7" "7.27" "v${generator_version}" "${generator_version}.x"; do
+    sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${range}#" "${real_versions}" >"${work}/genver-range.env"
+    expect 1 "it must be an exact version" "generator plugin, versions.env: the version is not an exact version (${range})" run_generator_pins "${REPO_ROOT}" "${work}/genver-range.env"
+done
+grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=' "${real_versions}" >"${work}/genver-nover.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is not in tools/versions.env" "generator plugin, versions.env has no version" run_generator_pins "${REPO_ROOT}" "${work}/genver-nover.env"
+grep -v '^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=' "${real_versions}" >"${work}/genver-nosha.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not in tools/versions.env" "generator plugin, versions.env has no sha256" run_generator_pins "${REPO_ROOT}" "${work}/genver-nosha.env"
+# The checks are separate: a bad version of the plugin does not hide the result of the other checks
+generator_versions_case separate "Frontend pin: Frontend:" "a bad version of the generator plugin: the check of the frontend still passes (and says so)" \
+    "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=${other_generator_version}#"
+# The sha256 of the jar: the second place is tools/generate/openapi-generator-maven-plugin.sha256 (ACC-011). A change of
+# only one of the two places (versions.env, the file) stops the check.
+generator_versions_case onlyjarsha "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${other_generator_file_sha}" \
+    "generator plugin, one place only: versions.env has another sha256 of the jar" \
+    "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${other_generator_file_sha}#"
+# run_generator_files_pins <files dir> [<versions.env>]: check-pins.sh with another folder for the reference file
+run_generator_files_pins() { env GENERATOR_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_generator_files <name>: a copy of the reference file in a new folder (the folder is printed)
+mk_generator_files() {
+    local dir="${work}/genfiles-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_generator_files}/openapi-generator-maven-plugin.sha256" "${dir}/"
+    echo "${dir}"
+}
+dir="$(mk_generator_files onlyjarfile)"
+echo "${other_generator_file_sha}" >"${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in tools/versions.env is ${generator_sha}" "generator plugin, one place only: the reference file has another sha256" run_generator_files_pins "${dir}"
+dir="$(mk_generator_files nojarfile)" && rm "${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "does not exist (it is the second place of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256, the sha256 of the plugin jar)" "generator plugin: no reference file" run_generator_files_pins "${dir}"
+dir="$(mk_generator_files badjarfile)" && echo "not a sha256 value" >"${dir}/openapi-generator-maven-plugin.sha256"
+expect 1 "has one line with the sha256 value only" "generator plugin: a reference file with no sha256 value" run_generator_files_pins "${dir}"
+
+section "check-pins.sh: the pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110, REQ-009, ACC-011)"
+# Kubb, Zod and TypeScript: package.json, pnpm-workspace.yaml, the lock file, and the keys KUBB_*, ZOD_* and TYPESCRIPT_* of versions.env.
+# The messages start with `Frontend:`. Each package has a version key and an integrity key, and each case changes one place only.
+real_frontend="${REPO_ROOT}/frontend"
+# mk_frontend_root <name>: a tree with a copy of the three files of frontend/ (the folder is printed)
+mk_frontend_root() {
+    local dir="${work}/feroot-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}/frontend"
+    cp "${real_frontend}/package.json" "${real_frontend}/pnpm-lock.yaml" "${real_frontend}/pnpm-workspace.yaml" "${dir}/frontend/"
+    echo "${dir}"
+}
+run_frontend_pins() { env GATE_WORK_ROOT="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# frontend_file_case <name> <file> <text> <description> <sed expression>: change <file> in a copy with sed (exit code 1)
+frontend_file_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_frontend_root "${name}")"
+    sed -i -e "${expression}" "${dir}/frontend/${file}"
+    if cmp -s "${real_frontend}/${file}" "${dir}/frontend/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_frontend_pins "${dir}"
+}
+# frontend_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+frontend_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/fever-${name}.env"
+    if cmp -s "${real_versions}" "${work}/fever-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_frontend_pins "${REPO_ROOT}" "${work}/fever-${name}.env"
+}
+# frontend_append_case <name> <file> <text> <description> <text to append>: add text at the end of <file> in a copy
+frontend_append_case() {
+    local name="$1" file="$2" text="$3" description="$4" dir
+    dir="$(mk_frontend_root "${name}")"
+    printf '%b' "$5" >>"${dir}/frontend/${file}"
+    expect 1 "${text}" "${description}" run_frontend_pins "${dir}"
+}
+fe_new_version="9.9.9"
+fe_new_integrity="${other_integrity}"
+dir="$(mk_frontend_root real)"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod and TypeScript, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod and TypeScript" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
+expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
+mkdir -p "${work}/feroot-none"
+expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_frontend_pins "${work}/feroot-none"
+
+# Each package: the three places, each alone (ACC-011: a changed version and a changed checksum of each tool)
+# <name> <version key> <integrity key>: kubb and @kubb/core have the version key KUBB_VERSION, so a change of it stops both.
+for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
+    "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY"; do
+    IFS='|' read -r package version_key integrity_key <<<"${entry}"
+    version="$(version_of "${version_key}")"
+    integrity="$(version_of "${integrity_key}")"
+    escaped="${package//\//\\/}" # the name in a sed expression
+    slug="${package//[^a-z]/}"
+    frontend_versions_case "v-${slug}" "but ${version_key} in tools/versions.env is ${fe_new_version}" "${package}, one place only: versions.env has another ${version_key}" \
+        "s#^${version_key}=.*#${version_key}=${fe_new_version}#"
+    frontend_versions_case "i-${slug}" "but ${integrity_key} in tools/versions.env is ${fe_new_integrity}" "${package}, one place only: versions.env has another ${integrity_key}" \
+        "s#^${integrity_key}=.*#${integrity_key}=${fe_new_integrity}#"
+    frontend_file_case "p-${slug}" package.json "but ${version_key} in tools/versions.env is ${version}" "${package}, one place only: package.json has another version" \
+        "s#\"${package}\": \"${version}\"#\"${package}\": \"${fe_new_version}\"#"
+    frontend_file_case "l-${slug}" pnpm-lock.yaml "the importer has ${package} \`specifier\` '${fe_new_version}'" "${package}, one place only: the lock file has another version (importer)" \
+        "/^      '\\?${escaped}'\\?:\$/,+2 s#${version}#${fe_new_version}#"
+    frontend_file_case "k-${slug}" pnpm-lock.yaml "\`packages\` has no ${package}@${version}" "${package}, one place only: the lock file has another version (packages)" \
+        "s#^  '\\?${escaped}@${version}'\\?:\$#  '${package}@${fe_new_version}':#"
+    frontend_file_case "g-${slug}" pnpm-lock.yaml "but ${integrity_key} in tools/versions.env is ${integrity}" "${package}, one place only: the lock file has another integrity value" \
+        "s#${integrity}#${fe_new_integrity}#"
+done
+# All three places with the same new value pass (the procedure of frontend/README.md), for Zod
+dir="$(mk_frontend_root allthree)"
+sed -i -e "s#\"zod\": \"4.6.7\"#\"zod\": \"${fe_new_version}\"#" "${dir}/frontend/package.json"
+sed -i -e "/^      zod:\$/,+2 s#4.6.7#${fe_new_version}#" -e "s#^  zod@4.6.7:#  zod@${fe_new_version}:#" -e "s#^  zod@4.6.7: {}#  zod@${fe_new_version}: {}#" \
+    -e "s#$(version_of ZOD_INTEGRITY)#${fe_new_integrity}#" "${dir}/frontend/pnpm-lock.yaml"
+sed -e "s#^ZOD_VERSION=.*#ZOD_VERSION=${fe_new_version}#" -e "s#^ZOD_INTEGRITY=.*#ZOD_INTEGRITY=${fe_new_integrity}#" "${real_versions}" >"${work}/fever-allthree.env"
+expect 0 "RESULT: PASS" "zod: all three places have the same new version and integrity value" run_frontend_pins "${dir}" "${work}/fever-allthree.env"
+
+# The form of the values in versions.env
+for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION; do
+    for range in "^$(version_of "${key}")" "latest" "5"; do
+        sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
+        expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
+    done
+done
+for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY; do
+    sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
+    expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
+    grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
+    expect 1 "${key} is not in tools/versions.env" "frontend, versions.env has no ${key}" run_frontend_pins "${REPO_ROOT}" "${work}/fever-missing.env"
+done
+grep -v "^KUBB_VERSION=" "${real_versions}" >"${work}/fever-missing.env"
+expect 1 "KUBB_VERSION is not in tools/versions.env" "frontend, versions.env has no KUBB_VERSION" run_frontend_pins "${REPO_ROOT}" "${work}/fever-missing.env"
+
+# package.json
+frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env is 5.15.3" "package.json: a range (^) and not an exact version" 's#"kubb": "5.15.3"#"kubb": "^5.15.3"#'
+frontend_file_case pkgtag package.json "but TYPESCRIPT_VERSION in tools/versions.env is 5.9.3" "package.json: a tag and not an exact version" 's#"typescript": "5.9.3"#"typescript": "latest"#'
+frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['zod']" "package.json: a dev dependency in dependencies" \
+    's#"dependencies": {#"dependencies": {\n    "typescript": "5.9.3",#'
+frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d;s#"kubb": "5.15.3",#"kubb": "5.15.3"#'
+frontend_file_case pkgextra package.json "\`devDependencies\` has left-pad. It has only" "package.json: a dependency that is not in the list" 's#"typescript": "5.9.3"#"typescript": "5.9.3",\n    "left-pad": "1.3.0"#'
+frontend_file_case pkgpm package.json "has the key \`packageManager\`" "package.json: a packageManager field (it changes the lock file)" 's#"private": true,#"private": true,\n  "packageManager": "pnpm@12.16.1",#'
+frontend_file_case pkgpnpm package.json "has the key \`pnpm\`" "package.json: a pnpm key (settings)" 's#"private": true,#"private": true,\n  "pnpm": {"overrides": {"zod": "3.0.0"}},#'
+frontend_file_case pkgoverrides package.json "has the key \`overrides\`" "package.json: overrides" 's#"private": true,#"private": true,\n  "overrides": {"zod": "3.0.0"},#'
+frontend_file_case pkgoptional package.json "has the key \`optionalDependencies\`" "package.json: optionalDependencies" 's#"private": true,#"private": true,\n  "optionalDependencies": {},#'
+frontend_file_case pkgpeer package.json "has the key \`peerDependencies\`" "package.json: peerDependencies" 's#"private": true,#"private": true,\n  "peerDependencies": {},#'
+frontend_file_case pkgtwice package.json "the key 'zod' is there two times" "package.json: a key two times" 's#"zod": "4.6.7"#"zod": "4.6.7", "zod": "4.6.7"#'
+frontend_file_case pkgbroken package.json "cannot be read as JSON" "package.json: not JSON" 's#^{#not json {#'
+frontend_append_case pkgarray package.json "" "package.json: text after the JSON object" 'x'
+
+# pnpm-workspace.yaml
+frontend_file_case wsoverrides pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: an extra key (overrides)" 's#^packages:#overrides:\n  zod: 3.0.0\npackages:#'
+frontend_file_case wspackages pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: another package folder" 's#"\."#"packages/*"#'
+frontend_file_case wsregistry pnpm-workspace.yaml "must be exactly \`packages: [\".\"]\`" "pnpm-workspace.yaml: a registry setting" 's#^packages:#registry: https://example.com/\npackages:#'
+
+# the lock file
+frontend_file_case lockversion pnpm-lock.yaml "\`lockfileVersion\` is '8.0'" "lock file: another lockfileVersion" "s#^lockfileVersion: '9.0'#lockfileVersion: '8.0'#"
+frontend_file_case lockoverrides pnpm-lock.yaml "has the top-level key \`overrides\`" "lock file: a top-level key overrides" "s#^settings:#overrides:\n  zod: 3.0.0\n\nsettings:#"
+frontend_file_case locktarball pnpm-lock.yaml "has the \`resolution\` keys ['tarball']" "lock file: a package from a tarball URL" \
+    "0,/resolution: {integrity: \\(sha512-[^,}]*\\)}/s#resolution: {integrity: \\(sha512-[^,}]*\\)}#resolution: {integrity: \\1, tarball: https://example.com/x.tgz}#"
+frontend_file_case lockgit pnpm-lock.yaml "is not \`<name>@<exact version>\`" "lock file: a package from git" "0,/^  '@apidevtools\\/json-schema-ref-parser@15.5.2':/s##  '@apidevtools/json-schema-ref-parser@github.com/x/y/z':#"
+frontend_file_case locknointegrity pnpm-lock.yaml "has no integrity value" "lock file: a package with no integrity value" "0,/^    resolution: {integrity: sha512-[^}]*}/s#^    resolution: {integrity: sha512-[^}]*}#    resolution: {}#"
+frontend_file_case lockbadintegrity pnpm-lock.yaml "has an integrity value that is not sha256, sha384 or sha512" "lock file: an integrity value that is not a hash" "0,/integrity: sha512-[^,}]*/s#integrity: sha512-[^,}]*#integrity: md5-abc#"
+frontend_file_case lockimporter pnpm-lock.yaml "the importer has no zod in \`dependencies\` with \`specifier\` and \`version\`" "lock file: the importer has no zod" "/^      zod:\$/,+2d"
+frontend_append_case locktwice pnpm-lock.yaml "has 2 YAML documents" "lock file: a second YAML document" "---\nlockfileVersion: '9.0'\n"
+frontend_append_case lockdup pnpm-lock.yaml "the key 'importers' is there two times" "lock file: a key two times" "importers: {}\n"
+frontend_file_case locksnapshot pnpm-lock.yaml "which is not in \`packages\`" "lock file: a snapshot of a package that is not in packages" "0,/^snapshots:/s#^snapshots:#snapshots:\n\n  nothing@1.0.0: {}#"
+
+# the files of the folder
+for name in .npmrc .pnpmfile.cjs .pnpmfile.mjs pnpmfile.cjs .yarnrc .yarnrc.yml yarn.lock package-lock.json bunfig.toml; do
+    dir="$(mk_frontend_root "file-${name}")" && echo "x" >"${dir}/frontend/${name}"
+    expect 1 "frontend/${name} is not allowed" "frontend/ has the file ${name}" run_frontend_pins "${dir}"
+done
+for name in package.json pnpm-workspace.yaml pnpm-lock.yaml; do
+    dir="$(mk_frontend_root "missing-${name}")" && rm "${dir}/frontend/${name}"
+    expect 1 "frontend/${name} does not exist" "frontend/ has no ${name}" run_frontend_pins "${dir}"
+done
+dir="$(mk_frontend_root files-ok)" && mkdir -p "${dir}/frontend/src" "${dir}/frontend/node_modules" && echo "x" >"${dir}/frontend/tsconfig.json" && echo "x" >"${dir}/frontend/README.md"
+expect 0 "RESULT: PASS" "frontend/ with other files (tsconfig.json, README.md, src, node_modules) passes" run_frontend_pins "${dir}"
+
+# ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
 fix="${GATES_DIR}/fixtures"
 sudo_case() {
@@ -785,14 +1383,22 @@ mkdir -p "${stubs}"
 cat >"${stubs}/mvnw-stub" <<'STUB'
 #!/usr/bin/env bash
 echo "stub mvnw $*"
-repo="" skip=0
+[[ -n "${STUB_MVN_LOG:-}" ]] && echo "$*" >>"${STUB_MVN_LOG}"
+repo="" skip=0 generator_version=""
 for argument in "$@"; do
     case "${argument}" in
         -Dmaven.repo.local=*) repo="${argument#*=}" ;;
         -Dcyclonedx.skip=true) skip=1 ;;
+        -Dcodegen.skip=true) skip=1 ;;
+        org.openapitools:openapi-generator-maven-plugin:*) generator_version="${argument#org.openapitools:openapi-generator-maven-plugin:}"; generator_version="${generator_version%%:*}" ;;
     esac
 done
-if [[ -n "${repo}" ]]; then
+if [[ -n "${repo}" && -n "${generator_version}" ]]; then
+    # feat-6, Task 120.105: the goal of the generator plugin. Like Maven, the stub writes the plugin jar in the local repository.
+    jar="${repo}/org/openapitools/openapi-generator-maven-plugin/${generator_version}"
+    mkdir -p "${jar}"
+    [[ "${STUB_GENERATOR_NO_JAR:-}" == "1" ]] || printf '%s' "${STUB_GENERATOR_JAR_CONTENT:-stub-generator-jar}" >"${jar}/openapi-generator-maven-plugin-${generator_version}.jar"
+elif [[ -n "${repo}" ]]; then
     jar="${repo}/org/cyclonedx/cyclonedx-maven-plugin/${STUB_PLUGIN_VERSION}"
     mkdir -p "${jar}"
     printf '%s' "${STUB_JAR_CONTENT:-stub-plugin-jar}" >"${jar}/cyclonedx-maven-plugin-${STUB_PLUGIN_VERSION}.jar"
@@ -800,7 +1406,10 @@ fi
 [[ ${skip} -eq 1 ]] && exit 0
 [[ "${STUB_MVN_FAIL:-}" == "1" ]] && exit 0
 mkdir -p target
-if [[ "${STUB_EMPTY:-}" == "1" ]]; then
+if [[ "${STUB_NO_COMPONENTS:-}" == "1" ]]; then
+    # like cyclonedx-maven-plugin 2.9.3 for a project with no dependency: no `components` key (first real run, feat-6)
+    echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"metadata":{"component":{"type":"library","name":"backend"}}}' >target/bom.json
+elif [[ "${STUB_EMPTY:-}" == "1" ]]; then
     echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[]}' >target/bom.json
 else
     cat >target/bom.json <<'JSON'
@@ -1094,6 +1703,32 @@ empty_case pomprofile 1 "has no component" "pom.xml with a dependency in a profi
 empty_case pombroken 1 "cannot read" "a pom.xml that is not XML" pom 'this is not xml'
 empty_case nodebroken 1 "cannot read" "a package.json that is not JSON" node 'this is not json'
 empty_case nodebadkey 1 "is not an object" "a package.json with dependencies that is not an object" node '{"dependencies":["a"]}'
+# The real plugin writes no `components` key for a project with no dependency (the first real run, feat-6 Task 105.110).
+root="$(new_tree no-components-key)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 0 'wrote `components: []`' "pom.xml with no dependency, and an SBOM with no components key: the script writes the empty list" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
+expect 0 "RESULT: PASS. 0 component(s)" "license-check.sh reads the SBOM that has the empty list" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+if grep -q '"components"' "${root}/build/sbom/backend.cdx.json" && ! grep -q '"components"' "${root}/backend/target/bom.json"; then
+    echo "ok   the SBOM in the SBOM folder has the list, and the file of the plugin in target/ is not changed"
+    passed=$((passed + 1))
+else
+    echo "FAIL the SBOM folder has no components list, or the file of the plugin was changed"
+    failed=$((failed + 1))
+fi
+root="$(new_tree no-components-key-deps)"
+put "${root}" backend/pom.xml "${pom_deps}"
+put_mvnw "${root}" backend
+expect 1 "has no component" "pom.xml with a dependency, and an SBOM with no components key: the script stops" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
+root="$(new_tree no-components-key-module-deps)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+put "${root}" backend/svc/pom.xml "${pom_deps}"
+expect 1 "backend/svc/pom.xml: 1 declared dependency" "a dependency in a module pom.xml, and an SBOM with no components key: the script stops" \
+    sbom_run "${root}" STUB_NO_COMPONENTS=1
 root="$(new_tree nested-deps)"
 put "${root}" frontend/package.json '{}'
 put "${root}" frontend/pnpm-lock.yaml 'lockfileVersion: 9'
@@ -1135,6 +1770,91 @@ expect 1 "CYCLONEDX_MAVEN_PLUGIN_SHA256 in ${work}/versions-badjar.env is 0000" 
     sbom_run "${root}" VERSIONS_FILE="${work}/versions-badjar.env"
 sed -e "s#^CYCLONEDX_MAVEN_PLUGIN_SHA256=.*#CYCLONEDX_MAVEN_PLUGIN_SHA256=abc#" "${stub_versions}" >"${work}/versions-shortjar.env"
 expect 1 "is not a sha256 value" "versions.env has a plugin sha256 that is not a sha256 value" sbom_run "${root}" VERSIONS_FILE="${work}/versions-shortjar.env"
+section "the pin of the generator plugin: verify_generator_plugin with a stub for mvnw (feat-6-contracts-openapi-pipeline, Task 120.105, ACC-012)"
+# The function of _lib.sh that generate.sh, compile.sh and api-docs.sh start first: Maven loads the plugin (the stub writes a jar to
+# the local repository), and the sha256 of the jar must be OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256. The real plugin is in
+# test-generate-gate.sh.
+gen_jar_sha="$(printf 'stub-generator-jar' | sha256sum | cut -d' ' -f1)"
+gen_stub_versions="${work}/versions-genstubs.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=${gen_jar_sha}#" "${real_versions}" >"${gen_stub_versions}"
+# The reference file (the second place of the pin, ACC-011) with the sha256 of the stub jar.
+gen_stub_ref="${work}/gen-plugin-ref.sha256"
+echo "${gen_jar_sha}" >"${gen_stub_ref}"
+mvn_log="${work}/mvn-calls.log"
+# verify_run <root> [<VAR=value>...]: verify_generator_plugin for <root>/backend, with the stub of mvnw
+verify_run() {
+    local root="$1"
+    shift
+    : >"${mvn_log}"
+    env PATH="${stubs}:${PATH}" GENERATOR_MAVEN_REPO_LOCAL="${root}/m2" VERSIONS_FILE="${gen_stub_versions}" \
+        GENERATOR_PLUGIN_SHA_FILE="${gen_stub_ref}" STUB_MVN_LOG="${mvn_log}" "$@" \
+        bash -c 'source "$1"; verify_generator_plugin "$2"' _ "${GATES_DIR}/_lib.sh" "${root}/backend"
+}
+root="$(new_tree gen-good)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 0 "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256" "the plugin jar has the pinned sha256" verify_run "${root}"
+if grep -q -- "org.openapitools:openapi-generator-maven-plugin:$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION):generate@spring-interfaces" "${mvn_log}" \
+    && grep -q -- "-Dcodegen.skip=true" "${mvn_log}" && grep -q -- "-Dmaven.repo.local=${root}/m2" "${mvn_log}"; then
+    echo "ok   Maven loads the plugin with the version of versions.env, -Dcodegen.skip=true (no generation) and the local repository of the test"
+    passed=$((passed + 1))
+else
+    echo "FAIL the call of mvnw is not the call that loads the plugin without a generation:"
+    sed -e 's/^/     | /' "${mvn_log}"
+    failed=$((failed + 1))
+fi
+expect 1 "but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${gen_stub_versions} is ${gen_jar_sha}" "a plugin jar with another sha256 than the pin" \
+    verify_run "${root}" STUB_GENERATOR_JAR_CONTENT=other-jar
+expect 1 "The plugin did not generate." "a plugin jar with another sha256: the message says that the plugin did not generate" verify_run "${root}" STUB_GENERATOR_JAR_CONTENT=other-jar
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=0000000000000000000000000000000000000000000000000000000000000000#" \
+    "${gen_stub_versions}" >"${work}/versions-genbadjar.env"
+expect 1 "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${work}/versions-genbadjar.env is 0000" "versions.env has another plugin sha256 than the jar" \
+    verify_run "${root}" VERSIONS_FILE="${work}/versions-genbadjar.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256=abc#" "${gen_stub_versions}" >"${work}/versions-genshortjar.env"
+expect 1 "is not a sha256 value" "versions.env has a plugin sha256 that is not a sha256 value" verify_run "${root}" VERSIONS_FILE="${work}/versions-genshortjar.env"
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=7.x#" "${gen_stub_versions}" >"${work}/versions-genrange.env"
+expect 1 "is not an exact version" "versions.env has a plugin version that is not an exact version" verify_run "${root}" VERSIONS_FILE="${work}/versions-genrange.env"
+# Another version in versions.env: Maven loads that version, and the jar of the stub has the same content, so the pin of the version is the one of the call
+sed -e "s#^OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=.*#OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION=7.28.0#" "${gen_stub_versions}" >"${work}/versions-gen728.env"
+expect 0 "sha256 of the plugin jar is the value" "another version in versions.env: Maven loads that version" verify_run "${root}" VERSIONS_FILE="${work}/versions-gen728.env"
+if grep -q -- "openapi-generator-maven-plugin:7.28.0:generate@spring-interfaces" "${mvn_log}"; then
+    echo "ok   the call of mvnw has the version of versions.env (7.28.0)"
+    passed=$((passed + 1))
+else
+    echo "FAIL the call of mvnw has not the version of versions.env"
+    sed -e 's/^/     | /' "${mvn_log}"
+    failed=$((failed + 1))
+fi
+# The reference file (the second place of the pin, ACC-011): the sha256 of the jar must be the value of the file.
+echo "${other_generator_file_sha}" >"${work}/gen-ref-bad.sha256"
+expect 1 "but ${work}/gen-ref-bad.sha256 has ${other_generator_file_sha}. The plugin did not generate." \
+    "the reference file has another sha256 than the jar" verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/gen-ref-bad.sha256"
+expect 1 "The reference file of the sha256 of the plugin jar does not exist" "the reference file does not exist" \
+    verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/no-such-ref.sha256"
+mkdir -p "${work}/gen-ref-badform"
+echo "not a sha256 value" >"${work}/gen-ref-badform/ref.sha256"
+expect 1 "has no sha256 value (64 lower case hexadecimal characters)" "the reference file has no sha256 value" \
+    verify_run "${root}" GENERATOR_PLUGIN_SHA_FILE="${work}/gen-ref-badform/ref.sha256"
+root="$(new_tree gen-nojar)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+expect 1 "The plugin jar is not at" "Maven did not write the plugin jar" verify_run "${root}" STUB_GENERATOR_NO_JAR=1
+root="$(new_tree gen-nomvnw)"
+put "${root}" backend/pom.xml "${pom_xml}"
+expect 1 "backend/mvnw does not exist" "no mvnw: the function does not use the Maven of the PATH" verify_run "${root}"
+root="$(new_tree gen-noexec)"
+put "${root}" backend/pom.xml "${pom_xml}"
+put_mvnw "${root}" backend
+chmod -x "${root}/backend/mvnw"
+expect 1 "backend/mvnw is not executable" "mvnw is not executable" verify_run "${root}"
+if [[ ! -e "${work}/mvn-of-the-path-was-started" ]]; then
+    echo "ok   verify_generator_plugin did not start the mvn of the PATH (it starts mvnw)"
+    passed=$((passed + 1))
+else
+    echo "FAIL verify_generator_plugin started the mvn of the PATH"
+    failed=$((failed + 1))
+fi
+
 section "sbom.sh: cdxgen runs from the lock file (finding G2, feat-16-cdxgen-lockfile)"
 # no_frontend_sbom <root> <description>: no SBOM file of the frontend (the script stopped before cdxgen made it)
 no_frontend_sbom() {
@@ -1266,6 +1986,35 @@ sbom_run "${root}" >/dev/null 2>&1 || true
 no_frontend_sbom "${root}" "a package.json in tools/sbom/sub/ stops the script before cdxgen"
 pnpm_calls 0 "a manifest outside the set: the script stops before the install"
 
+
+section "sbom.sh: the lock file of Spectral in tools/spectral/ is not an unscanned manifest (finding E1, feat-6-contracts-openapi-pipeline, Task 110.110)"
+root="$(new_tree e1-tools-spectral)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/spectral/package.json '{"dependencies":{"@stoplight/spectral-cli":"1.0.0"}}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Wrote ${root}/build/sbom/frontend.cdx.json" "tools/spectral/package.json and tools/spectral/pnpm-lock.yaml with frontend/package.json do not stop the script" sbom_run "${root}"
+expect 0 "PASS" "the two files of tools/spectral/: the script passes" sbom_run "${root}"
+root="$(new_tree e1-tools-spectral-alone)"
+put "${root}" tools/spectral/package.json '{"dependencies":{"@stoplight/spectral-cli":"1.0.0"}}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+expect 0 "Nothing to scan" "the two files of tools/spectral/ alone: nothing to scan, and no stop" sbom_run "${root}"
+pnpm_calls 0 "the two files of tools/spectral/ alone: no install"
+root="$(new_tree e1-tools-spectral-modules)"
+put "${root}" frontend/package.json '{}'
+put "${root}" tools/spectral/package.json '{}'
+put "${root}" tools/spectral/pnpm-lock.yaml "${tools_lock}"
+put "${root}" tools/spectral/node_modules/pkg/package.json '{}'
+expect 0 "Wrote" "node_modules in tools/spectral/ is not entered" sbom_run "${root}"
+tools_spectral_files=(tools/spectral/package.json:'{}' tools/spectral/pnpm-lock.yaml:"${tools_lock}" frontend/package.json:'{}')
+unscanned_case toolsspectralworkspace tools/spectral/pnpm-workspace.yaml 'packages: []' "${tools_spectral_files[@]}"
+unscanned_case toolsspectralsub tools/spectral/sub/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case toolsspectralsublock tools/spectral/sub/pnpm-lock.yaml "${tools_lock}" "${tools_spectral_files[@]}"
+unscanned_case toolsspectralpom tools/spectral/pom.xml "${pom_xml}" "${tools_spectral_files[@]}"
+unscanned_case toolslint tools/lint/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case toolslintlock tools/lint/pnpm-lock.yaml "${tools_lock}" "${tools_spectral_files[@]}"
+unscanned_case toolsspectralnested tools/spectral/nested/deep/package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case rootwithtoolsspectral package.json '{}' "${tools_spectral_files[@]}"
+unscanned_case contractswithtoolsspectral contracts/package.json '{}' "${tools_spectral_files[@]}"
 
 # ---------------------------------------------------------------------------------------------
 section "validate-docs.sh (Task 130.110)"

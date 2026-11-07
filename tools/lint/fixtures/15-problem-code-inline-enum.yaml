@@ -1,0 +1,76 @@
+openapi: 3.1.0
+info:
+  title: Fixture API
+  version: 0.1.0
+  description: A small file for the test of the lint rules.
+servers:
+  - url: /
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      summary: Get the status
+      description: Gives the state of the system.
+      x-specmgr-req: 123e4567-e89b-42d3-a456-426614174000
+      responses:
+        "200":
+          description: The system gives its status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "429":
+          $ref: "#/components/responses/ProblemResponse"
+        "500":
+          description: An error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  responses:
+    ProblemResponse:
+      description: An error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Status:
+      type: object
+      required:
+        - state
+      properties:
+        state:
+          type: string
+          enum:
+            - up
+            - degraded
+    Problem:
+      type: object
+      required:
+        - code
+        - traceId
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          enum:
+            - not_found
+            - internal_error
+        traceId:
+          type: string
+    ErrorCode:
+      type: string
+      enum:
+        - not_found
+        - internal_error

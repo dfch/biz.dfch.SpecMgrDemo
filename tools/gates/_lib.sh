@@ -71,6 +71,44 @@ make_python_env() {
         || die "uv did not install ${lock_name} from ${lock_file} (see the message of uv above)"
 }
 
+# copy_work_tree <dest>
+#
+# Makes a temporary git repository in <dest> (feat-6-contracts-openapi-pipeline, Task 130.100): a copy of the files of this
+# repository that git knows or that .gitignore does not ignore (`git ls-files --cached --others --exclude-standard`, so the
+# files that are not yet committed, for example a new gate script, are in the copy, and node_modules, target and build are not),
+# in one commit on the branch `work` with the tag `base`. The tests of the gates for generated code and for the build use it, so
+# they never change the real work tree. The modes of the files (mvnw, the scripts) stay. A file that the index has and the work
+# tree has deleted is not in the copy. A tar error stops the copy, and the copy must have the files that the tests need
+# (justfile, .gitignore, tools/versions.env, contracts/openapi.yaml, backend/pom.xml and frontend/pnpm-lock.yaml), or the
+# function dies.
+copy_work_tree() {
+    local dest="$1" file
+    [[ $# -eq 1 && -n "${dest}" ]] || die "copy_work_tree: usage: copy_work_tree <dest>"
+    require_cmd git
+    require_cmd tar
+    mkdir -p "${dest}"
+    # A tar error (a file that git listed and that is not readable any more) stops the copy: the error of tar is shown,
+    # and a copy that is not complete must not be used by a test.
+    git -C "${REPO_ROOT}" ls-files -z --cached --others --exclude-standard --deduplicate \
+        | tar --null -C "${REPO_ROOT}" -T - -cf - | tar -C "${dest}" -xf -
+    (
+        cd "${dest}"
+        git init --quiet --initial-branch=work
+        git config user.name "Gate Test"
+        git config user.email "gate-test@example.invalid"
+        git config commit.gpgsign false
+        git add -A
+        git commit --quiet --no-verify -m "base"
+        git tag base
+    ) || die "copy_work_tree: could not make the temporary repository in ${dest}"
+    # The files that the tests of the gates of feat-6-contracts-openapi-pipeline need. A copy without one of them is
+    # not a copy of this repository.
+    for file in justfile .gitignore tools/versions.env contracts/openapi.yaml backend/pom.xml frontend/pnpm-lock.yaml; do
+        [[ -f "${dest}/${file}" ]] \
+            || die "copy_work_tree: the copy in ${dest} has no ${file}. The copy of the work tree is not complete."
+    done
+}
+
 # manifest_files <root> -- print the manifests of the project (one path for each line, relative to
 # <root>, with ./ at the start) that are not in an excluded folder. The manifests are pom.xml,
 # package.json, pnpm-lock.yaml and pnpm-workspace.yaml. The excluded folders are .git, node_modules,
@@ -78,10 +116,12 @@ make_python_env() {
 # prototypes and documents that are not part of the layout) and the fixtures of the gates
 # (tools/license/fixtures and tools/gates/fixtures). check_pins.py has the same list (EXCLUDED_*).
 #
-# Two files are not listed, by path and not by folder (feat-16-cdxgen-lockfile): tools/sbom/package.json
-# and tools/sbom/pnpm-lock.yaml. They are the lock file of the SBOM tool cdxgen. They are not part of the
-# project that the SBOM describes (rule A: cdxgen does not go to users). Each other manifest in tools/sbom/
-# (pnpm-workspace.yaml, a package.json in a sub-folder) and in the other folders of tools/ is listed.
+# Four files are not listed, by path and not by folder: tools/sbom/package.json and tools/sbom/pnpm-lock.yaml
+# (the lock file of the SBOM tool cdxgen, feat-16-cdxgen-lockfile), and tools/spectral/package.json and
+# tools/spectral/pnpm-lock.yaml (the lock file of the linter Spectral, feat-6-contracts-openapi-pipeline). They
+# are not part of the project that the SBOM describes (rule A: these tools do not go to users). Each other
+# manifest in tools/sbom/ and in tools/spectral/ (pnpm-workspace.yaml, a package.json in a sub-folder) and in the
+# other folders of tools/ is listed.
 # check_pins.py needs no change for them: it searches for pom.xml and for the Maven Wrapper only.
 manifest_files() {
     (
@@ -89,8 +129,161 @@ manifest_files() {
         find . \
             -type d \( -name .git -o -name node_modules -o -name build -o -name target \) -prune -o \
             -type d \( -path ./.specmgr -o -path ./tools/license/fixtures -o -path ./tools/gates/fixtures \) -prune -o \
-            -type f \( -path ./tools/sbom/package.json -o -path ./tools/sbom/pnpm-lock.yaml \) -prune -o \
+            -type f \( -path ./tools/sbom/package.json -o -path ./tools/sbom/pnpm-lock.yaml \
+            -o -path ./tools/spectral/package.json -o -path ./tools/spectral/pnpm-lock.yaml \) -prune -o \
             -type f \( -name pom.xml -o -name package.json -o -name pnpm-lock.yaml -o -name pnpm-workspace.yaml \) \
             -print | LC_ALL=C sort
     )
+}
+
+# install_oasdiff
+#
+# Installs the tool for breaking changes oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100, REQ-009) and
+# sets OASDIFF_BIN to its path. oasdiff is a Go binary with no package manager, so the install is a download with
+# a checksum, as the install scripts of just and Node:
+#
+#   1. The script stops if the machine is not Linux x86_64. The pin has the checksum of the file
+#      oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz only (the gates run on a runner of GitHub and on the machine
+#      of the author, and both are Linux x86_64).
+#   2. If the folder <home>/oasdiff-<version> has the binary, the version of the binary is OASDIFF_VERSION, and the
+#      file `.sha256` of the folder has the value OASDIFF_SHA256, the script does not download again. A change of
+#      OASDIFF_VERSION or of OASDIFF_SHA256 in tools/versions.env therefore makes a new download.
+#   3. If not, it downloads the file with curl, compares the sha256 of the file with OASDIFF_SHA256 of
+#      tools/versions.env (never with a value from the server) BEFORE it unpacks the file, and stops (the download
+#      is deleted) if the value is not the same. It unpacks only the two files `oasdiff` and `LICENSE`.
+#   4. It stops if `oasdiff --version` does not say `oasdiff version <OASDIFF_VERSION>`.
+#
+# Variables for the tests: OASDIFF_HOME (the folder for the install; the default is build/tools of this repository,
+# and /build/ is in .gitignore) and OASDIFF_URL (another URL for the file, for example a file:// URL; the sha256 is
+# compared with the pin in each case, so another URL gives no other trust). The install needs the network for the
+# first run (curl, GitHub). The tool does not send data and does not write a file when it examines a file. The
+# tool reads a configuration file `.oasdiff.*` or `oasdiff.*` in the current folder, so breaking_changes.py starts it
+# in a new empty folder.
+install_oasdiff() {
+    local version sha home target url work actual installed
+    version="$(version_of OASDIFF_VERSION)"
+    sha="$(version_of OASDIFF_SHA256)"
+    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "OASDIFF_VERSION is not an exact version: '${version}'"
+    [[ "${sha}" =~ ^[0-9a-f]{64}$ ]] || die "OASDIFF_SHA256 is not a sha256 value (64 lower case hexadecimal characters): '${sha}'"
+    [[ "$(uname -s)" == "Linux" && "$(uname -m)" == "x86_64" ]] \
+        || die "oasdiff is pinned for Linux x86_64 only (OASDIFF_SHA256 is the checksum of the linux_amd64 file). This machine is $(uname -s) $(uname -m)."
+    require_cmd tar
+    require_cmd sha256sum
+    home="${OASDIFF_HOME:-${REPO_ROOT}/build/tools}"
+    target="${home}/oasdiff-${version}"
+    OASDIFF_BIN="${target}/oasdiff"
+
+    if [[ -x "${OASDIFF_BIN}" && -f "${target}/.sha256" && "$(cat "${target}/.sha256")" == "${sha}" ]] \
+        && [[ "$("${OASDIFF_BIN}" --version 2>/dev/null)" == "oasdiff version ${version}" ]]; then
+        log "oasdiff ${version} is already installed in ${target}"
+        return 0
+    fi
+
+    require_cmd curl
+    url="${OASDIFF_URL:-https://github.com/oasdiff/oasdiff/releases/download/v${version}/oasdiff_${version}_linux_amd64.tar.gz}"
+    mkdir -p "${home}"
+    work="$(mktemp -d "${home}/.oasdiff.XXXXXX")"
+    log "Download ${url}"
+    curl -fsSL --retry 3 -o "${work}/archive.tar.gz" "${url}" || { rm -rf "${work}"; die "Download failed: ${url}"; }
+    actual="$(sha256sum "${work}/archive.tar.gz" | cut -d' ' -f1)"
+    if [[ "${actual}" != "${sha}" ]]; then
+        rm -rf "${work}"
+        die "sha256 of the oasdiff download is ${actual}, but OASDIFF_SHA256 in ${VERSIONS_FILE} is ${sha}. The download is deleted. oasdiff did not start."
+    fi
+    log "sha256 is correct for the oasdiff download"
+    mkdir -p "${work}/unpacked"
+    tar -xzf "${work}/archive.tar.gz" -C "${work}/unpacked" oasdiff LICENSE \
+        || { rm -rf "${work}"; die "The oasdiff download has not the files oasdiff and LICENSE."; }
+    printf '%s\n' "${sha}" >"${work}/unpacked/.sha256"
+    rm -rf "${target}"
+    mv "${work}/unpacked" "${target}"
+    rm -rf "${work}"
+    installed="$("${OASDIFF_BIN}" --version 2>/dev/null)" || die "${OASDIFF_BIN} does not start."
+    [[ "${installed}" == "oasdiff version ${version}" ]] \
+        || die "${OASDIFF_BIN} says '${installed}', but OASDIFF_VERSION in ${VERSIONS_FILE} is '${version}'."
+    log "oasdiff ${version} is in ${target}"
+}
+
+# verify_generator_plugin <module dir>
+#
+# Compares the sha256 of the jar of the generator plugin (openapi-generator-maven-plugin, feat-6-contracts-openapi-pipeline,
+# Task 120.105, REQ-009, ACC-012) with OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 of tools/versions.env, as sbom.sh does for
+# cyclonedx-maven-plugin (rule G2):
+#
+#   1. The function starts the goal `generate` of the plugin (the version is OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION; the
+#      execution `spring-interfaces` of backend/pom.xml gives the input) with -Dcodegen.skip=true through the Maven Wrapper of <module dir> (never the Maven of the PATH). Maven loads the plugin,
+#      and downloads the jar to the local repository if it is not there, but nothing is generated.
+#   2. It compares the sha256 of the jar in the local repository with the pin, and stops (exit code 1) if the value is not
+#      the same. The caller starts the real plugin only after this function returns.
+#   3. It compares the sha256 of the jar with the reference file tools/generate/openapi-generator-maven-plugin.sha256
+#      (the second place of the pin, ACC-011; GENERATOR_PLUGIN_SHA_FILE sets another file for the tests) and stops if the
+#      value is not the same. The pin is now in two committed places (tools/versions.env and the file), so a change of
+#      only one of them stops `just check-pins` (the comparison of the two places) or this function (the comparison of
+#      the jar with both).
+#
+# The local repository is ~/.m2/repository. GENERATOR_MAVEN_REPO_LOCAL sets another one (for the tests); the function gives
+# it to Maven with -Dmaven.repo.local, so Maven and the function use the same folder. The dependencies of the plugin are NOT
+# checked (GitHub issue #23). The first run needs the network (Maven Central).
+verify_generator_plugin() {
+    local module_dir="$1" version sha repo_local jar actual ref_file ref_sha
+    version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
+    sha="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256)"
+    [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is not an exact version: '${version}'"
+    [[ "${sha}" =~ ^[0-9a-f]{64}$ ]] || die "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 is not a sha256 value: '${sha}'"
+    [[ -f "${module_dir}/mvnw" ]] || die "${module_dir}/mvnw does not exist. The gates must not use the Maven of the PATH."
+    [[ -x "${module_dir}/mvnw" ]] || die "${module_dir}/mvnw is not executable (chmod +x, and git update-index --chmod=+x)."
+    require_cmd sha256sum
+    repo_local="${GENERATOR_MAVEN_REPO_LOCAL:-${HOME}/.m2/repository}"
+    jar="${repo_local}/org/openapitools/openapi-generator-maven-plugin/${version}/openapi-generator-maven-plugin-${version}.jar"
+    log "Generator plugin: openapi-generator-maven-plugin ${version} (load the plugin, no generation)"
+    (
+        cd "${module_dir}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+            "org.openapitools:openapi-generator-maven-plugin:${version}:generate@spring-interfaces" -Dcodegen.skip=true
+    ) || die "Maven could not load the plugin openapi-generator-maven-plugin ${version} (see above)."
+    [[ -f "${jar}" ]] || die "The plugin jar is not at ${jar} after Maven loaded it."
+    actual="$(sha256sum "${jar}" | cut -d' ' -f1)"
+    [[ "${actual}" == "${sha}" ]] \
+        || die "sha256 of ${jar} is ${actual}, but OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 in ${VERSIONS_FILE} is ${sha}. The plugin did not generate."
+    # The second place of the pin (ACC-011): the reference file must have the sha256 of the jar.
+    ref_file="${GENERATOR_PLUGIN_SHA_FILE:-${REPO_ROOT}/tools/generate/openapi-generator-maven-plugin.sha256}"
+    [[ -f "${ref_file}" ]] || die "The reference file of the sha256 of the plugin jar does not exist: ${ref_file}"
+    ref_sha="$(head -n 1 "${ref_file}" | tr -d '[:space:]')"
+    [[ "${ref_sha}" =~ ^[0-9a-f]{64}$ ]] || die "${ref_file} has no sha256 value (64 lower case hexadecimal characters)."
+    [[ "${actual}" == "${ref_sha}" ]] \
+        || die "sha256 of ${jar} is ${actual}, but ${ref_file} has ${ref_sha}. The plugin did not generate."
+    log "sha256 of the plugin jar is the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 and the value of ${ref_file}"
+}
+
+# install_frontend <frontend dir>
+#
+# Installs the pnpm module frontend/ from its lock file (feat-6-contracts-openapi-pipeline, Task 120.110, REQ-009, ACC-011):
+#
+#   pnpm install --frozen-lockfile --ignore-scripts
+#
+# pnpm stops if package.json and the lock file are not the same, and it compares the integrity value of each tarball (Kubb,
+# Zod, TypeScript and all their dependencies) with the lock file. No package runs an install script. Then the function stops
+# if an installed package has another version than the key of tools/versions.env (`just check-pins` ties package.json and the
+# lock file to these keys, and this is the check of the install itself). Needs Node, pnpm and the network (the first run).
+install_frontend() {
+    local frontend_dir="$1" file
+    [[ -d "${frontend_dir}" ]] || die "The folder of the pnpm module does not exist: ${frontend_dir}"
+    for file in package.json pnpm-lock.yaml pnpm-workspace.yaml; do
+        [[ -f "${frontend_dir}/${file}" ]] || die "${frontend_dir}/${file} does not exist. The module must run from a lock file."
+    done
+    require_cmd node
+    require_cmd pnpm
+    log "Install: pnpm install --frozen-lockfile --ignore-scripts in ${frontend_dir}"
+    (cd "${frontend_dir}" && pnpm install --frozen-lockfile --ignore-scripts >/dev/null) \
+        || die "pnpm install --frozen-lockfile --ignore-scripts failed in ${frontend_dir} (see above). Nothing was generated."
+    local entry package key want installed
+    for entry in kubb:KUBB_VERSION @kubb/core:KUBB_VERSION @kubb/plugin-zod:KUBB_PLUGIN_ZOD_VERSION \
+        @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION; do
+        package="${entry%%:*}" key="${entry##*:}"
+        want="$(version_of "${key}")"
+        installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \
+            || die "Cannot read the version of the installed ${package} in ${frontend_dir}/node_modules/${package}/package.json"
+        [[ "${installed}" == "${want}" ]] \
+            || die "The installed ${package} has the version '${installed}', but ${key} in ${VERSIONS_FILE} is '${want}'."
+    done
+    log "The installed Kubb, Zod and TypeScript have the versions of tools/versions.env"
 }

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Gate: the pins in the workflows (ACC-013), the lock file of cdxgen and the lock files of the Python tools.
+"""Gate: the pins in the workflows (ACC-013), the lock files of cdxgen and Spectral, the download of oasdiff, and the Python tools.
 
 feat-5-foundation-monorepo-ci, Task 130.142 (REQ-003, REQ-015).
 feat-16-cdxgen-lockfile, Task 110.100 (REQ-003, REQ-005).
 feat-22-python-tools-lockfile, Task 120.100 (REQ-003, REQ-004).
+feat-6-contracts-openapi-pipeline, Task 110.110 (REQ-009): the same check for the lock file of Spectral.
+feat-6-contracts-openapi-pipeline, Task 115.100 (REQ-009, ACC-011): the check of the pin of oasdiff.
+feat-6-contracts-openapi-pipeline, Task 120.105 (REQ-009, ACC-011, ACC-012): the pin of the generator plugin.
+feat-6-contracts-openapi-pipeline, Task 120.110 (REQ-009, ACC-011): the pnpm module frontend/ (Kubb, Zod, TypeScript).
 
-Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> <python-lock-dir>
+Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir>
+                      <python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir>
 
 The script stops for each of these:
 
@@ -34,8 +39,9 @@ _lib.sh) and stops for each of these:
     value with versions.env (the file has the sha512 of the tar.gz), so it checks that the value is there;
   * a project with a `pom.xml` and no wrapper (fail closed: sbom.sh does not use the Maven of the runner).
 
-A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". Until
-feat-6-contracts-openapi-pipeline adds the wrapper, a `pom.xml` stops this gate on purpose.
+A project with no `pom.xml` and no wrapper passes, and the script says "no Maven project". A `pom.xml`
+with no wrapper stops this gate on purpose. feat-6-contracts-openapi-pipeline (Task 105.100) added backend/pom.xml
+and the wrapper.
 
 The lock file of the SBOM tool cdxgen (the finding G2 of the review, feat-16-cdxgen-lockfile; REQ-003, REQ-005).
 tools/versions.env is the one source of truth for CDXGEN_VERSION and CDXGEN_INTEGRITY. <sbom-tool-dir> is the
@@ -44,7 +50,8 @@ script stops for each of these:
 
   * <sbom-tool-dir>, its package.json or its pnpm-lock.yaml is missing, or the folder has a file that pnpm
     could read as a setting (for example `.npmrc`, `pnpm-workspace.yaml`, `.pnpmfile.cjs`): only package.json,
-    pnpm-lock.yaml, README.md and node_modules are allowed (SBOM_TOOL_FILES below);
+    pnpm-lock.yaml, README.md, node_modules and cyclonedx-maven-plugin.sha256 (the second place of the pin of
+    the jar of the SBOM plugin) are allowed (PNPM_TOOL_FILES below);
   * CDXGEN_VERSION is not an exact version (a range, a tag), or CDXGEN_INTEGRITY is not a sha512 value;
   * package.json: it has a key that is not in PACKAGE_JSON_KEYS (this stops devDependencies,
     optionalDependencies, peerDependencies, overrides, `pnpm`, `packageManager` and every other key), its
@@ -58,13 +65,85 @@ script stops for each of these:
   * a package in the lock file with no integrity value, with an integrity value that is not sha256, sha384 or
     sha512, with a `resolution` that has another key than `integrity` (`tarball`, `repo`, `commit`,
     `directory`, `type`: a package from another place than the registry), or with a key that is not
-    `<name>@<exact version>`; a `snapshots` entry for a package that is not in `packages`.
+    `<name>@<exact version>`; a `snapshots` entry for a package that is not in `packages`;
+  * the file `<sbom-tool-dir>/cyclonedx-maven-plugin.sha256` is missing, has no line, has a line that is not a
+    sha256 value, or has a value that is not `CYCLONEDX_MAVEN_PLUGIN_SHA256` (feat-6-contracts-openapi-pipeline,
+    the second place of the pin of the jar of the SBOM plugin, as `oasdiff-checksums.txt` is the second place of
+    the pin of oasdiff).
+
+The lock file of the OpenAPI linter Spectral (feat-6-contracts-openapi-pipeline, Task 110.110; REQ-009) has the
+same check, with the function check_pnpm_tool and the data SPECTRAL: SPECTRAL_VERSION and SPECTRAL_INTEGRITY of
+tools/versions.env, the package `@stoplight/spectral-cli`, and <lint-tool-dir> (the pnpm project tools/spectral/).
+The messages start with `Lint tool:` and not with `SBOM tool:`. The tree of Spectral is not in the SBOM (rule A:
+Spectral does not go to users), but its lock file is checked here.
 
 The check reads the lock file as text with PyYAML (it does not need Node or pnpm), so the job `check-pins` of CI
 runs it. The frozen install in sbom.sh does the real check of each tarball against the lock file; this check
 ties the lock file to tools/versions.env and stops a lock file that the install would accept but that has a
 source that is not the registry. A change of only one of the three places (versions.env, package.json, the
 lock file) stops the check.
+
+The pin of the tool for breaking changes oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100; REQ-009, ACC-011).
+oasdiff is a binary that the gate downloads (install_oasdiff in _lib.sh), so it has no lock file. tools/versions.env has
+OASDIFF_VERSION and OASDIFF_SHA256 (the sha256 of the file oasdiff_<version>_linux_amd64.tar.gz). <breaking-tool-dir> is
+tools/breaking/, and it has the file oasdiff-checksums.txt: the file `checksums.txt` of the release of the vendor, without
+a change (lines `<sha256>  <file name>`). The vendor file is the second place of the pin. The check is always on, and it
+fails closed. The script stops for each of these:
+
+  * OASDIFF_VERSION is missing or is not an exact version, or OASDIFF_SHA256 is missing or is not 64 lower case
+    hexadecimal characters;
+  * <breaking-tool-dir> or the file oasdiff-checksums.txt is missing, or a line of the file is not
+    `<sha256 value>  <file name>`;
+  * the file has no line for oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz, has more than one such line, or the sha256 of
+    the line is not OASDIFF_SHA256.
+
+A change of only one of the two places (versions.env, oasdiff-checksums.txt) stops the check. The real check of the
+download is in install_oasdiff (the sha256 of the file against OASDIFF_SHA256, before the file is unpacked).
+
+The pin of the generator plugin openapi-generator-maven-plugin (feat-6-contracts-openapi-pipeline, Task 120.105; REQ-009,
+ACC-011, ACC-012). The plugin is a Maven plugin, so its version is in a pom.xml, and tools/versions.env has the same version
+(OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION) and the sha256 of its jar (OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256). The sha256 is
+compared with the jar in the local Maven repository at run time (verify_generator_plugin in _lib.sh; the dependencies of the
+plugin are not checked, GitHub issue #23). This check is always on. The script looks at each pom.xml in <project-root> (the
+same folders as the Maven check) and stops for each of these:
+
+  * OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION is missing or is not an exact version, or the sha256 is missing or is not 64 lower
+    case hexadecimal characters;
+  * a pom.xml has the plugin `org.openapitools:openapi-generator-maven-plugin` with a version that is not
+    OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION (the version can be a `${property}` of the same pom.xml), with no version, or with
+    a version that this script cannot resolve;
+  * a pom.xml cannot be read as XML;
+  * the file `<generator-tool-dir>/openapi-generator-maven-plugin.sha256` is missing, has no line, has a line
+    that is not a sha256 value, or has a value that is not OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 (the second
+    place of the pin of the jar, as `oasdiff-checksums.txt` is the second place of the pin of oasdiff).
+
+A pom.xml with no such plugin is no problem for this check. A change of only one of the two places (versions.env,
+pom.xml) stops the check for the version, and a change of only one of the two places (versions.env, the
+`openapi-generator-maven-plugin.sha256` file) stops the check for the sha256 of the jar. The real check of the
+jar is in verify_generator_plugin (the sha256 of the jar in the local Maven repository against versions.env and
+against the file, before the plugin generates).
+
+The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011): the Zod generator Kubb, Zod and
+TypeScript. <project-root>/frontend has package.json, pnpm-workspace.yaml and pnpm-lock.yaml. The module has six direct packages
+(FRONTEND_PACKAGES below), each with a version key and an integrity key in tools/versions.env. The check is on if the folder has
+one of the three files (a folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
+
+  * a key of FRONTEND_PACKAGES is missing in tools/versions.env, a version is not an exact version, or an integrity value is
+    not a sha512 value of npm;
+  * the folder has a file that could change where pnpm gets the packages (`.npmrc`, `.pnpmfile.cjs`, `.pnpmfile.mjs`,
+    `pnpmfile.cjs`, `.yarnrc`, `.yarnrc.yml`, `yarn.lock`, `package-lock.json`, `bunfig.toml`), or one of the three files is missing;
+  * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
+  * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
+    overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
+    its `devDependencies` is not exactly the other five packages in the exact versions of versions.env;
+  * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
+    only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
+    does not have each of the six packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
+    versions.env.
+
+A change of only one of the three places (versions.env, package.json, the lock file) stops the check. The install itself
+(install_frontend in _lib.sh: `pnpm install --frozen-lockfile --ignore-scripts`) compares each tarball with the lock file.
 
 The lock files of the Python tools (the finding G2 of the review, feat-22-python-tools-lockfile; REQ-003, REQ-004).
 <python-lock-dir> is tools/python/. It has one lock file for each tool (PYTHON_LOCKS below), and no other lock
@@ -94,9 +173,10 @@ import json
 import os
 import re
 import sys
+import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import yaml
 from _workflow import GateError, iter_jobs, iter_steps, load_workflows
@@ -128,11 +208,49 @@ EXCLUDED_NAMES = {".git", "node_modules", "build", "target"}
 EXCLUDED_PATHS = {".specmgr", "tools/license/fixtures", "tools/gates/fixtures"}
 WRAPPER_FILE = Path(".mvn") / "wrapper" / "maven-wrapper.properties"
 
-# The lock file of cdxgen (feat-16-cdxgen-lockfile). See the header.
-CDXGEN_PACKAGE = "@cyclonedx/cdxgen"
+
+class PnpmTool(NamedTuple):
+    """A tool of the gates that is one npm package in a small pnpm project with a lock file.
+
+    label: the start of each message of the check. name: the name of the tool in a text. package: the npm package.
+    version_key, integrity_key: the keys of tools/versions.env. jar_sha_file, jar_sha_key: the second place of the
+    pin of the jar of a Maven plugin that the folder may have (None if the folder has no such file: the check of
+    cdxgen compares the jar of cyclonedx-maven-plugin with versions.env, as the check of oasdiff compares the
+    download with the file of the release).
+    """
+
+    label: str
+    name: str
+    package: str
+    version_key: str
+    integrity_key: str
+    jar_sha_file: str | None = None
+    jar_sha_key: str | None = None
+
+
+# The lock file of cdxgen (feat-16-cdxgen-lockfile) and the lock file of Spectral
+# (feat-6-contracts-openapi-pipeline, Task 110.110). The same check is for both. See the header.
+CDXGEN = PnpmTool(
+    "SBOM tool",
+    "cdxgen",
+    "@cyclonedx/cdxgen",
+    "CDXGEN_VERSION",
+    "CDXGEN_INTEGRITY",
+    "cyclonedx-maven-plugin.sha256",
+    "CYCLONEDX_MAVEN_PLUGIN_SHA256",
+)
+SPECTRAL = PnpmTool("Lint tool", "Spectral", "@stoplight/spectral-cli", "SPECTRAL_VERSION", "SPECTRAL_INTEGRITY")
 # The files that tools/sbom/ may have. A settings file (.npmrc, pnpm-workspace.yaml, .pnpmfile.cjs, ...) could
-# change where pnpm gets the packages, so each other file stops the check (node_modules is the install).
-SBOM_TOOL_FILES = {"package.json", "pnpm-lock.yaml", "README.md", "node_modules"}
+# change where pnpm gets the packages, so each other file stops the check (node_modules is the install). The file
+# cyclonedx-maven-plugin.sha256 is the second place of the pin of the jar of the SBOM plugin
+# (feat-6-contracts-openapi-pipeline, ACC-011).
+PNPM_TOOL_FILES = {
+    "package.json",
+    "pnpm-lock.yaml",
+    "README.md",
+    "node_modules",
+    "cyclonedx-maven-plugin.sha256",
+}
 # The keys that package.json may have. All of them are text that does not change the install.
 PACKAGE_JSON_KEYS = {"name", "private", "description", "dependencies"}
 # The top-level keys of pnpm-lock.yaml (lockfileVersion 9) that the check knows. `overrides`,
@@ -140,7 +258,7 @@ PACKAGE_JSON_KEYS = {"name", "private", "description", "dependencies"}
 LOCK_KEYS = {"lockfileVersion", "settings", "importers", "packages", "snapshots"}
 EXACT_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 INTEGRITY = re.compile(r"sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}")
-CDXGEN_INTEGRITY_FORM = re.compile(r"sha512-[A-Za-z0-9+/]{86}==")
+SHA512_INTEGRITY_FORM = re.compile(r"sha512-[A-Za-z0-9+/]{86}==")
 
 
 # The lock files of the Python tools (feat-22-python-tools-lockfile): the file, the name of the package of the
@@ -158,6 +276,69 @@ LOCK_REQUIREMENT = re.compile(
 )
 LOCK_HASH = re.compile(r"--hash=sha256:[0-9a-f]{64}")
 MAX_LOCK_PROBLEMS = 5
+
+# The pin of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105): the keys of tools/versions.env and the
+# plugin in the pom.xml.
+GENERATOR_VERSION_KEY = "OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION"
+GENERATOR_SHA256_KEY = "OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256"
+# The second place of the pin of the jar, in <generator-tool-dir> (tools/generate, the folder of the generators).
+GENERATOR_SHA_FILE = "openapi-generator-maven-plugin.sha256"
+GENERATOR_GROUP_ID = "org.openapitools"
+GENERATOR_ARTIFACT_ID = "openapi-generator-maven-plugin"
+POM_NAMESPACE = "{http://maven.apache.org/POM/4.0.0}"
+
+
+class FrontendPackage(NamedTuple):
+    """A direct package of the pnpm module frontend/: where it is in package.json and the keys of tools/versions.env."""
+
+    name: str
+    section: str
+    version_key: str
+    integrity_key: str
+
+
+# The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110). @kubb/core has the version of `kubb`.
+FRONTEND_PACKAGES = (
+    FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
+    FrontendPackage("@kubb/core", "devDependencies", "KUBB_VERSION", "KUBB_CORE_INTEGRITY"),
+    FrontendPackage("@kubb/plugin-zod", "devDependencies", "KUBB_PLUGIN_ZOD_VERSION", "KUBB_PLUGIN_ZOD_INTEGRITY"),
+    FrontendPackage("@kubb/plugin-ts", "devDependencies", "KUBB_PLUGIN_TS_VERSION", "KUBB_PLUGIN_TS_INTEGRITY"),
+    FrontendPackage("zod", "dependencies", "ZOD_VERSION", "ZOD_INTEGRITY"),
+    FrontendPackage("typescript", "devDependencies", "TYPESCRIPT_VERSION", "TYPESCRIPT_INTEGRITY"),
+)
+# The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
+FRONTEND_PACKAGE_JSON_KEYS = {
+    "name",
+    "private",
+    "version",
+    "description",
+    "type",
+    "scripts",
+    "dependencies",
+    "devDependencies",
+}
+FRONTEND_FILES = ("package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml")
+# Files that could change where pnpm gets the packages, or that make a second lock file.
+FRONTEND_FORBIDDEN_FILES = {
+    ".npmrc",
+    ".pnpmfile.cjs",
+    ".pnpmfile.mjs",
+    "pnpmfile.cjs",
+    ".yarnrc",
+    ".yarnrc.yml",
+    "yarn.lock",
+    "package-lock.json",
+    "bunfig.toml",
+}
+
+# The pin of oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100): the keys of tools/versions.env, the name of the
+# release file for Linux x86_64, and the file of the vendor (checksums.txt of the release) in tools/breaking/.
+OASDIFF_VERSION_KEY = "OASDIFF_VERSION"
+OASDIFF_SHA256_KEY = "OASDIFF_SHA256"
+OASDIFF_ASSET = "oasdiff_{version}_linux_amd64.tar.gz"
+OASDIFF_CHECKSUMS_FILE = "oasdiff-checksums.txt"
+SHA256_VALUE = re.compile(r"[0-9a-f]{64}")
+CHECKSUM_LINE = re.compile(r"([0-9a-f]{64})  (\S+)")
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -373,9 +554,9 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def check_package_json(path: Path, version: str) -> list[str]:
-    """Check tools/sbom/package.json: the one dependency in the exact version, and no other key that matters."""
-    where = f"SBOM tool: {path}"
+def check_package_json(tool: PnpmTool, path: Path, version: str) -> list[str]:
+    """Check the package.json of a pnpm tool: the one dependency in the exact version, and no other key that matters."""
+    where = f"{tool.label}: {path}"
     try:
         data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
     except (OSError, ValueError) as error:
@@ -391,15 +572,15 @@ def check_package_json(path: Path, version: str) -> list[str]:
         )
     dependencies = data.get("dependencies")
     if not isinstance(dependencies, dict):
-        problems.append(f"{where} has no `dependencies` object with {CDXGEN_PACKAGE}")
+        problems.append(f"{where} has no `dependencies` object with {tool.package}")
     else:
-        for name in sorted(set(dependencies) - {CDXGEN_PACKAGE}):
-            problems.append(f"{where} has the dependency {name}. The only dependency is {CDXGEN_PACKAGE}")
-        if CDXGEN_PACKAGE not in dependencies:
-            problems.append(f"{where} has no dependency {CDXGEN_PACKAGE}")
-        elif dependencies[CDXGEN_PACKAGE] != version:
+        for name in sorted(set(dependencies) - {tool.package}):
+            problems.append(f"{where} has the dependency {name}. The only dependency is {tool.package}")
+        if tool.package not in dependencies:
+            problems.append(f"{where} has no dependency {tool.package}")
+        elif dependencies[tool.package] != version:
             problems.append(
-                f"{where}: {CDXGEN_PACKAGE} is {dependencies[CDXGEN_PACKAGE]!r}, but CDXGEN_VERSION in "
+                f"{where}: {tool.package} is {dependencies[tool.package]!r}, but {tool.version_key} in "
                 f"tools/versions.env is {version} (an exact version, no range and no tag)"
             )
     return problems
@@ -413,9 +594,9 @@ def _split_package_key(key: str) -> tuple[str, str] | None:
     return key[:index], key[index + 1 :]
 
 
-def check_lock(path: Path, version: str, integrity: str) -> list[str]:
-    """Check tools/sbom/pnpm-lock.yaml (see the header). Return the problems."""
-    where = f"SBOM tool: {path}"
+def check_lock(tool: PnpmTool, path: Path, version: str, integrity: str) -> list[str]:
+    """Check the pnpm-lock.yaml of a pnpm tool (see the header). Return the problems."""
+    where = f"{tool.label}: {path}"
     try:
         documents = list(yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
     except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
@@ -437,12 +618,12 @@ def check_lock(path: Path, version: str, integrity: str) -> list[str]:
             f"{where} has the top-level key `{key}`, which the check does not know (known: {sorted(LOCK_KEYS)})"
         )
 
-    problems += _check_importers(where, lock.get("importers"), version)
+    problems += _check_importers(tool, where, lock.get("importers"), version)
     packages = lock.get("packages")
     if not isinstance(packages, dict) or not packages:
         problems.append(f"{where} has no `packages`")
         return problems
-    problems += _check_packages(where, packages, version, integrity)
+    problems += _check_packages(tool, where, packages, version, integrity)
     snapshots = lock.get("snapshots")
     if snapshots is not None:
         if not isinstance(snapshots, dict):
@@ -454,8 +635,8 @@ def check_lock(path: Path, version: str, integrity: str) -> list[str]:
     return problems
 
 
-def _check_importers(where: str, importers: Any, version: str) -> list[str]:
-    """Exactly one importer `.` with exactly one direct dependency: cdxgen, in the version of versions.env."""
+def _check_importers(tool: PnpmTool, where: str, importers: Any, version: str) -> list[str]:
+    """Exactly one importer `.` with exactly one direct dependency: the tool, in the version of versions.env."""
     if not isinstance(importers, dict) or set(importers) != {"."}:
         found = sorted(importers, key=str) if isinstance(importers, dict) else importers
         return [f"{where}: `importers` must have exactly one importer `.` (it has {found!r})"]
@@ -464,24 +645,24 @@ def _check_importers(where: str, importers: Any, version: str) -> list[str]:
         found = sorted(importer, key=str) if isinstance(importer, dict) else importer
         return [f"{where}: the importer `.` must have `dependencies` and nothing else (it has {found!r})"]
     dependencies = importer["dependencies"]
-    if not isinstance(dependencies, dict) or set(dependencies) != {CDXGEN_PACKAGE}:
+    if not isinstance(dependencies, dict) or set(dependencies) != {tool.package}:
         found = sorted(dependencies, key=str) if isinstance(dependencies, dict) else dependencies
-        return [f"{where}: the importer `.` must have exactly one dependency, {CDXGEN_PACKAGE} (it has {found!r})"]
-    entry = dependencies[CDXGEN_PACKAGE]
+        return [f"{where}: the importer `.` must have exactly one dependency, {tool.package} (it has {found!r})"]
+    entry = dependencies[tool.package]
     if not isinstance(entry, dict) or set(entry) != {"specifier", "version"}:
-        return [f"{where}: the dependency {CDXGEN_PACKAGE} of the importer must have `specifier` and `version`"]
+        return [f"{where}: the dependency {tool.package} of the importer must have `specifier` and `version`"]
     return [
-        f"{where}: the importer has {CDXGEN_PACKAGE} `{field}` {entry[field]!r}, but CDXGEN_VERSION in "
+        f"{where}: the importer has {tool.package} `{field}` {entry[field]!r}, but {tool.version_key} in "
         f"tools/versions.env is {version}"
         for field in ("specifier", "version")
         if entry[field] != version
     ]
 
 
-def _check_packages(where: str, packages: dict[Any, Any], version: str, integrity: str) -> list[str]:
-    """Each package has a registry source and an integrity value. cdxgen has the version and the value of versions.env."""
+def _check_packages(tool: PnpmTool, where: str, packages: dict[Any, Any], version: str, integrity: str) -> list[str]:
+    """Each package has a registry source and an integrity value. The tool has the values of versions.env."""
     problems: list[str] = []
-    cdxgen_keys = []
+    tool_keys = []
     for key, entry in packages.items():
         parts = _split_package_key(str(key)) if isinstance(key, str) else None
         if parts is None or not EXACT_VERSION.fullmatch(parts[1]):
@@ -489,8 +670,8 @@ def _check_packages(where: str, packages: dict[Any, Any], version: str, integrit
                 f"{where}: the package {key!r} is not `<name>@<exact version>` (a link, a URL or a git source?)"
             )
             continue
-        if parts[0] == CDXGEN_PACKAGE:
-            cdxgen_keys.append(key)
+        if parts[0] == tool.package:
+            tool_keys.append(key)
         resolution = entry.get("resolution") if isinstance(entry, dict) else None
         if not isinstance(resolution, dict):
             problems.append(f"{where}: the package {key} has no `resolution`")
@@ -503,57 +684,409 @@ def _check_packages(where: str, packages: dict[Any, Any], version: str, integrit
             problems.append(
                 f"{where}: the package {key} has the `resolution` keys {others}. The check allows `integrity` only"
             )
-    expected_key = f"{CDXGEN_PACKAGE}@{version}"
-    if cdxgen_keys != [expected_key]:
+    expected_key = f"{tool.package}@{version}"
+    if tool_keys != [expected_key]:
         problems.append(
-            f"{where}: `packages` must have exactly one {CDXGEN_PACKAGE}, and it must be {expected_key} "
-            f"(CDXGEN_VERSION in tools/versions.env). It has {cdxgen_keys}"
+            f"{where}: `packages` must have exactly one {tool.package}, and it must be {expected_key} "
+            f"({tool.version_key} in tools/versions.env). It has {tool_keys}"
         )
     else:
         resolution = packages[expected_key].get("resolution") if isinstance(packages[expected_key], dict) else None
         found = resolution.get("integrity") if isinstance(resolution, dict) else None
         if found != integrity:
             problems.append(
-                f"{where}: the integrity value of {expected_key} is {found}, but CDXGEN_INTEGRITY in "
+                f"{where}: the integrity value of {expected_key} is {found}, but {tool.integrity_key} in "
                 f"tools/versions.env is {integrity}"
             )
     return problems
 
 
-def check_sbom_tool(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
-    """Check the pnpm project of cdxgen (feat-16-cdxgen-lockfile). Return a message for the log and the problems."""
+def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pnpm project of a tool (cdxgen: feat-16-cdxgen-lockfile; Spectral: feat-6, Task 110.110).
+
+    Return a message for the log and the problems.
+    """
     problems: list[str] = []
-    version, integrity = versions.get("CDXGEN_VERSION", ""), versions.get("CDXGEN_INTEGRITY", "")
-    for key in ("CDXGEN_VERSION", "CDXGEN_INTEGRITY"):
+    version, integrity = versions.get(tool.version_key, ""), versions.get(tool.integrity_key, "")
+    for key in (tool.version_key, tool.integrity_key):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
     if version and not EXACT_VERSION.fullmatch(version):
         problems.append(
-            f"CDXGEN_VERSION in tools/versions.env is {version!r}, but it must be an exact version (no range, no tag)"
+            f"{tool.version_key} in tools/versions.env is {version!r}, "
+            "but it must be an exact version (no range, no tag)"
         )
-    if integrity and not CDXGEN_INTEGRITY_FORM.fullmatch(integrity):
+    if integrity and not SHA512_INTEGRITY_FORM.fullmatch(integrity):
         problems.append(
-            f"CDXGEN_INTEGRITY in tools/versions.env is {integrity!r}, but it must be a sha512 integrity value of npm"
+            f"{tool.integrity_key} in tools/versions.env is {integrity!r}, "
+            "but it must be a sha512 integrity value of npm"
         )
     if not tool_dir.is_dir():
-        problems.append(f"SBOM tool: the folder {tool_dir} (the lock file of cdxgen) does not exist")
+        problems.append(f"{tool.label}: the folder {tool_dir} (the lock file of {tool.name}) does not exist")
         return "", problems
     for name in sorted(path.name for path in tool_dir.iterdir()):
-        if name not in SBOM_TOOL_FILES:
+        if name not in PNPM_TOOL_FILES:
             problems.append(
-                f"SBOM tool: {tool_dir / name} is not allowed. The folder has only {sorted(SBOM_TOOL_FILES)} "
+                f"{tool.label}: {tool_dir / name} is not allowed. The folder has only {sorted(PNPM_TOOL_FILES)} "
                 "(a settings file could change where pnpm gets the packages)"
             )
     package_json, lock = tool_dir / "package.json", tool_dir / "pnpm-lock.yaml"
     for path in (package_json, lock):
         if not path.is_file():
-            problems.append(f"SBOM tool: {path} does not exist")
+            problems.append(f"{tool.label}: {path} does not exist")
     if problems:
         return "", problems
-    # CDXGEN_VERSION and CDXGEN_INTEGRITY are in the right form here, or the problems above stopped.
-    problems += check_package_json(package_json, version)
-    problems += check_lock(lock, version, integrity)
-    note = f"SBOM tool: {tool_dir}: @cyclonedx/cdxgen {version}, package.json and lock file as in tools/versions.env"
+    # The version and the integrity value are in the right form here, or the problems above stopped.
+    problems += check_package_json(tool, package_json, version)
+    problems += check_lock(tool, lock, version, integrity)
+    note = f"{tool.label}: {tool_dir}: {tool.package} {version}, package.json and lock file as in tools/versions.env"
+    if tool.jar_sha_file and tool.jar_sha_key:
+        problems += check_jar_sha_file(tool.label, tool_dir / tool.jar_sha_file, tool.jar_sha_key, versions)
+        note += f", and the sha256 of the plugin jar in {tool.jar_sha_file} as in tools/versions.env"
+    return ("" if problems else note), problems
+
+
+def check_jar_sha_file(label: str, path: Path, key: str, versions: dict[str, str]) -> list[str]:
+    """The second place of the pin of the jar of a Maven plugin (ACC-011): the file has the value of <key>.
+
+    The file has exactly one line, a sha256 value (64 lower case hexadecimal characters). <label> is the start of
+    the message (for example `SBOM tool` or `Generator plugin`). See the header.
+    """
+    where = f"{label}: {path}"
+    if key not in versions:
+        return [f"{key} is not in tools/versions.env"]
+    value = versions[key]
+    if not SHA256_VALUE.fullmatch(value):
+        return [
+            (
+                f"{key} in tools/versions.env is {value!r}, "
+                "but it must be a sha256 value (64 lower case hexadecimal characters)"
+            )
+        ]
+    if not path.is_file():
+        return [f"{where} does not exist (it is the second place of {key}, the sha256 of the plugin jar)"]
+    try:
+        lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, UnicodeDecodeError) as error:
+        return [f"cannot read {where}: {error}"]
+    if len(lines) != 1 or not SHA256_VALUE.fullmatch(lines[0]):
+        return [f"{where} has one line with the sha256 value only (64 lower case hexadecimal characters)"]
+    if lines[0] != value:
+        return [f"{where} has the sha256 {lines[0]} for the plugin jar, but {key} in tools/versions.env is {value}"]
+    return []
+
+
+def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of oasdiff (see the header). Return a message for the log and the problems."""
+    label = "Breaking-changes tool"
+    problems: list[str] = []
+    version, sha256 = versions.get(OASDIFF_VERSION_KEY, ""), versions.get(OASDIFF_SHA256_KEY, "")
+    for key in (OASDIFF_VERSION_KEY, OASDIFF_SHA256_KEY):
+        if key not in versions:
+            problems.append(f"{key} is not in tools/versions.env")
+    if version and not EXACT_VERSION.fullmatch(version):
+        problems.append(f"{OASDIFF_VERSION_KEY} in tools/versions.env is {version!r}, but it must be an exact version")
+    if sha256 and not SHA256_VALUE.fullmatch(sha256):
+        problems.append(
+            f"{OASDIFF_SHA256_KEY} in tools/versions.env is {sha256!r}, "
+            "but it must be a sha256 value (64 lower case hexadecimal characters)"
+        )
+    if problems:
+        return "", problems
+    path = tool_dir / OASDIFF_CHECKSUMS_FILE
+    if not tool_dir.is_dir():
+        return "", [f"{label}: the folder {tool_dir} (the checksums of the release of oasdiff) does not exist"]
+    if not path.is_file():
+        return "", [f"{label}: {path} does not exist (it is the file `checksums.txt` of the release of oasdiff)"]
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        return "", [f"{label}: cannot read {path}: {error}"]
+    asset = OASDIFF_ASSET.format(version=version)
+    found: list[str] = []
+    for number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        match = CHECKSUM_LINE.fullmatch(line)
+        if not match:
+            problems.append(f"{label}: {path}, line {number}: the form is not `<sha256 value>  <file name>`")
+        elif match.group(2) == asset:
+            found.append(match.group(1))
+    if not found:
+        problems.append(
+            f"{label}: {path} has no line for {asset}. {OASDIFF_VERSION_KEY} in tools/versions.env is {version}"
+        )
+    elif len(found) > 1:
+        problems.append(f"{label}: {path} has {len(found)} lines for {asset}, but it must have one")
+    elif found[0] != sha256:
+        problems.append(
+            f"{label}: {path} has the sha256 {found[0]} for {asset}, "
+            f"but {OASDIFF_SHA256_KEY} in tools/versions.env is {sha256}"
+        )
+    note = f"{label}: {path}: {asset} has the sha256 of tools/versions.env"
+    return ("" if problems else note), problems
+
+
+def _resolve_pom_value(text: str, properties: dict[str, str]) -> str | None:
+    """Resolve a `${name}` of the <properties> of a pom.xml. Return None if the value has another form."""
+    text = text.strip()
+    match = re.fullmatch(r"\$\{([^${}]+)\}", text)
+    if match:
+        return properties.get(match.group(1).strip())
+    return None if "${" in text else text
+
+
+def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of the generator plugin (see the header). Return a message for the log and the problems.
+
+    tool_dir is the folder that has the file GENERATOR_SHA_FILE, the second place of the pin of the jar
+    (tools/generate, the folder of the generators).
+    """
+    label = "Generator plugin"
+    problems: list[str] = []
+    version, sha256 = versions.get(GENERATOR_VERSION_KEY, ""), versions.get(GENERATOR_SHA256_KEY, "")
+    for key in (GENERATOR_VERSION_KEY, GENERATOR_SHA256_KEY):
+        if key not in versions:
+            problems.append(f"{key} is not in tools/versions.env")
+    if version and not EXACT_VERSION.fullmatch(version):
+        problems.append(
+            f"{GENERATOR_VERSION_KEY} in tools/versions.env is {version!r}, but it must be an exact version"
+        )
+    if sha256 and not SHA256_VALUE.fullmatch(sha256):
+        problems.append(
+            f"{GENERATOR_SHA256_KEY} in tools/versions.env is {sha256!r}, "
+            "but it must be a sha256 value (64 lower case hexadecimal characters)"
+        )
+    if problems:
+        return "", problems
+    checked: list[str] = []
+    for pom in find_files(root, "pom.xml"):
+        try:
+            tree = ET.parse(root / pom)
+        except (OSError, ET.ParseError) as error:
+            problems.append(f"{label}: cannot read {pom} as XML: {error}")
+            continue
+        project = tree.getroot()
+        properties_node = project.find(f"{POM_NAMESPACE}properties")
+        properties = (
+            {child.tag.removeprefix(POM_NAMESPACE): (child.text or "") for child in properties_node}
+            if properties_node is not None
+            else {}
+        )
+        for plugin in project.iter(f"{POM_NAMESPACE}plugin"):
+            artifact = plugin.findtext(f"{POM_NAMESPACE}artifactId", default="").strip()
+            group = plugin.findtext(f"{POM_NAMESPACE}groupId", default="").strip()
+            if artifact != GENERATOR_ARTIFACT_ID or group != GENERATOR_GROUP_ID:
+                continue
+            raw = plugin.findtext(f"{POM_NAMESPACE}version")
+            if raw is None or not raw.strip():
+                problems.append(f"{label}: {pom} has the plugin {GENERATOR_ARTIFACT_ID} with no <version>")
+                continue
+            found = _resolve_pom_value(raw, properties)
+            if found is None:
+                problems.append(
+                    f"{label}: {pom}: the version {raw.strip()!r} of the plugin {GENERATOR_ARTIFACT_ID} is not a version "
+                    "or a <properties> value of the same pom.xml"
+                )
+            elif found != version:
+                problems.append(
+                    f"{label}: {pom} has the plugin {GENERATOR_ARTIFACT_ID} {found}, "
+                    f"but {GENERATOR_VERSION_KEY} in tools/versions.env is {version}"
+                )
+            else:
+                checked.append(str(pom))
+    # The version and the sha256 are in the right form here, or the problems above stopped.
+    problems += check_jar_sha_file(label, tool_dir / GENERATOR_SHA_FILE, GENERATOR_SHA256_KEY, versions)
+    note = (
+        f"{label}: {', '.join(checked)}: {GENERATOR_ARTIFACT_ID} {version}, the version of tools/versions.env"
+        if checked
+        else f"{label}: no pom.xml has the plugin {GENERATOR_ARTIFACT_ID}"
+    )
+    note += f", and the sha256 of the jar in {tool_dir / GENERATOR_SHA_FILE} as in tools/versions.env"
+    return ("" if problems else note), problems
+
+
+def _frontend_versions(versions: dict[str, str]) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """The version and the integrity value of each direct package of frontend/, and the problems of versions.env."""
+    problems: list[str] = []
+    result: dict[str, tuple[str, str]] = {}
+    for package in FRONTEND_PACKAGES:
+        version, integrity = versions.get(package.version_key, ""), versions.get(package.integrity_key, "")
+        for key in (package.version_key, package.integrity_key):
+            if key not in versions:
+                problems.append(f"{key} is not in tools/versions.env")
+        if version and not EXACT_VERSION.fullmatch(version):
+            problems.append(
+                f"{package.version_key} in tools/versions.env is {version!r}, but it must be an exact version (no range, no tag)"
+            )
+        if integrity and not SHA512_INTEGRITY_FORM.fullmatch(integrity):
+            problems.append(
+                f"{package.integrity_key} in tools/versions.env is {integrity!r}, but it must be a sha512 integrity value of npm"
+            )
+        result[package.name] = (version, integrity)
+    return result, sorted(set(problems))
+
+
+def _check_frontend_package_json(path: Path, expected: dict[str, tuple[str, str]]) -> list[str]:
+    where = f"Frontend: {path}"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+    except (OSError, ValueError) as error:
+        return [f"{where} cannot be read as JSON: {error}"]
+    if not isinstance(data, dict):
+        return [f"{where} is not a JSON object"]
+    problems: list[str] = []
+    for key in sorted(set(data) - FRONTEND_PACKAGE_JSON_KEYS):
+        problems.append(
+            f"{where} has the key `{key}`. The module has only {sorted(FRONTEND_PACKAGE_JSON_KEYS)}: no "
+            "optionalDependencies, peerDependencies, overrides, `pnpm` settings or `packageManager`"
+        )
+    for section in ("dependencies", "devDependencies"):
+        wanted = {p.name: p for p in FRONTEND_PACKAGES if p.section == section}
+        found = data.get(section)
+        if not isinstance(found, dict):
+            problems.append(f"{where} has no `{section}` object")
+            continue
+        for name in sorted(set(found) - set(wanted)):
+            problems.append(f"{where}: `{section}` has {name}. It has only {sorted(wanted)}")
+        for name, package in sorted(wanted.items()):
+            if name not in found:
+                problems.append(f"{where}: `{section}` has no {name}")
+            elif found[name] != expected[name][0]:
+                problems.append(
+                    f"{where}: {name} is {found[name]!r}, but {package.version_key} in tools/versions.env is "
+                    f"{expected[name][0]} (an exact version, no range and no tag)"
+                )
+    return problems
+
+
+def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> list[str]:
+    where = f"Frontend: {path}"
+    try:
+        documents = list(yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+    except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
+        return [f"{where} cannot be read as YAML: {error}"]
+    if len(documents) != 1:
+        return [f"{where} has {len(documents)} YAML documents, but it must have exactly one"]
+    lock = documents[0]
+    if not isinstance(lock, dict):
+        return [f"{where} is not a YAML mapping"]
+    problems: list[str] = []
+    lock_version = lock.get("lockfileVersion")
+    if not isinstance(lock_version, str) or not lock_version.startswith("9."):
+        problems.append(f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`")
+    for key in sorted(set(lock) - LOCK_KEYS, key=str):
+        problems.append(
+            f"{where} has the top-level key `{key}`, which the check does not know (known: {sorted(LOCK_KEYS)})"
+        )
+    importers = lock.get("importers")
+    if not isinstance(importers, dict) or set(importers) != {"."}:
+        found = sorted(importers, key=str) if isinstance(importers, dict) else importers
+        problems.append(f"{where}: `importers` must have exactly one importer `.` (it has {found!r})")
+    elif not isinstance(importers["."], dict) or not set(importers["."]) <= {"dependencies", "devDependencies"}:
+        problems.append(f"{where}: the importer `.` must have `dependencies` and `devDependencies` and nothing else")
+    else:
+        importer = importers["."]
+        for package in FRONTEND_PACKAGES:
+            entries = importer.get(package.section)
+            entry = entries.get(package.name) if isinstance(entries, dict) else None
+            if not isinstance(entry, dict) or set(entry) != {"specifier", "version"}:
+                problems.append(
+                    f"{where}: the importer has no {package.name} in `{package.section}` with `specifier` and `version`"
+                )
+                continue
+            want = expected[package.name][0]
+            if entry["specifier"] != want:
+                problems.append(
+                    f"{where}: the importer has {package.name} `specifier` {entry['specifier']!r}, "
+                    f"but {package.version_key} in tools/versions.env is {want}"
+                )
+            if str(entry["version"]).split("(", 1)[0] != want:
+                problems.append(
+                    f"{where}: the importer has {package.name} `version` {entry['version']!r}, "
+                    f"but {package.version_key} in tools/versions.env is {want}"
+                )
+        for section in importer:
+            names = {p.name for p in FRONTEND_PACKAGES if p.section == section}
+            if isinstance(importer[section], dict):
+                for name in sorted(set(importer[section]) - names):
+                    problems.append(
+                        f"{where}: the importer has the direct dependency {name} in `{section}`, which the check does not know"
+                    )
+    packages = lock.get("packages")
+    if not isinstance(packages, dict) or not packages:
+        problems.append(f"{where} has no `packages`")
+        return problems
+    for key, entry in packages.items():
+        parts = _split_package_key(str(key)) if isinstance(key, str) else None
+        if parts is None or not EXACT_VERSION.fullmatch(parts[1]):
+            problems.append(
+                f"{where}: the package {key!r} is not `<name>@<exact version>` (a link, a URL or a git source?)"
+            )
+            continue
+        resolution = entry.get("resolution") if isinstance(entry, dict) else None
+        if not isinstance(resolution, dict):
+            problems.append(f"{where}: the package {key} has no `resolution`")
+        elif "integrity" not in resolution:
+            problems.append(f"{where}: the package {key} has no integrity value")
+        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(resolution["integrity"]):
+            problems.append(f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512")
+        elif set(resolution) != {"integrity"}:
+            others = sorted(set(resolution) - {"integrity"}, key=str)
+            problems.append(
+                f"{where}: the package {key} has the `resolution` keys {others}. The check allows `integrity` only"
+            )
+    for package in FRONTEND_PACKAGES:
+        version, integrity = expected[package.name]
+        key = f"{package.name}@{version}"
+        if key not in packages:
+            problems.append(f"{where}: `packages` has no {key} ({package.version_key} in tools/versions.env)")
+            continue
+        resolution = packages[key].get("resolution") if isinstance(packages[key], dict) else None
+        found = resolution.get("integrity") if isinstance(resolution, dict) else None
+        if found != integrity:
+            problems.append(
+                f"{where}: the integrity value of {key} is {found}, but {package.integrity_key} in tools/versions.env is {integrity}"
+            )
+    snapshots = lock.get("snapshots")
+    if snapshots is not None:
+        if not isinstance(snapshots, dict):
+            problems.append(f"{where}: `snapshots` is not a mapping")
+        else:
+            for key in snapshots:
+                if str(key).split("(", 1)[0] not in packages:
+                    problems.append(f"{where}: `snapshots` has {key!r}, which is not in `packages`")
+    return problems
+
+
+def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pnpm module frontend/ (see the header). Return a message for the log and the problems."""
+    folder = root / "frontend"
+    if not any((folder / name).exists() for name in FRONTEND_FILES):
+        return "no pnpm module frontend/ (no package.json, no pnpm-workspace.yaml and no pnpm-lock.yaml)", []
+    expected, problems = _frontend_versions(versions)
+    for name in sorted(path.name for path in folder.iterdir()):
+        if name in FRONTEND_FORBIDDEN_FILES:
+            problems.append(
+                f"Frontend: {folder / name} is not allowed (it could change where pnpm gets the packages, or it makes a second lock file)"
+            )
+    for name in FRONTEND_FILES:
+        if not (folder / name).is_file():
+            problems.append(f"Frontend: {folder / name} does not exist (the module needs {', '.join(FRONTEND_FILES)})")
+    if problems:
+        return "", problems
+    try:
+        workspace = yaml.load((folder / "pnpm-workspace.yaml").read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+    except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
+        return "", [f"Frontend: {folder / 'pnpm-workspace.yaml'} cannot be read as YAML: {error}"]
+    if workspace != {"packages": ["."]}:
+        problems.append(
+            f'Frontend: {folder / "pnpm-workspace.yaml"} is {workspace!r}, but it must be exactly `packages: ["."]` '
+            "(a key such as `overrides`, `catalog` or `registry` changes the install)"
+        )
+    problems += _check_frontend_package_json(folder / "package.json", expected)
+    problems += _check_frontend_lock(folder / "pnpm-lock.yaml", expected)
+    note = f"Frontend: {folder}: Kubb, Zod and TypeScript, package.json and lock file as in tools/versions.env"
     return ("" if problems else note), problems
 
 
@@ -605,7 +1138,9 @@ def _python_lock_entries(path: Path) -> tuple[list[tuple[int, str, str]], list[s
     if len(problems) > MAX_LOCK_PROBLEMS:
         # One broken entry can make a problem for each of its hash lines. The first ones are enough to find the place.
         hidden = len(problems) - MAX_LOCK_PROBLEMS
-        problems = problems[:MAX_LOCK_PROBLEMS] + [f"Python lock: {path}: and {hidden} more line(s) that are not correct"]
+        problems = problems[:MAX_LOCK_PROBLEMS] + [
+            f"Python lock: {path}: and {hidden} more line(s) that are not correct"
+        ]
     return entries, problems
 
 
@@ -650,10 +1185,10 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 7:
+    if len(argv) != 10:
         print(
             "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> "
-            "<python-lock-dir>",
+            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir>",
             file=sys.stderr,
         )
         return 2
@@ -670,9 +1205,21 @@ def main(argv: list[str]) -> int:
         note, maven_problems = check_maven(Path(argv[4]), versions)
         print(f"Maven pin: {note or str(len(maven_problems)) + ' problem(s)'}")
         problems += maven_problems
-        note, sbom_problems = check_sbom_tool(Path(argv[5]), versions)
+        note, sbom_problems = check_pnpm_tool(CDXGEN, Path(argv[5]), versions)
         print(f"SBOM tool pin: {note or str(len(sbom_problems)) + ' problem(s)'}")
         problems += sbom_problems
+        note, lint_problems = check_pnpm_tool(SPECTRAL, Path(argv[7]), versions)
+        print(f"Lint tool pin: {note or str(len(lint_problems)) + ' problem(s)'}")
+        problems += lint_problems
+        note, breaking_problems = check_oasdiff(Path(argv[8]), versions)
+        print(f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}")
+        problems += breaking_problems
+        note, generator_problems = check_generator_plugin(Path(argv[4]), Path(argv[9]), versions)
+        print(f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}")
+        problems += generator_problems
+        note, frontend_problems = check_frontend(Path(argv[4]), versions)
+        print(f"Frontend pin: {note or str(len(frontend_problems)) + ' problem(s)'}")
+        problems += frontend_problems
         note, python_problems = check_python_locks(Path(argv[6]), versions)
         print(f"Python lock pin: {note or str(len(python_problems)) + ' problem(s)'}")
         problems += python_problems
@@ -686,7 +1233,9 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
-        "The lock file of cdxgen and the lock files of the Python tools are the ones of tools/versions.env."
+        "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version and the jar checksum of the "
+        "generator plugin, the jar checksum of the SBOM plugin, the module frontend/ and the lock files of the Python "
+        "tools are the ones of tools/versions.env."
     )
     return 0
 

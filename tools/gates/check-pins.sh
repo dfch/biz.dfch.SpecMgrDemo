@@ -28,6 +28,25 @@
 #     first argument). The folder is PYTHON_LOCK_DIR (a variable for the tests, as in make_python_env in
 #     _lib.sh; the default is tools/python of this repository).
 #
+#   - the lock file of Spectral (feat-6-contracts-openapi-pipeline, Task 110.110, REQ-009): tools/spectral/package.json
+#     and tools/spectral/pnpm-lock.yaml have the same check as the lock file of cdxgen, with SPECTRAL_VERSION and
+#     SPECTRAL_INTEGRITY of the versions file. The folder is LINT_TOOL_DIR (a variable for the tests; the default
+#     is tools/spectral of this repository).
+#
+#   - the download of oasdiff (feat-6-contracts-openapi-pipeline, Task 115.100, REQ-009, ACC-011): OASDIFF_VERSION and
+#     OASDIFF_SHA256 of the versions file must be in the right form, and tools/breaking/oasdiff-checksums.txt (the file
+#     `checksums.txt` of the release of oasdiff) must have the line for oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz with
+#     the value of OASDIFF_SHA256. The folder is BREAKING_TOOL_DIR (a variable for the tests; the default is
+#     tools/breaking of this repository).
+#
+#   - the jar of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105, ACC-011): the version must be the
+#     version of the plugin in each pom.xml that has it, and tools/generate/openapi-generator-maven-plugin.sha256 must
+#     have the value of OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256. The folder is GENERATOR_TOOL_DIR (a variable for the tests;
+#     the default is tools/generate of this repository).
+#
+#   - the jar of the SBOM plugin (feat-6-contracts-openapi-pipeline, ACC-011): tools/sbom/cyclonedx-maven-plugin.sha256
+#     must have the value of CYCLONEDX_MAVEN_PLUGIN_SHA256 (part of the check of the cdxgen project, SBOM_TOOL_DIR).
+#
 # check_pins.py does the work. It reads the YAML with PyYAML. The version is PYYAML_VERSION in the versions
 # file (the first argument), and the script installs it with `uv pip install --require-hashes` from the
 # lock file tools/python/pyyaml.lock (make_python_env in _lib.sh). Exit codes: 0 pass, 1 a pin is not correct, 2 an error in a file.
@@ -40,4 +59,5 @@ allowed="${3:-${REPO_ROOT}/tools/license/allowed-actions.txt}"
 VERSIONS_FILE="$1"
 make_python_env pyyaml
 "${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}" "${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}" \
-    "${PYTHON_LOCK_DIR:-${REPO_ROOT}/tools/python}"
+    "${PYTHON_LOCK_DIR:-${REPO_ROOT}/tools/python}" "${LINT_TOOL_DIR:-${REPO_ROOT}/tools/spectral}" \
+    "${BREAKING_TOOL_DIR:-${REPO_ROOT}/tools/breaking}" "${GENERATOR_TOOL_DIR:-${REPO_ROOT}/tools/generate}"

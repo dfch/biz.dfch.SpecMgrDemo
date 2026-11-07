@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Maven module of the backend (feat-6-contracts-openapi-pipeline, Tasks 105.100 and 120.100).
+
+  This module has no product code. It has the Spring server interfaces that the plugin openapi-generator-maven-plugin
+  makes from contracts/openapi.yaml, and the libraries that this generated code needs to compile. Build with ./mvnw:
+  the Maven Wrapper (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+
+  The plugin has two executions (see the <build> section):
+    - spring-interfaces, bound to the phase generate-sources. It writes the Java code to src/generated/java, and
+      adds this folder as a compile source root (the plugin option addCompileSourceRoot, so no other plugin).
+      `just generate` deletes the folder first and makes the code again. The folder is committed to git.
+    - api-docs, bound to no phase (the HTML documentation, REQ-015). `just api-docs` starts it. It writes to
+      build/api-docs (the folder is not in git).
+  `just generate`, `just compile` and `just api-docs` compare the sha256 of the plugin jar with the pin
+  OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256 of tools/versions.env before they start Maven (tools/gates/_lib.sh,
+  verify_generator_plugin). The version of the plugin in this file and the version in tools/versions.env must
+  be the same: `just check-pins` checks it.
+
+  The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
+     - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
+       with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
+       for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
+       the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
+       retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
+    - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
+      swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>biz.dfch.specmgrdemo</groupId>
+  <artifactId>backend</artifactId>
+  <version>0.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>biz.dfch.SpecMgrDemo backend</name>
+  <description>The Java backend. This module has no product code. It has the generated Spring server interfaces.</description>
+
+  <licenses>
+    <license>
+      <name>GNU Affero General Public License, version 3 only</name>
+      <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+    </license>
+  </licenses>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- The JDK of tools/versions.env (JDK_VERSION) is Temurin 21. -->
+    <maven.compiler.release>21</maven.compiler.release>
+    <!-- A fixed time stamp, so that the archives of a build are the same in each run. -->
+    <project.build.outputTimestamp>2026-11-04T00:00:00Z</project.build.outputTimestamp>
+
+    <!-- The generator. tools/versions.env has the same version (OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION). -->
+    <openapi-generator.version>7.27.0</openapi-generator.version>
+    <!-- The libraries that the generated code needs. Each version is named here, and no BOM gives one. -->
+    <spring.version>6.2.19</spring.version>
+    <jakarta-validation.version>3.0.2</jakarta-validation.version>
+    <jackson-annotations.version>2.21</jackson-annotations.version>
+    <tomcat-annotations-api.version>10.1.61</tomcat-annotations-api.version>
+
+    <!-- The files that the generators read and write, relative to the folder of this module. -->
+    <contract.file>${project.basedir}/../contracts/openapi.yaml</contract.file>
+    <generated.java.dir>${project.basedir}/src/generated</generated.java.dir>
+    <api-docs.dir>${project.basedir}/../build/api-docs</api-docs.dir>
+  </properties>
+
+  <dependencies>
+    <!-- ResponseEntity and the annotations of Spring Web MVC (@RequestMapping, @RequestParam and others). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <!-- @Validated of the generated interfaces. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <!-- Jakarta Bean Validation, the API only (no implementation: the generated code needs none to compile). -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <version>${jakarta-validation.version}</version>
+    </dependency>
+    <!-- @JsonProperty and @JsonValue of the generated model classes. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${jackson-annotations.version}</version>
+    </dependency>
+    <!-- jakarta.annotation.Generated (Jakarta Annotations 2.1) in place of jakarta.annotation-api. Decision of the
+          owner of 2026-11-04. The version is named here, and no BOM gives it. The scope is provided: the annotation
+          has SOURCE retention (it is read at compile time only), so the jar stays off the runtime class path, and a
+          later Spring Boot starter cannot bring jakarta.annotation-api in again with a duplicate class. -->
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-annotations-api</artifactId>
+      <version>${tomcat-annotations-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>${openapi-generator.version}</version>
+        <executions>
+          <!-- The Spring server interfaces (REQ-004). Options: the four of the task 090.120 (interfaceOnly,
+               skipDefaultInterface, hideGenerationTimestamp and generateSupportingFiles), and the options that the
+               agent set (see the plan, Decisions Made). -->
+          <execution>
+            <id>spring-interfaces</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${contract.file}</inputSpec>
+              <generatorName>spring</generatorName>
+              <output>${generated.java.dir}</output>
+              <apiPackage>biz.dfch.specmgrdemo.api</apiPackage>
+              <modelPackage>biz.dfch.specmgrdemo.model</modelPackage>
+              <generateSupportingFiles>false</generateSupportingFiles>
+              <generateApiTests>false</generateApiTests>
+              <generateModelTests>false</generateModelTests>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <generateModelDocumentation>false</generateModelDocumentation>
+              <addCompileSourceRoot>true</addCompileSourceRoot>
+              <configOptions>
+                <interfaceOnly>true</interfaceOnly>
+                <skipDefaultInterface>true</skipDefaultInterface>
+                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+                <useSpringBoot3>true</useSpringBoot3>
+                <sourceFolder>java</sourceFolder>
+                <annotationLibrary>none</annotationLibrary>
+                <documentationProvider>none</documentationProvider>
+                <openApiNullable>false</openApiNullable>
+                <!-- Both are the defaults of 7.27.0. The generator writes a warning if they are not set. -->
+                <generateJsonIncludeAnnotations>false</generateJsonIncludeAnnotations>
+                <generateJsonSetterNullsAnnotations>false</generateJsonSetterNullsAnnotations>
+              </configOptions>
+            </configuration>
+          </execution>
+          <!-- The API documentation (REQ-015): the generator html2. No phase: `just api-docs` starts it with
+               the goal openapi-generator:generate@api-docs. The output is not in git. -->
+          <execution>
+            <id>api-docs</id>
+            <phase>none</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${contract.file}</inputSpec>
+              <generatorName>html2</generatorName>
+              <output>${api-docs.dir}</output>
+              <addCompileSourceRoot>false</addCompileSourceRoot>
+              <configOptions>
+                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+              </configOptions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

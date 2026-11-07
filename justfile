@@ -2,6 +2,13 @@
 # CI jobs start one recipe from this file, and nothing else (ACC-003).
 #
 # feat-5-foundation-monorepo-ci, Task 120.110.
+# The number after the script name is the number of the task that wrote the gate: 130.xxx are the tasks of
+# feat-5-foundation-monorepo-ci, 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate), and
+# 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes), 120.120 and 120.130 are the
+# tasks of feat-6-contracts-openapi-pipeline (the generators and the API documentation), and 130.100 and 130.105 are tasks of
+# feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). The gate numbers of
+# the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
+# name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
 # because a script is missing.
@@ -54,8 +61,52 @@ check-sudo:
 test-license-gate:
     @{{ just_executable() }} _gate test-license-gate.sh 130.135
 
-# Test: all gates with good and bad input (the license gate and its fixtures too).
-test-gates: test-license-gate
+# Gate: the linter Spectral examines contracts/openapi.yaml with the rules in tools/lint/ruleset.yaml (REQ-002, REQ-006, REQ-008).
+lint:
+    @{{ just_executable() }} _gate lint.sh 110.115 contracts/openapi.yaml tools/lint/ruleset.yaml
+
+# Test: the lint gate with the real Spectral and the bad OpenAPI files in tools/lint/fixtures/ (ACC-007).
+test-lint-gate:
+    @{{ just_executable() }} _gate test-lint-gate.sh 110.115
+
+# Gate: oasdiff compares contracts/openapi.yaml with the file at the merge base of the base (a pull request to `dev`: dev, a release pull request to `main`: main). A breaking change needs an entry in the ignore file and a higher version (REQ-003, REQ-012, DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4).
+breaking-changes:
+    @{{ just_executable() }} _gate breaking-changes.sh 115.110 "{{ base }}" contracts/openapi.yaml tools/breaking/breaking-changes-ignore.txt
+
+# Test: the gate for breaking changes with the real oasdiff and temporary git repositories: the four cases of ACC-003 and more.
+test-breaking-changes-gate:
+    @{{ just_executable() }} _gate test-breaking-changes-gate.sh 115.130
+
+# Make all generated code again from contracts/openapi.yaml: the Spring server interfaces in backend/src/generated and the Zod schemas in frontend/src/generated. Two runs one after the other make no change (REQ-004, REQ-011).
+generate:
+    @{{ just_executable() }} _gate generate.sh 120.120 backend frontend
+
+# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, and tsc --noEmit --strict). The generation is part of the Maven build (ACC-005).
+compile:
+    @{{ just_executable() }} _gate compile.sh 120.120 backend frontend
+
+# Make the API documentation (HTML) from contracts/openapi.yaml with the generator html2 of the pinned plugin. The output is in build/api-docs and is not in git (REQ-015).
+api-docs:
+    @{{ just_executable() }} _gate api-docs.sh 120.130 backend build/api-docs
+
+# Gate: the generated code in the repository (backend/src/generated, frontend/src/generated) is the code that `just generate` makes now. It finds a file that is changed, deleted, extra, not tracked or ignored, and a missing mark "generated, do not change". It compares with HEAD (REQ-001, REQ-005).
+check-generated:
+    @{{ just_executable() }} _gate check-generated.sh 130.100 backend frontend
+
+# Test: the gate for generated code with the real generators and a temporary git repository: the four cases of ACC-004 (a change by hand, a change of the OpenAPI file with no new generation, a deleted file, an extra file) and more.
+test-check-generated-gate:
+    @{{ just_executable() }} _gate test-check-generated-gate.sh 130.100
+
+# Test: the gates `compile` and `api-docs` with bad input (a compile error, a type error, an OpenAPI file that the generator cannot read) in a temporary git repository.
+test-build-gates:
+    @{{ just_executable() }} _gate test-build-gates.sh 130.105
+
+# Test: the generators. Two runs of `just generate` make no change, the lists of error codes in the YAML file, in the Java enum and in the Zod schema are the same, and two runs of `just api-docs` make the same HTML (ACC-008, ACC-013, ACC-018).
+test-generate-gate:
+    @{{ just_executable() }} _gate test-generate-gate.sh 120.120
+
+# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code and the build gates with their own tests too).
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Check the install on this machine: each tool has the pinned version.
@@ -69,7 +120,7 @@ _gate script task *args:
     set -euo pipefail
     path="tools/gates/{{ script }}"
     if [[ ! -x "${path}" ]]; then
-        echo "NOT IMPLEMENTED: ${path} does not exist. Task {{ task }} of feat-5-foundation-monorepo-ci writes it." >&2
+        echo "NOT IMPLEMENTED: ${path} does not exist. The task {{ task }} of the plan of the feature that added this recipe writes it." >&2
         exit 1
     fi
     exec "${path}" {{ args }}

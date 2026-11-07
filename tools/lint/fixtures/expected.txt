@@ -1,0 +1,54 @@
+00-good-minimal.yaml | PASS | Good: a small file with both forms of an error response (the shared response and the inline response).
+01-404-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | A response 404 has the media type application/json and not application/problem+json.
+02-500-wrong-schema.yaml | STOP problem-response-media-type-and-schema | A response 500 has application/problem+json, but another schema than Problem (an inline schema).
+03-503-no-content.yaml | STOP problem-response-media-type-and-schema | A response 503 has no content.
+04-500-two-media-types.yaml | STOP problem-response-media-type-and-schema | A response 500 has two media types (application/problem+json and application/json).
+05-4XX-range-wrong.yaml | STOP problem-response-media-type-and-schema | A response with the range key 4XX has application/json.
+06-5XX-range-wrong.yaml | STOP problem-response-media-type-and-schema | A response with the range key 5XX has application/json.
+07-default-wrong.yaml | STOP problem-response-media-type-and-schema | The response `default` (an error response too) has application/json.
+08-shared-response-wrong-media-type.yaml | STOP problem-response-component | The shared response ProblemResponse has application/json.
+09-response-ref-other-component.yaml | STOP problem-response-media-type-and-schema | A response 500 is a $ref to another response than ProblemResponse.
+10-shared-response-wrong-schema.yaml | STOP problem-response-component | The shared response ProblemResponse has application/problem+json, but the schema Status.
+11-problem-no-code.yaml | STOP problem-code-required,problem-members,oas3-unused-component | The schema Problem has no member `code`.
+12-problem-code-not-required.yaml | STOP problem-code-required | The schema Problem has `code`, but `code` is not in the list `required`.
+13-problem-no-trace-id.yaml | STOP problem-trace-id-required,problem-members | The schema Problem has no member `traceId` (the trace identifier).
+14-problem-trace-id-not-required.yaml | STOP problem-trace-id-required | The schema Problem has `traceId`, but `traceId` is not in the list `required`.
+15-problem-code-inline-enum.yaml | STOP problem-code-uses-shared-list,oas3-unused-component | The member `code` of Problem is an inline list and not a $ref to ErrorCode.
+16-problem-code-other-ref.yaml | STOP problem-code-uses-shared-list,oas3-unused-component | The member `code` of Problem is a $ref to another schema than ErrorCode.
+17-problem-has-message.yaml | STOP problem-members | The schema Problem has a member `message` (a text in a language).
+18-problem-has-localized-text.yaml | STOP problem-members | The schema Problem has a member `localizedMessage` (a text in a language).
+19-no-problem-schema.yaml | STOP problem-schema-exists,invalid-ref,oas3-unused-component | The file has no schema Problem.
+20-no-error-code-schema.yaml | STOP error-code-schema-exists,problem-code-uses-shared-list | The file has no schema ErrorCode.
+21-error-code-duplicate.yaml | STOP error-code-list,duplicated-entry-in-enum | The list ErrorCode has a value two times.
+22-error-code-upper-case.yaml | STOP error-code-list | The list ErrorCode has a value that is not in lower case.
+23-error-code-hyphen.yaml | STOP error-code-list | The list ErrorCode has a value with a hyphen (not snake case).
+24-error-code-camel-case.yaml | STOP error-code-list | The list ErrorCode has a value in camel case.
+25-error-code-integer.yaml | STOP error-code-list | The schema ErrorCode is a list of integers and not of texts.
+26-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | The operation has no extension `x-specmgr-req`.
+27-x-specmgr-req-empty.yaml | STOP operation-req-present,operation-req-uuid | The extension `x-specmgr-req` of the operation is an empty text.
+28-x-specmgr-req-not-uuid.yaml | STOP operation-req-uuid | The value of `x-specmgr-req` is not a UUID.
+29-x-specmgr-req-no-hyphens.yaml | STOP operation-req-uuid | The value of `x-specmgr-req` is a UUID with no hyphens.
+30-x-specmgr-req-too-short.yaml | STOP operation-req-uuid | The value of `x-specmgr-req` is a UUID that is one character too short.
+31-x-specmgr-req-number.yaml | STOP operation-req-uuid | The value of `x-specmgr-req` is a number.
+32-x-specmgr-req-list.yaml | STOP operation-req-uuid | The value of `x-specmgr-req` is a list with a UUID (one value is the rule).
+33-x-specmgr-req-on-path-item.yaml | STOP operation-req-present,operation-req-uuid | The extension is on the path item and not on the operation.
+34-good-second-method.yaml | PASS | Good: a second operation (POST) with `x-specmgr-req`.
+35-post-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (POST) has no `x-specmgr-req`. The rule is for each HTTP method.
+36-put-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (PUT) has no `x-specmgr-req`. The rule is for each HTTP method.
+37-delete-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (DELETE) has no `x-specmgr-req`. The rule is for each HTTP method.
+38-patch-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (PATCH) has no `x-specmgr-req`. The rule is for each HTTP method.
+39-options-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (OPTIONS) has no `x-specmgr-req`. The rule is for each HTTP method.
+40-head-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (HEAD) has no `x-specmgr-req`. The rule is for each HTTP method.
+41-trace-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | A second operation (TRACE) has no `x-specmgr-req`. The rule is for each HTTP method.
+42-post-x-specmgr-req-not-uuid.yaml | STOP operation-req-uuid | A second operation (POST) has a value of `x-specmgr-req` that is not a UUID.
+43-post-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | A second operation (POST) has an error response 400 with application/json.
+44-info-version-not-semver.yaml | STOP info-version-semver | The `info.version` is not a Semantic Versioning 2.0.0 version (1.0).
+45-info-version-leading-zero.yaml | STOP info-version-semver | The `info.version` has a number with a leading zero (01.2.3).
+46-good-info-version-prerelease.yaml | PASS | Good: `info.version` with a pre-release and a build part (1.0.0-rc.1+build.5).
+47-not-yaml.yaml | STOP parser,unrecognized-format | The file is not YAML. The linter must not pass it.
+48-not-openapi.yaml | STOP unrecognized-format | The file is YAML, but it is not an OpenAPI file.
+49-webhook-400-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | An operation of a webhook (webhooks is a path item) has a response 400 with the media type application/json.
+50-webhook-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | An operation of a webhook has no extension `x-specmgr-req`.
+51-callback-500-wrong-media-type.yaml | STOP problem-response-media-type-and-schema | An operation of a callback (a callback maps a runtime expression to a path item) has a response 500 with the media type application/json.
+52-callback-no-x-specmgr-req.yaml | STOP operation-req-present,operation-req-uuid | An operation of a callback has no extension `x-specmgr-req`.
+53-good-webhook-callback.yaml | PASS | Good: a webhook and a callback with the correct responses and the extension `x-specmgr-req`.

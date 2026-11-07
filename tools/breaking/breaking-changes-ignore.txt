@@ -1,0 +1,36 @@
+# The ignore file of the gate for breaking changes (`just breaking-changes`).
+# feat-6-contracts-openapi-pipeline, Task 115.120. The policy is DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4.
+#
+# This file is empty on purpose. A breaking change of contracts/openapi.yaml stops the gate. The owner of the project
+# accepts a breaking change with one entry in this file, and with a higher version number of the interface in the
+# same pull request (`info.version` of contracts/openapi.yaml). CODEOWNERS covers /tools/, so the owner examines each
+# new entry. A coding agent adds an entry only if the owner tells it to do so (rule 3 of the DEC).
+#
+# Blank lines and lines that start with `#` are not read.
+#
+# One entry is one line with four items, separated by ` | ` (a space, a vertical bar and a space):
+#
+#   <METHOD> <path> <the change as oasdiff names it> | <cause> | #<issue or pull request> | <release>
+#
+#   1. The change, as oasdiff names it: the HTTP method, the path and the text of the change. When the gate stops
+#      for a breaking change, its message has the first item of the entry (`GET /status removed ...`). Copy it.
+#      Each status of a response is its own change, so each status needs its own line.
+#   2. The cause: why the project accepts the change. Text for a person, one line.
+#   3. The number of the issue or of the pull request, for example #123.
+#   4. The release after which the entry ends, as a version (for example 0.2.0). After that release, `main` has
+#      the change, and the owner removes the entry in the next pull request. The owner also removes an entry that
+#      matches no change (the gate writes a WARNING for it, and it does not stop).
+#
+# The version number: `info.version` must go up in the same pull request, in the way of rule 5 of the DEC. If the first
+# number of the version of the base is 0, the second number must go up (0.1.0 to 0.2.0). If the first number is not
+# 0, the first number must go up (1.4.2 to 2.0.0). The gate checks this, and it stops if an entry is used and the
+# version does not go up.
+#
+# Example (a real entry has no `#` at the start):
+#
+#   GET /status removed the required property `checkedAt` from the response with the `200` status | The member moves to `time` | #123 | 0.2.0
+#
+# oasdiff reads a line that starts with `#` as a normal line, and it ignores a text after the message. So the gate
+# gives only the first item of each entry to oasdiff, and a comment cannot ignore a change by chance.
+#
+# Entries:

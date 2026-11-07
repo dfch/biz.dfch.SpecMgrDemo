@@ -39,7 +39,7 @@ The project uses OpenAPI as the source of truth for interfaces. The build makes 
 
 ### Confirmation
 
-CI operates a linter on the OpenAPI file and a tool that finds breaking changes against the main branch. CI makes the code again and stops the pull request if the result is different from the code in the repository. Tests make sure that responses obey the OpenAPI file.
+CI operates a linter on the OpenAPI file and a tool that finds breaking changes against the base of the pull request. The base is the branch that the pull request goes to (`dev` for a feature, `main` for a release). CI makes the code again and stops the pull request if the result is different from the code in the repository. Tests make sure that responses obey the OpenAPI file.
 
 ## Roles and Responsibilities
 
@@ -73,6 +73,10 @@ Possible tools: Spectral (linter), oasdiff (breaking changes), openapi-generator
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-04 12:16:44.388Z - Base of the check for breaking changes
+
+The owner gave a permission for one time to make this change, and no other change (statement of the owner on 2026-11-04, in the chat). The agent changed one sentence in Confirmation. The text said that the tool finds breaking changes "against the main branch". Pull requests go to `dev`, and only a release pull request goes to `main` (DEC d778d444-6227-4070-ae6e-b1083c78c58b), so the text now says "against the base of the pull request". The policy for an accepted breaking change is in DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4. The status of this DEC is not changed. The agent did not change the older entry "Draft written", because the owner corrects its time stamp.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 
