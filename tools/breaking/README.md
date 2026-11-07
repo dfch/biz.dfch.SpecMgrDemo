@@ -10,7 +10,7 @@ Plan: FEAT `feat-6-contracts-openapi-pipeline` (GitHub issue #6), Tasks 115.100 
 
 | File | Content |
 |---|---|
-| `breaking-changes-ignore.txt` | The ignore file. It has no entry at this time. The owner accepts a breaking change with one entry in this file (the format is in the file and below). CODEOWNERS covers `/tools/`. The owner examines each new entry |
+| `breaking-changes-ignore.txt` | The ignore file. The owner accepts a breaking change with one entry in this file (the format is in the file and below). CODEOWNERS covers `/tools/`. The owner examines each new entry |
 | `oasdiff-checksums.txt` | The file `checksums.txt` of the release of oasdiff, without a change. It is the second file of the pin of oasdiff. `just check-pins` compares it with `tools/versions.env` |
 | `oasdiff-severity-levels.txt` | The severity levels of the gate (below). It sets the level `err` for the removal of a response property (required or optional). It sets the level `err` for the removal of a response. It sets the level `err` for the removal of an enum value of a response property. All other levels are the values of oasdiff without the file |
 | `README.md` | This file |
