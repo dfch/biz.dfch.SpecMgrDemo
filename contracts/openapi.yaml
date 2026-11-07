@@ -52,7 +52,6 @@ components:
       description: The status of the system.
       required:
         - state
-        - checkedAt
       properties:
         state:
           type: string
@@ -60,10 +59,6 @@ components:
           enum:
             - up
             - degraded
-        checkedAt:
-          type: string
-          format: date-time
-          description: The time of the check.
     # RFC 9457 Problem Details. The schema has no text in a language. The backend sends the error code, and
     # the frontend shows the text for each error code from its catalog (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698).
     # `title` and `detail` are the members of RFC 9457. They are for logs and for developers (English), and a
