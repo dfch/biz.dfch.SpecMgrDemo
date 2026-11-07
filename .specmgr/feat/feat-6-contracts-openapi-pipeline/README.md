@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
-status: review
+status: done
 type: feat
-updated: '2026-11-07T16:12:36.620+01:00'
+updated: '2026-11-07T19:51:34.780+01:00'
 version: 1.0.0
 ---
 
@@ -171,8 +171,8 @@ License table (the agent fills it from the license file of each tool and not fro
 |---|---|---|---|
 | Spectral CLI 6.17.0 (`@stoplight/spectral-cli`) | linter. Pinned in the phase 110: `SPECTRAL_VERSION` and `SPECTRAL_INTEGRITY` in `tools/versions.env` (the integrity value is the one of the registry, and the sha256 of the tarball `fdff6161...39bf` is the one of the phase 100), and the lock file `tools/spectral/pnpm-lock.yaml` (242 packages, installed with `pnpm install --frozen-lockfile --ignore-scripts`). Rule A applies, so the tree of Spectral is not in the SBOM (finding F3) | Apache-2.0 | Permitted |
 | oasdiff 1.35.0 | breaking changes. Pinned in the phase 115: `OASDIFF_VERSION` and `OASDIFF_SHA256` in `tools/versions.env` (the sha256 `a8023002...9140` of `oasdiff_1.35.0_linux_amd64.tar.gz`, the one of the phase 100), and `tools/breaking/oasdiff-checksums.txt` (the file `checksums.txt` of the release). `install_oasdiff` in `tools/gates/_lib.sh` downloads it to `build/tools/` and compares the sha256 before it unpacks the file. Rule A applies, so oasdiff is not in the SBOM | Apache-2.0 | Permitted |
-| openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool). Pinned in phase 120: `OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION` and `OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256` in `tools/versions.env` (the sha256 of the jar was computed again from Maven Central on 2026-11-05: `9af831e2...a1c6`, and the sha1 `f14a0cf6...` is the `.sha1` of Maven Central). The dependencies of the plugin are not checked (GitHub issue #23) | Apache-2.0 | Permitted |
-| Kubb (`kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0) | client schemas. Pinned in phase 120 with `@kubb/core` 5.15.3 (the runner imports it) in `frontend/`. Real run of the SBOM gate with the real `frontend/pnpm-lock.yaml` (2026-11-05): 102 components, all Permitted (93 MIT, 3 Apache-2.0, 3 ISC, 2 BSD-3-Clause, 1 PSF-2.0 `argparse` 3.0.4), the same result as the scratch test of the phase 100 | MIT (all three packages) | Permitted |
+| openapi-generator 7.27.0 and its Maven plugin (`openapi-generator-maven-plugin`) | server interfaces (generator `spring`) and API documentation (generator `html2`, the same plugin, no new tool). Pinned in phase 120: `OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION` and `OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256` in `tools/versions.env` (the sha256 of the jar was computed again from Maven Central on 2026-11-05: `9af831e2...a1c6`, and the sha1 `f14a0cf6...` is the `.sha1` of Maven Central). The dependencies of the plugin are not checked (GitHub issue #23). The bundled third-party code of the `html2` output is not checked, and the HTML is a CI artifact only (finding F2) | Apache-2.0 | Permitted |
+| Kubb (`kubb` 5.15.3, `@kubb/plugin-zod` 5.8.0, `@kubb/plugin-ts` 5.4.0) | client schemas. Pinned in phase 120 with `@kubb/core` 5.15.3 (the runner imports it) in `frontend/`. Real run of the SBOM gate with the real `frontend/pnpm-lock.yaml` (2026-11-05): 102 components, all Permitted (93 MIT, 3 Apache-2.0, 3 ISC, 2 BSD-3-Clause, 1 PSF-2.0 `argparse` 3.0.4), the same result as the scratch test of the phase 100 | MIT (all four packages) | Permitted |
 | Zod 4.6.7 | runtime library | MIT | Permitted |
 | `argparse` 3.0.4 (in the tree of Kubb, through `js-yaml` 5.5.0) | library in the tree of the Zod generator. The owner stated on 2026-11-04 that its license PSF-2.0 is Permitted by DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. The phase 100 read the license file. | PSF-2.0 | Permitted |
 | TypeScript 5.9.3 (the version that was tested) | compiler for ACC-005 | Apache-2.0 | Permitted |
@@ -184,6 +184,7 @@ License table (the agent fills it from the license file of each tool and not fro
 | `jakarta.annotation-api` 2.1.1 (and 3.0.0) | not used. The owner replaced it on 2026-11-04 (finding F1) | EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 | Replaced (not used, so no DEC for the class Review is necessary) |
 | Implementation of Jakarta Bean Validation (for example `hibernate-validator`) | runtime library | none | Not necessary: the generated code compiles with the API only, and this feature has no product code. A later feature must check the implementation before it adds it |
 | Maven Wrapper 3.3.4 (type `only-script`: `mvnw` and `.mvn/wrapper/maven-wrapper.properties`) | build tool | Apache-2.0 | Permitted |
+| Apache Maven 3.10.0 | build tool. The wrapper downloads it from Maven Central (the `distributionUrl` of `backend/.mvn/wrapper/maven-wrapper.properties`). The sha256 in the properties file was verified in the phase 105 against the `.sha512` of Apache (ACC-010) | Apache-2.0 (the `LICENSE` of the distribution) | Permitted |
 | Maven plugins of the build: `maven-wrapper-plugin` 3.3.4, `maven-clean-plugin` 3.5.0, `maven-resources-plugin` 3.5.0, `maven-compiler-plugin` 3.16.0, `maven-surefire-plugin` 3.6.0, `maven-jar-plugin` 3.5.1 (the versions that Maven 3.10.0 binds), and the two plugins above (`openapi-generator-maven-plugin` 7.27.0 and `cyclonedx-maven-plugin` 2.9.3) | build tools | Apache-2.0 (each plugin) | Permitted |
 | New GitHub Actions | CI | None is new. The only action that this feature can add is `actions/upload-artifact` (ACC-018). It is already in `tools/license/allowed-actions.txt` (v7.0.2, MIT, checked in feat-5-foundation-monorepo-ci) and in `ci.yml` | Permitted (no new action) |
 
@@ -968,25 +969,22 @@ The pull requests #39, #41 and #42 are closed without a merge (state `CLOSED`, `
 
 #### Phase 140: Review
 
-- [ ] Task 140.100: The owner examines the license table and the open items (ACC-006). Not ticked: this task waits for the owner. ACC-006 is ticked, because no row has the result "open" (the owner decided the one Review in phase 100), but the owner has not yet examined the whole table
+- [x] Task 140.100: The owner examines the license table and the open items (ACC-006). Done on 2026-11-07: the owner examined the license table and the open items, and no change was requested. The three record corrections of the license table are part of the examination: "MIT (all four packages)" in the Kubb row (the use column names `@kubb/core` 5.15.3), the row for Apache Maven 3.10.0, and the pointer to finding F2 in the openapi-generator row
 
-- [ ] Task 140.110: The owner accepts or changes DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (ACC-014). Not ticked: this task waits for the owner. The status of the DEC is draft, and the agent does not change it. The DEC has the update entry of phase 115 (the format of an entry and the check of the version number), which is the content of ACC-014
+- [x] Task 140.110: The owner accepts or changes DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (ACC-014). Done on 2026-11-07: the owner accepted the DEC, and the status is `accepted`. The points that the owner could have changed (the severity-level list, the SemVer reading of rule 5, the warning for a stale entry) stay as written
 
-- [ ] Task 140.120: Write a comment in GitHub issue #23 (the limit that stays) and in GitHub issue #8 (the extension `x-specmgr-req` and the lint rule that exist). Set this feature to done in the last pull request, as the SOP "Close a Feature With One Pull Request" says (ACC-012). Not ticked: one part is done and one part is left. Done on 2026-11-05: the comment in issue #23 (https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/23#issuecomment-6647138618, the limit about the dependencies of the Maven plugins, posted in phase 120) and the comment in issue #8 (https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/8#issuecomment-6648179153: the extension `x-specmgr-req`, the rules `operation-req-present` and `operation-req-uuid`, the first REQ document, and what stays for the issue). Both issues are open. Left, on purpose: "Set this feature to done in the last pull request". The owner wants the status `review` for this pull request and `done` later, so the status `done` is set after the owner accepts the work (phases 135 and 140)
+- [x] Task 140.120: Write a comment in GitHub issue #23 (the limit that stays) and in GitHub issue #8 (the extension `x-specmgr-req` and the lint rule that exist). Set this feature to done in the last pull request, as the SOP "Close a Feature With One Pull Request" says (ACC-012). The comments in issue #23 and #8 are done (the records exist in the plan). The feature is set to `done` in this pull request, as the SOP "Close a Feature With One Pull Request" says
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-07 (phase 135 is done)**: All agent work of the phases 090 to 130 is done, and phase 135 is done. On 2026-11-07 the agent added the jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` to the `required_status_checks` of both rulesets (`dev` id 26472506, `main` id 26481206), on the one-time instruction of the owner (tasks 135.100 and 135.110). The rows of `branch-protection.md` are set. ACC-001 to ACC-018 are ticked. Waiting for the owner (phase 140): the review of the license table (task 140.100), the acceptance or the change of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (task 140.110), the confirmation of the rewording of REQ-006, and the final status `done` (task 140.120).
+**As of 2026-11-07 (the review is done)**: The feature is done. All phases 090 to 140 are done, all tasks and all acceptance criteria are ticked, and the status is `done`. What stays open for the project (not for this feature): GitHub issue #23 (the full pinning of the Maven plugin dependencies), GitHub issue #8 (the traceability check and the security checks), the follow-up of `actions/cache` (a decision of the owner, the limit is in `tools/gates/README.md`), and the feature feat-7-verification-architecture-tools that this feature unblocks.
 
 ### Blockers
 
-- Open, for the owner (the points that stop the feature from being `done`):
-  - The review (phase 140): the owner examines the license table and the open items (task 140.100, ACC-006), and accepts or changes DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (task 140.110, ACC-014). The status of the DEC is draft.
-  - The follow-up of `actions/cache` (the limit in `tools/gates/README.md`): the action is not in `tools/license/allowed-actions.txt`. A new action is a decision of the owner (REQ-014). If the owner adds the action, the cache of `~/.m2`, the pnpm store and `build/tools/` makes the job `test-gates` faster and less dependent on the network.
-  - The final status: this feature is set to `review` for this pull request. The owner sets it to `done` later, and then the part "Set this feature to done" of task 140.120 is complete.
-- Points that the agent set and that the owner can change at the review (the details are in the section Decisions Made):
+- None. The feature is done.
+- Points that the agent set and that the owner accepted at the review (the details are in the section Decisions Made):
   - Phase 105: the values of `backend/pom.xml` (group `biz.dfch.specmgrdemo`, artifact `backend`, version `0.0.0-SNAPSHOT`, packaging `jar`).
   - Phase 115: the version check of the gate for breaking changes is strict (rule 5 is read as higher by SemVer 2.0.0, and for a 0.x version the pair of the first and the second number must be higher, so `0.1.0` to `0.1.1` fails). An entry in the ignore file that matches no change only gives a WARNING. The pin of oasdiff has a second place, `tools/breaking/oasdiff-checksums.txt`, which the owner did not ask for.
   - Phase 120: Kubb starts with a programmatic runner (`frontend/generate.mjs`) and not with `kubb generate`. The generator options that go beyond the four fixed ones (`annotationLibrary`, `documentationProvider` and `openApiNullable` off). The Java source root (`src/generated/java` with the plugin option `addCompileSourceRoot`). The marks and the committed marker `.openapi-generator/*.sha256`. The recipe `compile` that the agent added.
@@ -996,6 +994,10 @@ The pull requests #39, #41 and #42 are closed without a merge (state `CLOSED`, `
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-07 18:35:00.000Z - The owner closes the review: the license table, REQ-006 and DEC 93594b2b are accepted, the status is `done`
+
+The owner closed the review of the feature (tasks 140.100 to 140.120). The license table is accepted with the three record corrections. The rewording of REQ-006 is accepted. DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 is accepted (the status is `accepted`). Tasks 140.100, 140.110 and 140.120 are ticked, and the status is set to `done` in this pull request. The new entry in the section Decisions Made has the details, and the Current Status and the Blockers are updated. The changes are not committed.
 
 #### 2026-11-07 14:51:00.000Z - Phase 135 done: the five jobs are required checks in both rulesets
 
@@ -1082,6 +1084,15 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-07 18:35:00.000Z - The owner closes the review (tasks 140.100 to 140.120)
+
+The owner closed the review of the feature on 2026-11-07 (tasks 140.100 to 140.120):
+
+- The license table is accepted with the three record corrections: "MIT (all four packages)" in the Kubb row (the use column names `@kubb/core` 5.15.3), the row for Apache Maven 3.10.0, and the pointer to finding F2 in the openapi-generator row (the bundled third-party code of the `html2` output is not checked, and the HTML is a CI artifact only).
+- The rewording of REQ-006 (the members `title` and `detail` stay, the entry of 2026-11-05 20:00) is accepted.
+- DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 is accepted, and the status is `accepted`. The points that the owner could have changed (the severity-level list, the SemVer reading of rule 5, the warning for a stale entry) stay as written.
+- The feature is set to `done` in this pull request, as the SOP "Close a Feature With One Pull Request" says.
 
 #### 2026-11-07 14:51:00.000Z - ruleset change (phase 135)
 
