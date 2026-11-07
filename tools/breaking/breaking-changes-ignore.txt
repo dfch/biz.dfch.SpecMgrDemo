@@ -34,3 +34,4 @@
 # gives only the first item of each entry to oasdiff, and a comment cannot ignore a change by chance.
 #
 # Entries:
+GET /status removed the required property `checkedAt` from the response with the `200` status | throwaway proof of the accepted-change flow (Part B, Task 130.120) | #39 | 0.2.0

@@ -11,7 +11,7 @@ info:
   title: SpecMgr Demo API
   # The version of the interface. It follows Semantic Versioning 2.0.0 and goes up for each accepted
   # breaking change (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4). While the first number is 0, the second number goes up.
-  version: 0.1.0
+  version: 0.2.0
   description: The interfaces between the backend and the frontend of the SpecMgr Demo application.
 # The URL is relative to the host of the file. This is the default of OpenAPI. The rule oas3-api-servers wants it written.
 servers:
