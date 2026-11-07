@@ -4,7 +4,7 @@ created: '2026-11-04T12:13:01.518+01:00'
 id: 93594b2b-be54-4f60-9f53-ec2ce6c84be4
 status: draft
 type: dec
-updated: '2026-11-05T17:29:40.235+01:00'
+updated: '2026-11-07T03:32:43.971+01:00'
 version: 1.0.0
 ---
 
@@ -157,7 +157,7 @@ The gate stops for a line that has not four items, for an item 3 that is not `#<
 
 1. The gate finds the merge base of the base branch and `HEAD` with `git merge-base`. The base branch is the variable `base` of the `justfile`: `origin/dev`, or `origin/<target branch>` in a pull request. A pull request to `dev` is compared with the merge base of `dev`. A release pull request to `main` is compared with `main`.
 2. If the merge base has no `contracts/openapi.yaml`, there is nothing to compare, and the gate passes. If the merge base has the file and the pull request deletes it, the gate stops.
-3. The gate starts oasdiff with `--fail-on ERR`. The default levels of oasdiff stay. A breaking change is a change of the level `error`. A new value of an enum in a property of a response is an error. The removal of a value is only `info`, so it is not a breaking change.
+3. This item is superseded by the entry of 2026-11-05 08:45 for the levels of the removals. The gate starts oasdiff with `--fail-on ERR`. The default levels of oasdiff stay. A breaking change is a change of the level `error`. A new value of an enum in a property of a response is an error. The removal of a value is only `info`, so it is not a breaking change.
 4. A breaking change that no entry ignores stops the gate. The gate starts oasdiff in a new empty folder and without the variables `OASDIFF_*`, so a configuration file of oasdiff in the repository cannot switch off the check.
 
 **The check of the version number (rule 5).** The gate checks the version only if an entry is used. An entry is used if it ignores a breaking change that oasdiff found. The gate finds the used entries when it starts oasdiff once for each entry. The version of the base is `info.version` of the file at the merge base. The version of the pull request is `info.version` of the file in the pull request. The gate stops if the new version does not go up in this way:
