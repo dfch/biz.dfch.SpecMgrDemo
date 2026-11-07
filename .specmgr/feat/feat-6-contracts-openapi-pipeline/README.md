@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:51.955+01:00'
 id: feat-6-contracts-openapi-pipeline
 status: review
 type: feat
-updated: '2026-11-07T13:07:30.433+01:00'
+updated: '2026-11-07T16:12:36.620+01:00'
 version: 1.0.0
 ---
 
@@ -82,7 +82,7 @@ The feature has many phases, and each phase is small. A phase can be a pull requ
 
 - [x] ACC-015: Each new CI job is in `tools/gates/required-setup.txt` and has the name of its recipe. `just test-gates` has negative cases for each new gate. These recipes return exit code 0 on the branch: `just test-gates`, `just test-license-gate`, `just check-pins`, `just check-workflows`, `just check-sudo`, `just validate`, `just commit-check`, `just license-check` and `just --fmt --unstable --check`. A throwaway pull request (closed, not merged) with a breaking change fails the new job in real CI (REQ-013). Phase 115 did the negative cases for the gate for breaking changes (`just test-breaking-changes-gate`, started by `just test-gates`), and the listed recipes returned exit code 0 on the branch at the end of phase 115. Phase 120 did the negative cases for the generators and the pins (`just test-generate-gate` and the new cases of `just test-gates`, 725 ok), and the listed recipes returned exit code 0 on the branch at the end of phase 120. Phase 130 did the CI jobs and the lines in `tools/gates/required-setup.txt` (`lint`, `breaking-changes`, `check-generated`, `compile`, `api-docs`, and the changed line of `test-gates`), the gate `check-generated`, and the negative cases (`just test-check-generated-gate`: 43 ok, `just test-build-gates`: 10 ok, and 24 new cases in `selftest.sh` for the jobs; `just test-gates` 749 ok in `selftest.sh`), and the listed recipes returned exit code 0 on the branch at the end of phase 130 (see "Result of the Phase 130"). Part A is done on 2026-11-06 (the orchestrator): the four branches are from the head `5a8f709` (the head at the time), and the throwaway pull requests to `dev` run in real CI, and each job that must fail gives exit code 1: #34 (branch `throwaway/feat-6-lint`, run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42298531003, the jobs that fail: `lint` and `test-gates`), #35 (branch `throwaway/feat-6-generated`, run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42299350291, the jobs that fail: `check-generated` and `test-gates`), #36 (branch `throwaway/feat-6-compile`, run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42299535350, the jobs that fail: `compile` and `test-gates`) and #37 (branch `throwaway/feat-6-docs`, run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42299968654, the jobs that fail: `api-docs`, `lint`, `check-generated`, `compile` and `test-gates`). The job `test-gates` fails in the four pull requests, because the good cases of the gate tests check the state of the repository (finding P7, accepted by the orchestrator on 2026-11-06; the detail is in "Result of the Phase 130"). The four pull requests #34 to #37 are closed without a merge, and the branches are deleted. Part B is done on 2026-11-07 (the agent): the failure proof is the throwaway pull request #38 to `dev` (the branch `throwaway/feat-6-breaking` is from the merge commit `2dec942`, the run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42338986266): the job `breaking-changes` gives exit code 1 (the oasdiff finding `response-required-property-removed`, level err), and the jobs `test-gates` and `check-generated` give exit code 1 too (finding P7: the good cases of the gate tests guard the state of the repository that the throwaway change breaks). The other nine jobs give exit code 0. The two-commit form of the procedure (the accepted change passes) is proven in the re-runs #39, #41 and #42 on the fixed test suite (the two state-independence fixes are in pull request #40): the run 1 of each is RED as designed, and the run 2 of #42 is 12 of 12 green (the entry in the ignore file, `info.version` 0.2.0, the new generation; the table and the verbatim messages are in "Result of the Phase 130"). The pull requests #38 to #42 are closed without a merge, and the branches are deleted (the detail is in "Result of the Phase 130"). The branch is pushed (pull request #33, the head is `2209486`). The CI of the pull request ran all 12 jobs in real CI: the run 42158874460 on the head `fbb0653` at the time, all exit code 0, and the run 42304606867 on the head `2209486`, all 12 jobs with exit code 0 (completed 2026-11-06 22:36Z). The procedure, the branch names and the jobs that must fail are in "Result of the Phase 130".
 
-- [ ] ACC-016: The owner added the new jobs to the required checks of the rulesets of `dev` and `main`, and `branch-protection.md` shows the new rows as set (REQ-013). Not ticked: this is an owner action (tasks 135.100 and 135.110). The agent made the table with the five new jobs in `branch-protection.md` in phase 130, and each row is "No" in the column "Set in the rulesets". This stays so until the owner adds the checks to the rulesets.
+- [x] ACC-016: The owner added the new jobs to the required checks of the rulesets of `dev` and `main`, and `branch-protection.md` shows the new rows as set (REQ-013). Done on 2026-11-07: the jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` are in the `required_status_checks` of both rulesets (`dev` id 26472506, `main` id 26481206), and the column "Set" of the rows of `branch-protection.md` says Yes.
 
 - [x] ACC-017: The phase 090 has a list of candidates for each tool, with the criteria, and the owner selected each tool. The decision is in the section Decisions Made (REQ-014).
 
@@ -962,9 +962,9 @@ The pull requests #39, #41 and #42 are closed without a merge (state `CLOSED`, `
 
 #### Phase 135: Rulesets (Owner Actions)
 
-- [ ] Task 135.100: The owner adds the new jobs to the required checks of the rulesets of `dev` and `main` after the first run of the jobs. The agent cannot do this (ACC-016). Not ticked: this task waits for the owner. The jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` (and the changed job `test-gates`) are in the file `ci.yml`, but they are not yet required checks. The first run of each job in real CI must come first (throwaway pull requests, task 130.120)
+- [x] Task 135.100: The owner adds the new jobs to the required checks of the rulesets of `dev` and `main` after the first run of the jobs. The agent cannot do this (ACC-016). The first run of each job in real CI must come first (throwaway pull requests, task 130.120). Done on 2026-11-07 by the owner.
 
-- [ ] Task 135.110: Update `branch-protection.md` for the new rows (ACC-016). Not ticked: this task waits for the owner, and it follows task 135.100. The agent added the table with the five jobs in phase 130, and each row is "No" in the column "Set in the rulesets". The agent does not change a row to "set". The owner changes each row to "set" after the owner adds the check to the rulesets
+- [x] Task 135.110: Update `branch-protection.md` for the new rows (ACC-016). The agent added the table with the five jobs in phase 130. Done on 2026-11-07 by the owner: the rows of `branch-protection.md` are set (the section heading of the five jobs says "(required)", and the column "Set" says Yes for the five rows; the row of `api-docs` keeps the note that it is an artifact job)
 
 #### Phase 140: Review
 
@@ -978,12 +978,11 @@ The pull requests #39, #41 and #42 are closed without a merge (state `CLOSED`, `
 
 ### Current Status
 
-**As of 2026-11-07 (Part B of the throwaway pull request is fully proven in real CI)**: The owner merged pull request #33 into `dev` (the merge commit `2dec942`). All agent work of the phases 090 to 130 is done, and the throwaway pull requests of task 130.120 (ACC-015) are done too: Part A on 2026-11-06 (the pull requests #34 to #37) and Part B on 2026-11-07: the failure proof is pull request #38 (the job `breaking-changes` gives exit code 1, the finding `response-required-property-removed`, level err), and the two-commit form of the procedure (the accepted change passes) is proven in the re-runs #39, #41 and #42, where the run 1 of each is RED as designed and the run 2 of #42 is 12 of 12 green (run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42358875123; the tables and the verbatim messages are in "Result of the Phase 130"). The re-runs find two defects of the same family in the test suite (it asserted on the committed state of the repository, so a future real accepted breaking change would block the job `test-gates`); the fixes are in the commits `6c2b07d` and `7040cb9` of pull request #40, the CI run of that pull request is green on `7040cb9` (run https://github.com/dfch/biz.dfch.SpecMgrDemo/actions/runs/42356706952), and the suite is independent of the committed state now. The pull requests #38 to #42 are closed without a merge, and the branches are deleted. ACC-001 to ACC-015, ACC-017 and ACC-018 are ticked (ACC-005 and ACC-018 with the evidence of real CI), and ACC-016 is not. Waiting for the owner: the merge of pull request #40, the rulesets (phase 135), the review of the license table and of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (phase 140), and the final status `done`.
+**As of 2026-11-07 (phase 135 is done)**: All agent work of the phases 090 to 130 is done, and phase 135 is done. On 2026-11-07 the agent added the jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` to the `required_status_checks` of both rulesets (`dev` id 26472506, `main` id 26481206), on the one-time instruction of the owner (tasks 135.100 and 135.110). The rows of `branch-protection.md` are set. ACC-001 to ACC-018 are ticked. Waiting for the owner (phase 140): the review of the license table (task 140.100), the acceptance or the change of DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (task 140.110), the confirmation of the rewording of REQ-006, and the final status `done` (task 140.120).
 
 ### Blockers
 
 - Open, for the owner (the points that stop the feature from being `done`):
-  - The rulesets (phase 135, ACC-016): the owner adds the new jobs to the required checks of `dev` and `main`, and then changes the rows of `branch-protection.md` to "set". The owner also decides if the artifact job `api-docs` is a required check. The jobs `compile` and `check-generated` must be required checks together (the note is in `branch-protection.md`): a broken generated Java file does not stop `compile` (finding P3 of phase 130), and only `check-generated` stops it.
   - The review (phase 140): the owner examines the license table and the open items (task 140.100, ACC-006), and accepts or changes DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4 (task 140.110, ACC-014). The status of the DEC is draft.
   - The follow-up of `actions/cache` (the limit in `tools/gates/README.md`): the action is not in `tools/license/allowed-actions.txt`. A new action is a decision of the owner (REQ-014). If the owner adds the action, the cache of `~/.m2`, the pnpm store and `build/tools/` makes the job `test-gates` faster and less dependent on the network.
   - The final status: this feature is set to `review` for this pull request. The owner sets it to `done` later, and then the part "Set this feature to done" of task 140.120 is complete.
@@ -997,6 +996,10 @@ The pull requests #39, #41 and #42 are closed without a merge (state `CLOSED`, `
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-07 14:51:00.000Z - Phase 135 done: the five jobs are required checks in both rulesets
+
+On 2026-11-07: change of the rulesets (task 135.100) and the update of `branch-protection.md` (task 135.110). Append the five jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` to the `required_status_checks` of both rulesets, after the existing seven. The source is GitHub Actions (the integration id 15368). The rulesets are `dev` (id 26472506, the condition `~DEFAULT_BRANCH`) and `main` (id 26481206, the condition `refs/heads/main`). Every other rule, condition and parameter of both rulesets is unchanged, and the enforcement stays `active`. Each job ran at least once in the last 7 days (the throwaway pull requests #38 to #42, the pull requests #33 and #40). GitHub lists the jobs in the rulesets. In `branch-protection.md` the section heading of the five jobs says "(required)". The column "Set" says `Yes (2026-11-07, task 135.100)` for the five rows (the row of `api-docs` keeps the note that it is an artifact job). The paragraph "When the owner sets the jobs" stays unchanged (it is the advice for later jobs). Tasks 135.100 and 135.110 are ticked, ACC-016 is ticked, the bullet of the rulesets is removed from the Blockers, and the Current Status is updated. The changes are not committed.
 
 #### 2026-11-07 12:55:00.000Z - Part B re-run: the two state-independence fixes, the full chain #39/#41/#42, and the 12 of 12 green accepted-change run
 
@@ -1079,6 +1082,15 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-07 14:51:00.000Z - ruleset change (phase 135)
+
+The change has these points:
+
+- Both rulesets: `dev` (id 26472506, the condition `~DEFAULT_BRANCH`) and `main` (id 26481206, the condition `refs/heads/main`).
+- The five jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` (the integration id 15368) are appended to the `required_status_checks` after the existing seven.
+- Every other rule, condition and parameter of both rulesets is unchanged, and the enforcement stays `active`.
+- The instruction is one-time: it applies to this change only, and it does not change the fact that ruleset changes are owner actions for later changes.
 
 #### 2026-11-07 13:01:00.000Z - The gate tests are independent of the committed repository state (the two state-independence fixes, pull request #40)
 
