@@ -5,8 +5,6 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.OffsetDateTime;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -60,9 +58,6 @@ public class Status {
 
   private StateEnum state;
 
-  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private OffsetDateTime checkedAt;
-
   public Status() {
     super();
   }
@@ -70,9 +65,8 @@ public class Status {
   /**
    * Constructor with only required parameters
    */
-  public Status(StateEnum state, OffsetDateTime checkedAt) {
+  public Status(StateEnum state) {
     this.state = state;
-    this.checkedAt = checkedAt;
   }
 
   public Status state(StateEnum state) {
@@ -95,26 +89,6 @@ public class Status {
     this.state = state;
   }
 
-  public Status checkedAt(OffsetDateTime checkedAt) {
-    this.checkedAt = checkedAt;
-    return this;
-  }
-
-  /**
-   * The time of the check.
-   * @return checkedAt
-   */
-  @NotNull @Valid 
-  @JsonProperty("checkedAt")
-  public OffsetDateTime getCheckedAt() {
-    return checkedAt;
-  }
-
-  @JsonProperty("checkedAt")
-  public void setCheckedAt(OffsetDateTime checkedAt) {
-    this.checkedAt = checkedAt;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -124,13 +98,12 @@ public class Status {
       return false;
     }
     Status status = (Status) o;
-    return Objects.equals(this.state, status.state) &&
-        Objects.equals(this.checkedAt, status.checkedAt);
+    return Objects.equals(this.state, status.state);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(state, checkedAt);
+    return Objects.hash(state);
   }
 
   @Override
@@ -138,7 +111,6 @@ public class Status {
     StringBuilder sb = new StringBuilder();
     sb.append("class Status {\n");
     sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    checkedAt: ").append(toIndentedString(checkedAt)).append("\n");
     sb.append("}");
     return sb.toString();
   }
