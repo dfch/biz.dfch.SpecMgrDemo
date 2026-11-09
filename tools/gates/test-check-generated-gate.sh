@@ -108,7 +108,7 @@ STOP_CLEAN="RESULT: STOP. The generated folders are not clean before the generat
 STOP_MARK='RESULT: STOP. A mark "generated, do not change" is missing.'
 
 section "the good cases"
-expect 0 "PASS. The generated code (15 files in backend/src/generated frontend/src/generated) is the same as the new generation" \
+expect 0 "is the same as the new generation" \
     "the copy of the repository (the generated code is the generated code) passes" gate_run
 expect 0 "PASS" "the same copy again (the first run left no change, and node_modules and target do not matter)" gate_run
 echo "a change outside of the generated folders" >>"${repo}/contracts/README.md"

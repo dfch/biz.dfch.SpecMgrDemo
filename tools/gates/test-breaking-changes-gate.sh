@@ -21,12 +21,14 @@
 # More cases: the severity levels file (tools/breaking/oasdiff-severity-levels.txt, --severity-levels of oasdiff) makes
 # breaking the removal of a response property (required or optional), the removal of a response, and the removal of an
 # enum value of a response property (the criterion ACC-003): each stops the gate with no entry, and passes with an entry
-# and a higher version. A change that is not breaking (for example a new description) passes with no entry. A lower
-# version, a version that goes up in a way that rule 5 does not accept, a stale entry (a WARNING, no failure), an entry
-# that is not correct, a comment that has the text of a change, the merge base (the base branch moves on), a deleted
-# OpenAPI file, a repository with no severity levels file, a configuration file of oasdiff in the repository, a file
-# that oasdiff cannot read, the install of oasdiff with a checksum, and a table of versions for the comparison of the
-# version numbers (SemVer 2.0.0).
+# and a higher version. A change that is not breaking (for example a new description) passes with no entry. A change
+# without an operation (a change of the components, which oasdiff names with no method and no path) stops the gate with
+# the dedicated message (no line for the ignore file), and an entry in the ignore file does not change the result. A
+# lower version, a version that goes up in a way that rule 5 does not accept, a stale entry (a WARNING, no failure), an
+# entry that is not correct, a comment that has the text of a change, the merge base (the base branch moves on), a
+# deleted OpenAPI file, a repository with no severity levels file, a configuration file of oasdiff in the repository, a
+# file that oasdiff cannot read, the install of oasdiff with a checksum, and a table of versions for the comparison of
+# the version numbers (SemVer 2.0.0).
 #
 # oasdiff comes from the install of the gate (install_oasdiff in _lib.sh: build/tools/, a download with a sha256 value
 # of tools/versions.env). The first run needs the network (GitHub). The tests of the install use a small file that
@@ -352,6 +354,81 @@ repo="$(new_repo noseverity)"
 git_in "${repo}" rm -q tools/breaking/oasdiff-severity-levels.txt
 git_in "${repo}" commit -q -m "no severity levels file"
 expect 1 "The severity levels file does not exist" "a repository with no severity levels file: the gate stops" run_gate "${repo}"
+
+# ============================================================================================================
+section "A change without an operation (a change of the components: oasdiff names it with no method and no path)"
+# A change of the security scheme in components (api-security-component-http-scheme-changed, level err by default) has
+# no operation and no path in the JSON of oasdiff. The first item of an entry of the ignore file needs a method and a
+# path (rule 4 of the DEC), so this change has no form for an entry: the gate stops with the dedicated message (no line
+# for the ignore file), and an entry in the ignore file does not change the result.
+nooperation_yaml() {
+    # nooperation_yaml <version> <scheme>: a small OpenAPI 3.1 file with GET /status and the security scheme
+    # `basic` (type http, scheme <scheme>).
+    cat <<YAML
+openapi: 3.1.0
+info:
+  title: Test API
+  version: ${1}
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      responses:
+        "200":
+          description: ok
+components:
+  securitySchemes:
+    basic:
+      type: http
+      scheme: ${2}
+YAML
+}
+C_TEXT='the component security scheme `basic` http scheme changed from `basic` to `bearer`'
+C_ID='api-security-component-http-scheme-changed'
+nooperation_base() {
+    # nooperation_base <repo>: the base commit with the security scheme `basic`, on dev and on origin/dev.
+    local repo="$1"
+    git_in "${repo}" switch -q dev
+    nooperation_yaml 0.1.0 basic >"${repo}/contracts/openapi.yaml"
+    git_in "${repo}" commit -q -am "base with the security scheme"
+    git_in "${repo}" update-ref refs/remotes/origin/dev dev
+    git_in "${repo}" switch -q feature
+    git_in "${repo}" reset -q --hard dev
+}
+nooperation_change() {
+    # nooperation_change <repo> <version> <entries...>: the scheme changes to `bearer` (committed, on feature).
+    local repo="$1" version="$2"
+    shift 2
+    nooperation_yaml "${version}" bearer >"${repo}/contracts/openapi.yaml"
+    local line
+    for line in "$@"; do echo "${line}" >>"${repo}/tools/breaking/breaking-changes-ignore.txt"; done
+    git_in "${repo}" add -A
+    git_in "${repo}" commit -q -m "the scheme changes (no operation)"
+}
+repo="$(new_repo nooperation)"
+nooperation_base "${repo}"
+nooperation_change "${repo}" 0.1.0
+expect 1 "STOP breaking change that no entry can ignore: ${C_TEXT} [${C_ID}]" "a change of the components without an operation: the gate stops with the dedicated STOP" run_gate "${repo}"
+expect 1 "  ${C_TEXT} [${C_ID}]" "the list of the changes has the text of the change (no leading space, no line for the ignore file)" run_gate "${repo}"
+expect_not 1 "    ${C_TEXT}" "the output has no line with a leading space that the gate rejects as an entry (the line that the gate used to suggest)" run_gate "${repo}"
+expect 1 "This change has no form for an entry" "the message says that this kind of change has no form for an entry (the first item needs a method)" run_gate "${repo}"
+expect 1 "cannot accept it with an entry" "the message says that the owner cannot accept the change with an entry" run_gate "${repo}"
+expect_not 1 "adds one line to the ignore file" "the message has no line with four items (no change with an operation)" run_gate "${repo}"
+expect 1 "RESULT: STOP. 1 breaking change(s) have no entry" "the result is STOP (the gate stops for the change)" run_gate "${repo}"
+# An entry with a method and a path and the text of the change (the natural attempt) matches no breaking change: the
+# gate stops as before, and the entry gets a WARNING.
+repo="$(new_repo nooperation-entry)"
+nooperation_base "${repo}"
+nooperation_change "${repo}" 0.2.0 "GET /status ${C_TEXT} | The scheme moves | #7 | 0.2.0"
+expect 1 "STOP breaking change that no entry can ignore: ${C_TEXT} [${C_ID}]" "an entry with a method and the text of the change does not ignore it: the gate stops" run_gate "${repo}"
+expect 1 "WARNING" "the entry that matches no change gets a WARNING" run_gate "${repo}"
+expect 1 "RESULT: STOP. 1 breaking change(s) have no entry" "the entry does not change the result (the gate stops as before)" run_gate "${repo}"
+# The line that the gate used to suggest (a leading space and the text, no method) is not an entry: the gate stops for
+# the line that is not correct.
+repo="$(new_repo nooperation-badline)"
+nooperation_base "${repo}"
+nooperation_change "${repo}" 0.2.0 "  ${C_TEXT} | The scheme moves | #7 | 0.2.0"
+expect 1 "is not \`<METHOD> <path>" "the line that the gate used to suggest is not an entry (no method): the gate stops for the line that is not correct" run_gate "${repo}"
 
 # ============================================================================================================
 section "The version number (rule 5 of the DEC), with an entry that is used"

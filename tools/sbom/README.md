@@ -92,12 +92,12 @@ Change all three files in **one commit**. `CDXGEN_VERSION` is `<v>` in this sect
 
    ```bash
    pnpm view @cyclonedx/cdxgen@<v> dist.integrity
-```
+   ```
 
-```
+   ```
    CDXGEN_VERSION=<v>
    CDXGEN_INTEGRITY=<the value of the command, it starts with sha512->
-```
+   ```
 
    The version is the one value (no `^`, no `~`, no tag). Compare the value of the command with the
    checksum on the page of the release if you can (the value comes from the registry; the lock file and

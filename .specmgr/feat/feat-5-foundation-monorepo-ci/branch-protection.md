@@ -43,7 +43,7 @@ The name of a check is the name of the job in `.github/workflows/ci.yml`. Each j
 
 #### Jobs that feat-6-contracts-openapi-pipeline added (required)
 
-These five jobs are in `.github/workflows/ci.yml` since phase 130 of feat-6 (the workflow runs them for each pull request to `dev` and `main`), and `tools/gates/required-setup.txt` has a line for each. They are set as required checks in the rulesets: on 2026-11-07 the agent added them to the `required_status_checks` of the rulesets of `dev` (id 26472506) and of `main` (id 26481206), on the one-time instruction of the owner (phase 135 of feat-6, task 135.100). The column "Set" of this table now says Yes for each row. `test-gates` (set above) now also runs the tests of these gates, so its run takes longer (about 8 minutes on the machine of the author, with warm caches).
+These five jobs are in `.github/workflows/ci.yml` since phase 130 of feat-6 (the workflow runs them for each pull request to `dev` and `main`), and `tools/gates/required-setup.txt` has a line for each. They are set as required checks in the rulesets: on 2026-11-07 (phase 135 of feat-6, task 135.100), the owner added them to the `required_status_checks` of the rulesets of `dev` (id 26472506) and of `main` (id 26481206). The column "Set" of this table now says Yes for each row. `test-gates` (set above) now also runs the tests of these gates, so its run takes longer (about 8 minutes on the machine of the author, with warm caches).
 
 | Check (job) | Recipe | What it stops | Gate in DEC 361678a6 | Set in the rulesets of `dev` and `main` |
 |---|---|---|---|---|
