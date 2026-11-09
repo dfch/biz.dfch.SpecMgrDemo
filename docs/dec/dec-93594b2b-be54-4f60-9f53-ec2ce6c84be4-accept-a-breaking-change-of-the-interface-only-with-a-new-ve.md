@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-04T12:13:01.518+01:00'
 id: 93594b2b-be54-4f60-9f53-ec2ce6c84be4
-status: draft
+status: accepted
 type: dec
-updated: '2026-11-07T03:32:43.971+01:00'
+updated: '2026-11-07T18:02:37.075+01:00'
 version: 1.0.0
 ---
 

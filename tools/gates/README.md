@@ -54,7 +54,7 @@ The gates have `git`, `bash`, `uv` and `just` as necessary. `uv` starts the Pyth
 
 ## The CI jobs of `feat-6-contracts-openapi-pipeline`
 
-Each job has the name of its recipe. Each job starts only `just <recipe>`. Each job has a line in `required-setup.txt`. `check-workflows` stops for a job with actions that are not in its line. It stops for a job with a name that is different from its recipe. It stops for a job that is not in the file (ACC-015). The actions of each job get the versions of `tools/versions.env` through `just check-pins`. The jobs are not required checks of the rulesets at this time. The owner adds the jobs. See `branch-protection.md` in the folder of feat-5 (the rows of the jobs are "not set").
+Each job has the name of its recipe. Each job starts only `just <recipe>`. Each job has a line in `required-setup.txt`. `check-workflows` stops for a job with actions that are not in its line. It stops for a job with a name that is different from its recipe. It stops for a job that is not in the file (ACC-015). The actions of each job get the versions of `tools/versions.env` through `just check-pins`. The five jobs `lint`, `breaking-changes`, `check-generated`, `compile` and `api-docs` are required checks in the rulesets of `dev` and `main` (since 2026-11-07). See `branch-protection.md` in the folder of feat-5.
 
 | Job (= recipe) | Actions (with `actions/checkout` with `fetch-depth: 0` and `extractions/setup-just`) | The cause |
 |---|---|---|

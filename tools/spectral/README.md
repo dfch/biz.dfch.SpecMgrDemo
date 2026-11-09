@@ -83,12 +83,12 @@ Change all three files in **one commit**. `SPECTRAL_VERSION` is `<v>` in this se
 
    ```bash
    pnpm view @stoplight/spectral-cli@<v> dist.integrity
-```
+   ```
 
-```
+   ```
    SPECTRAL_VERSION=<v>
    SPECTRAL_INTEGRITY=<the value of the command, it starts with sha512->
-```
+   ```
 
    The version is the one value (no `^`, no `~`, no tag). Compare the value with the sha512 of the
    package file if you can (`openssl dgst -sha512 -binary <file>.tgz | base64 -w0`).

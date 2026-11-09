@@ -21,9 +21,11 @@ What `check` does:
   3. For each entry it starts oasdiff again with that one entry as the ignore file. The changes that go away are the
      changes that the entry ignores. So the script knows which entry is used and which change is ignored, and it uses
      the matching of oasdiff itself and not its own copy of the rule.
-  4. A change of the level `error` that no entry ignores stops the gate (exit code 1). The message has the line that
-     the owner can add to the ignore file. A last start of oasdiff with all entries must agree with this result
-     (exit code 1 if and only if a change is not ignored), or the script stops with exit code 2.
+  4. A change of the level `error` that no entry ignores stops the gate (exit code 1). For a change that has an
+     operation, the message has the line that the owner can add to the ignore file. A change without an operation has
+     no form for an entry (the first item of an entry needs a method, rule 4 of the DEC), and the message says this.
+     A last start of oasdiff with all entries must agree with this result (exit code 1 if and only if a change is not
+     ignored), or the script stops with exit code 2.
   5. If at least one entry is used (a breaking change was found and ignored), `info.version` of the revision must
      be higher than `info.version` of the base in the way of rule 5 of the DEC (see version_goes_up), or the gate
      stops (exit code 1).
@@ -282,14 +284,14 @@ def run_oasdiff(
         raise GateError("the output of oasdiff is not a JSON list")
     changes: list[Change] = []
     for item in data:
-        if not isinstance(item, dict) or not all(key in item for key in ("id", "text", "level", "path")):
-            raise GateError(f"an item of the output of oasdiff has not the members id, text, level and path: {item!r}")
+        if not isinstance(item, dict) or not all(key in item for key in ("id", "text", "level")):
+            raise GateError(f"an item of the output of oasdiff has not the members id, text and level: {item!r}")
         if item["level"] == ERROR_LEVEL:
             changes.append(
                 Change(
                     str(item["id"]),
                     str(item.get("operation", "")),
-                    str(item["path"]),
+                    str(item.get("path", "")),
                     str(item["text"]),
                 )
             )
@@ -325,6 +327,20 @@ def suggested_line(change: Change) -> str:
     return f"{change.operation} {change.path} {change.text}"
 
 
+def display_line(change: Change) -> str:
+    """The line of a change in the list of the gate and in the STOP for it.
+
+    For a change that has an operation, it is the first item of an entry (suggested_line). A change without an
+    operation has no form for an entry (the first item needs a method, rule 4 of the DEC), and the gate does not
+    give a line for the ignore file for it: the line is the text of the change (with the path, if oasdiff names it).
+    """
+    if change.operation:
+        return suggested_line(change)
+    if change.path:
+        return f"{change.path} {change.text}"
+    return change.text
+
+
 def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path, severity_levels: Path) -> int:
     """The gate. See the header. Return the exit code."""
     entries, problems = parse_ignore_file(ignore_file)
@@ -337,7 +353,7 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path, severity_
     _, found = run_oasdiff(oasdiff, base, revision, severity_levels, None)
     print(f"oasdiff: {len(found)} breaking change(s) (level error) between the base and the revision")
     for change in found:
-        print(f"  {suggested_line(change)} [{change.id}]")
+        print(f"  {display_line(change)} [{change.id}]")
 
     used: set[Change] = set()
     used_entries: list[Entry] = []
@@ -369,13 +385,26 @@ def check(oasdiff: str, base: Path, revision: Path, ignore_file: Path, severity_
         )
 
     if unignored:
+        with_operation = [change for change in unignored if change.operation]
+        without_operation = [change for change in unignored if not change.operation]
         for change in unignored:
-            print(f"STOP breaking change that no entry ignores: {suggested_line(change)} [{change.id}]")
-        print(
-            "To accept a change, the owner adds one line to the ignore file, and the version of the interface goes up "
-            f"(DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4). The line has four items, for example:\n"
-            f"  {suggested_line(unignored[0])} | <cause> | #<issue or pull request> | <release>"
-        )
+            if change.operation:
+                print(f"STOP breaking change that no entry ignores: {suggested_line(change)} [{change.id}]")
+            else:
+                print(f"STOP breaking change that no entry can ignore: {display_line(change)} [{change.id}]")
+        if with_operation:
+            print(
+                "To accept a change, the owner adds one line to the ignore file, and the version of the interface "
+                "goes up (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4). The line has four items, for example:\n"
+                f"  {suggested_line(with_operation[0])} | <cause> | #<issue or pull request> | <release>"
+            )
+        if without_operation:
+            dec = "93594b2b-be54-4f60-9f53-ec2ce6c84be4"
+            print(
+                "This kind of change has no operation. The first item of an entry of the ignore file is "
+                f"`<METHOD> <path> <the change as oasdiff names it>` (rule 4 of DEC {dec}), and it needs a method. "
+                "This change has no form for an entry, and the owner cannot accept it with an entry."
+            )
         print(f"RESULT: STOP. {len(unignored)} breaking change(s) have no entry in {ignore_file}.")
         return 1
 
