@@ -17,15 +17,40 @@
   verify_generator_plugin). The version of the plugin in this file and the version in tools/versions.env must
   be the same: `just check-pins` checks it.
 
-  The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
-     - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
-       with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
-       for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
-       the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
-       retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
-    - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
-      swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
--->
+   The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
+      - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
+        with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
+        for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
+        the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
+        retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
+     - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
+       swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+
+   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The module has no
+   product code, so the tests exercise the generated code (the example module). The license of each tool is in the
+   license table of the plan; the two tools of the class Review (JUnit and jqwik, both EPL-2.0) have the deviation
+   DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the register of the approved deviations, accepted 2026-11-09). Every
+   test tool is in <scope>test</scope>, so the cyclonedx plugin (includeTestScope, the default false) keeps them out
+   of the SBOM: the licenses that the SBOM gate checks are the ones of the main dependencies above.
+     - JUnit (org.junit.jupiter:junit-jupiter): the unit tests. The version is the one of tools/versions.env
+       (JUNIT_VERSION). The 5.x line and not the 6.x line: jqwik 1.10.2 needs the JUnit Platform 1.14.x, and the
+       engines of the two lines do not mix (the plan records the decision).
+     - Testcontainers (org.testcontainers:testcontainers and the module org.testcontainers:postgresql,
+       org.testcontainers:junit-jupiter): the integration tests (one lightweight container, postgres:16-alpine, the
+       PostgreSQL license; the driver org.postgresql:postgresql is BSD-2-Clause). The version is the one of
+       tools/versions.env (TESTCONTAINERS_VERSION, POSTGRESQL_VERSION). The 1.21.x line and not the 2.x core: the
+       junit-jupiter module has no 2.x release, and the core and the modules must be the same line (the plan records
+       the decision).
+     - jqwik (net.jqwik:jqwik, EPL-2.0, the deviation DEC above): the property tests. The version is the one of
+       tools/versions.env (JQWIK_VERSION).
+     - maven-surefire-plugin (the version in tools/versions.env, MAVEN_SUREFIRE_PLUGIN_VERSION): runs the tests of
+       the JUnit Platform (the JUnit engine and the jqwik engine).
+
+   The test classes are in src/test/java/biz/dfch/specmgrdemo/testtools/. A class whose name has no suffix `Test`
+   (or `IT` for the integration tests) is a case that is not successful (ACC-002 of the plan): the default run of
+   surefire does not start it, and the recipes run it separately and stop for it (tools/gates/test-*-*.sh). The
+   suffix IT keeps the integration tests out of the unit run.
+ -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -60,6 +85,13 @@
     <jakarta-validation.version>3.0.2</jakarta-validation.version>
     <jackson-annotations.version>2.21</jackson-annotations.version>
     <tomcat-annotations-api.version>10.1.61</tomcat-annotations-api.version>
+    <!-- The test tools (feat-7-verification-architecture-tools, Phase 110). Each version is the one of
+         tools/versions.env (just check-pins compares them). The scope of every test tool is test. -->
+    <junit.version>5.14.4</junit.version>
+    <testcontainers.version>1.21.4</testcontainers.version>
+    <postgresql.version>42.7.14</postgresql.version>
+    <jqwik.version>1.10.2</jqwik.version>
+    <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
 
     <!-- The files that the generators read and write, relative to the folder of this module. -->
     <contract.file>${project.basedir}/../contracts/openapi.yaml</contract.file>
@@ -102,10 +134,62 @@
       <version>${tomcat-annotations-api.version}</version>
       <scope>provided</scope>
     </dependency>
+    <!-- The test tools (the scope test keeps them out of the SBOM, see the header comment). -->
+    <!-- JUnit 5 (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9). The 5.x line: jqwik needs the
+         JUnit Platform 1.14.x. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Testcontainers (MIT): the core, the JUnit module and the PostgreSQL module, the 1.21.x line (see the header). -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- The JDBC driver of the container (BSD-2-Clause, test scope only: not in the SBOM). -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- jqwik (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9): the property tests. -->
+    <dependency>
+      <groupId>net.jqwik</groupId>
+      <artifactId>jqwik</artifactId>
+      <version>${jqwik.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <!-- The test runner (feat-7-verification-architecture-tools, Phase 110). The version is the one of
+           tools/versions.env (MAVEN_SUREFIRE_PLUGIN_VERSION). The default includes of surefire (Test*, *Test,
+           *Tests, *TestCase) keep the cases that are not successful (the classes without a suffix, see the header)
+           out of the unit run. The tests of the JUnit Platform (the JUnit engine and the jqwik engine) are found
+           without further configuration. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+      </plugin>
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>

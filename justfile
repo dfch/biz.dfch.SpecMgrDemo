@@ -6,7 +6,9 @@
 # feat-5-foundation-monorepo-ci, 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate), and
 # 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes), 120.120 and 120.130 are the
 # tasks of feat-6-contracts-openapi-pipeline (the generators and the API documentation), and 130.100 and 130.105 are tasks of
-# feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). The gate numbers of
+# feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). 110.100 to 110.130
+# are the tasks of feat-7-verification-architecture-tools (the test tools, the recipes test-unit-backend,
+# test-integration-backend, test-unit-frontend, test-e2e, test-random-backend and test-random-frontend). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -108,6 +110,30 @@ test-generate-gate:
 # Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code and the build gates with their own tests too).
 test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates
     @{{ just_executable() }} _gate selftest.sh 130.145
+
+# Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
+test-unit-backend:
+    @{{ just_executable() }} _gate test-unit-backend.sh 110.100 backend
+
+# Test: the integration tests of the Maven module with Testcontainers (one container), and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
+test-integration-backend:
+    @{{ just_executable() }} _gate test-integration-backend.sh 110.100 backend
+
+# Test: the unit tests of the pnpm module with Vitest, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.110).
+test-unit-frontend:
+    @{{ just_executable() }} _gate test-unit-frontend.sh 110.110 frontend
+
+# Test: the end-to-end tests with Playwright and the accessibility check of axe-core, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.120).
+test-e2e:
+    @{{ just_executable() }} _gate test-e2e.sh 110.120 frontend
+
+# Test: the property tests of the Maven module with jqwik: one that is successful, and one that is not successful (feat-7-verification-architecture-tools, Task 110.130).
+test-random-backend:
+    @{{ just_executable() }} _gate test-random-backend.sh 110.130 backend
+
+# Test: the property tests of the pnpm module with fast-check: one that is successful, and one that is not successful (feat-7-verification-architecture-tools, Task 110.130).
+test-random-frontend:
+    @{{ just_executable() }} _gate test-random-frontend.sh 110.130 frontend
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

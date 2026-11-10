@@ -123,10 +123,14 @@ pom.xml) stops the check for the version, and a change of only one of the two pl
 jar is in verify_generator_plugin (the sha256 of the jar in the local Maven repository against versions.env and
 against the file, before the plugin generates).
 
-The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011): the Zod generator Kubb, Zod and
-TypeScript. <project-root>/frontend has package.json, pnpm-workspace.yaml and pnpm-lock.yaml. The module has six direct packages
-(FRONTEND_PACKAGES below), each with a version key and an integrity key in tools/versions.env. The check is on if the folder has
-one of the three files (a folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
+The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011; the test tools of
+feat-7-verification-architecture-tools, Phase 110): the Zod generator Kubb, Zod and TypeScript, and the test tools
+Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of the peer that vitest and the tree of
+Kubb take as a dependency or a peer; without the pin, the resolution of pnpm brings the tree of vite 8 with the
+package lightningcss, MPL-2.0, not in the permitted list). <project-root>/frontend has package.json,
+pnpm-workspace.yaml and pnpm-lock.yaml. The module has eleven direct packages (FRONTEND_PACKAGES below), each with a
+version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
+folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
 
   * a key of FRONTEND_PACKAGES is missing in tools/versions.env, a version is not an exact version, or an integrity value is
     not a sha512 value of npm;
@@ -135,15 +139,31 @@ one of the three files (a folder with none of them is "no pnpm module"), and it 
   * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
   * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
     overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
-    its `devDependencies` is not exactly the other five packages in the exact versions of versions.env;
+    its `devDependencies` is not exactly the other ten packages in the exact versions of versions.env;
   * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
     only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
-    does not have each of the six packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    does not have each of the eleven packages with `specifier` and `version` as in versions.env (the version can have a suffix in
     brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
     versions.env.
 
 A change of only one of the three places (versions.env, package.json, the lock file) stops the check. The install itself
 (install_frontend in _lib.sh: `pnpm install --frozen-lockfile --ignore-scripts`) compares each tarball with the lock file.
+
+The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110; REQ-001, REQ-002, ACC-011): JUnit,
+Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik, and the test runner
+maven-surefire-plugin. <project-root>/backend has the pom.xml with the test tools in <scope>test</scope> (the cyclonedx
+plugin keeps the test scope out of the SBOM). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and
+MAVEN_TEST_PLUGIN below). The check is always on, and it fails closed. The script stops for each of these:
+
+  * a key of MAVEN_TEST_DEPENDENCIES or MAVEN_TEST_PLUGIN is missing in tools/versions.env, or the version is not an
+    exact version;
+  * a pom.xml has one of the test dependencies (or the plugin) with a version that is not the version of
+    tools/versions.env (the version can be a `${property}` of the same pom.xml), with no version, or with a version
+    that this script cannot resolve;
+  * a pom.xml cannot be read as XML.
+
+A pom.xml without the test tools is no problem for this check (as for the generator plugin). A change of only one of
+the two places (versions.env, pom.xml) stops the check.
 
 The lock files of the Python tools (the finding G2 of the review, feat-22-python-tools-lockfile; REQ-003, REQ-004).
 <python-lock-dir> is tools/python/. It has one lock file for each tool (PYTHON_LOCKS below), and no other lock
@@ -287,6 +307,19 @@ GENERATOR_GROUP_ID = "org.openapitools"
 GENERATOR_ARTIFACT_ID = "openapi-generator-maven-plugin"
 POM_NAMESPACE = "{http://maven.apache.org/POM/4.0.0}"
 
+# The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110): the
+# (groupId, artifactId, version key) of each dependency that a pom.xml may have, and the same for the
+# test runner plugin. The three modules of Testcontainers have the version of the core (TESTCONTAINERS_VERSION).
+MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
+    ("org.junit.jupiter", "junit-jupiter", "JUNIT_VERSION"),
+    ("org.testcontainers", "testcontainers", "TESTCONTAINERS_VERSION"),
+    ("org.testcontainers", "junit-jupiter", "TESTCONTAINERS_VERSION"),
+    ("org.testcontainers", "postgresql", "TESTCONTAINERS_VERSION"),
+    ("org.postgresql", "postgresql", "POSTGRESQL_VERSION"),
+    ("net.jqwik", "jqwik", "JQWIK_VERSION"),
+)
+MAVEN_TEST_PLUGIN = ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION")
+
 
 class FrontendPackage(NamedTuple):
     """A direct package of the pnpm module frontend/: where it is in package.json and the keys of tools/versions.env."""
@@ -297,7 +330,7 @@ class FrontendPackage(NamedTuple):
     integrity_key: str
 
 
-# The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110). @kubb/core has the version of `kubb`.
+# The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of feat-7-verification-architecture-tools, Phase 110). @kubb/core has the version of `kubb`.
 FRONTEND_PACKAGES = (
     FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
     FrontendPackage("@kubb/core", "devDependencies", "KUBB_VERSION", "KUBB_CORE_INTEGRITY"),
@@ -305,6 +338,11 @@ FRONTEND_PACKAGES = (
     FrontendPackage("@kubb/plugin-ts", "devDependencies", "KUBB_PLUGIN_TS_VERSION", "KUBB_PLUGIN_TS_INTEGRITY"),
     FrontendPackage("zod", "dependencies", "ZOD_VERSION", "ZOD_INTEGRITY"),
     FrontendPackage("typescript", "devDependencies", "TYPESCRIPT_VERSION", "TYPESCRIPT_INTEGRITY"),
+    FrontendPackage("vitest", "devDependencies", "VITEST_VERSION", "VITEST_INTEGRITY"),
+    FrontendPackage("@playwright/test", "devDependencies", "PLAYWRIGHT_VERSION", "PLAYWRIGHT_INTEGRITY"),
+    FrontendPackage("axe-core", "devDependencies", "AXE_CORE_VERSION", "AXE_CORE_INTEGRITY"),
+    FrontendPackage("fast-check", "devDependencies", "FAST_CHECK_VERSION", "FAST_CHECK_INTEGRITY"),
+    FrontendPackage("vite", "devDependencies", "VITE_VERSION", "VITE_INTEGRITY"),
 )
 # The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
 FRONTEND_PACKAGE_JSON_KEYS = {
@@ -906,6 +944,94 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
     return ("" if problems else note), problems
 
 
+def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of the test tools of the Maven module (see the header). Return a note and the problems.
+
+    A pom.xml that has none of the test tools is no problem for this check (as for the generator plugin). A test
+    dependency (or the test runner plugin) that is there has the version of tools/versions.env (the version can be a
+    `${property}` of the same pom.xml).
+    """
+    label = "Maven test pins"
+    problems: list[str] = []
+    for _group, _artifact, key in (*MAVEN_TEST_DEPENDENCIES, MAVEN_TEST_PLUGIN):
+        if key not in versions:
+            problems.append(f"{key} is not in tools/versions.env")
+        elif not EXACT_VERSION.fullmatch(versions[key]):
+            problems.append(
+                f"{key} in tools/versions.env is {versions[key]!r}, but it must be an exact version (no range, no tag)"
+            )
+    if problems:
+        return "", problems
+    checked: list[str] = []
+    for pom in find_files(root, "pom.xml"):
+        try:
+            tree = ET.parse(root / pom)
+        except (OSError, ET.ParseError) as error:
+            problems.append(f"{label}: cannot read {pom} as XML: {error}")
+            continue
+        project = tree.getroot()
+        properties_node = project.find(f"{POM_NAMESPACE}properties")
+        properties = (
+            {child.tag.removeprefix(POM_NAMESPACE): (child.text or "") for child in properties_node}
+            if properties_node is not None
+            else {}
+        )
+        for group, artifact, key in MAVEN_TEST_DEPENDENCIES:
+            for dependency in project.iter(f"{POM_NAMESPACE}dependency"):
+                if (
+                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
+                    or dependency.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                ):
+                    continue
+                raw = dependency.findtext(f"{POM_NAMESPACE}version")
+                if raw is None or not raw.strip():
+                    problems.append(f"{label}: {pom} has the dependency {artifact} with no <version>")
+                    continue
+                version = _resolve_pom_value(raw, properties)
+                if version is None:
+                    problems.append(
+                        f"{label}: {pom}: the version {raw.strip()!r} of the dependency {artifact} is not a version or a "
+                        "<properties> value of the same pom.xml"
+                    )
+                elif version != versions[key]:
+                    problems.append(
+                        f"{label}: {pom} has the dependency {artifact} {version}, "
+                        f"but {key} in tools/versions.env is {versions[key]}"
+                    )
+                else:
+                    checked.append(f"{pom}: {artifact} {version}")
+        for group, artifact, key in (MAVEN_TEST_PLUGIN,):
+            for plugin in project.iter(f"{POM_NAMESPACE}plugin"):
+                if (
+                    plugin.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
+                    or plugin.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                ):
+                    continue
+                raw = plugin.findtext(f"{POM_NAMESPACE}version")
+                if raw is None or not raw.strip():
+                    problems.append(f"{label}: {pom} has the plugin {artifact} with no <version>")
+                    continue
+                version = _resolve_pom_value(raw, properties)
+                if version is None:
+                    problems.append(
+                        f"{label}: {pom}: the version {raw.strip()!r} of the plugin {artifact} is not a version or a "
+                        "<properties> value of the same pom.xml"
+                    )
+                elif version != versions[key]:
+                    problems.append(
+                        f"{label}: {pom} has the plugin {artifact} {version}, "
+                        f"but {key} in tools/versions.env is {versions[key]}"
+                    )
+                else:
+                    checked.append(f"{pom}: the plugin {artifact} {version}")
+    note = (
+        f"{label}: {', '.join(checked)}, the versions of tools/versions.env"
+        if checked
+        else f"{label}: no pom.xml has a test tool"
+    )
+    return ("" if problems else note), problems
+
+
 def _frontend_versions(versions: dict[str, str]) -> tuple[dict[str, tuple[str, str]], list[str]]:
     """The version and the integrity value of each direct package of frontend/, and the problems of versions.env."""
     problems: list[str] = []
@@ -1086,7 +1212,10 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
         )
     problems += _check_frontend_package_json(folder / "package.json", expected)
     problems += _check_frontend_lock(folder / "pnpm-lock.yaml", expected)
-    note = f"Frontend: {folder}: Kubb, Zod and TypeScript, package.json and lock file as in tools/versions.env"
+    note = (
+        f"Frontend: {folder}: Kubb, Zod, TypeScript and the test tools "
+        "(Vitest, Playwright, axe-core, fast-check, Vite), package.json and lock file as in tools/versions.env"
+    )
     return ("" if problems else note), problems
 
 
@@ -1217,6 +1346,9 @@ def main(argv: list[str]) -> int:
         note, generator_problems = check_generator_plugin(Path(argv[4]), Path(argv[9]), versions)
         print(f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}")
         problems += generator_problems
+        note, test_pin_problems = check_maven_test_pins(Path(argv[4]), versions)
+        print(f"Maven test pins: {note or str(len(test_pin_problems)) + ' problem(s)'}")
+        problems += test_pin_problems
         note, frontend_problems = check_frontend(Path(argv[4]), versions)
         print(f"Frontend pin: {note or str(len(frontend_problems)) + ' problem(s)'}")
         problems += frontend_problems
@@ -1234,8 +1366,8 @@ def main(argv: list[str]) -> int:
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
         "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version and the jar checksum of the "
-        "generator plugin, the jar checksum of the SBOM plugin, the module frontend/ and the lock files of the Python "
-        "tools are the ones of tools/versions.env."
+        "generator plugin, the jar checksum of the SBOM plugin, the versions of the test tools of the Maven module, "
+        "the module frontend/ and the lock files of the Python tools are the ones of tools/versions.env."
     )
     return 0
 

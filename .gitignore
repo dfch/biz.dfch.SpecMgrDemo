@@ -32,3 +32,11 @@ node_modules/
 
 # Output of the Maven build (feat-6-contracts-openapi-pipeline)
 target/
+
+# Output of the end-to-end tests (feat-7-verification-architecture-tools, Phase 110)
+frontend/test-results/
+frontend/playwright-report/
+
+# The failure database of jqwik (the run of a property that is not successful writes it)
+# (feat-7-verification-architecture-tools, Phase 110)
+backend/.jqwik-database

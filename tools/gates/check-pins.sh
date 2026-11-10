@@ -47,6 +47,11 @@
 #   - the jar of the SBOM plugin (feat-6-contracts-openapi-pipeline, ACC-011): tools/sbom/cyclonedx-maven-plugin.sha256
 #     must have the value of CYCLONEDX_MAVEN_PLUGIN_SHA256 (part of the check of the cdxgen project, SBOM_TOOL_DIR).
 #
+#   - the test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110, ACC-011): the version of
+#     each test dependency (JUnit, Testcontainers, the JDBC driver, jqwik) and of the test runner plugin
+#     (maven-surefire-plugin) in each pom.xml must be the version of the key of the versions file
+#     (JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION).
+#
 # check_pins.py does the work. It reads the YAML with PyYAML. The version is PYYAML_VERSION in the versions
 # file (the first argument), and the script installs it with `uv pip install --require-hashes` from the
 # lock file tools/python/pyyaml.lock (make_python_env in _lib.sh). Exit codes: 0 pass, 1 a pin is not correct, 2 an error in a file.

@@ -63,6 +63,19 @@
 #        value of an OPTIONAL dependency of cdxgen does not stop the install: pnpm logs the error, does not
 #        install that package (it does not run), and returns exit code 0. A required package stops it.
 #        If no Node manifest is scanned, the script does not install (no network is necessary).
+#   X1   The exclusion of axe-core from the FRONTEND SBOM only (feat-7-verification-architecture-tools,
+#        Phase 110, Task 110.120): the accessibility check of the end-to-end test uses the package
+#        axe-core (a devDependency of frontend/), and its license MPL-2.0 is not in
+#        tools/license/permitted-licenses.txt. The owner approved the use of the tool with the deviation
+#        DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted 2026-11-09). The tool does not go to users
+#        (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9), so its license is checked in the plan of
+#        the feature (the license table) and the package must not reach the SBOM. cdxgen 12.9.0 has no
+#        package filter for a pnpm lock file (its `--exclude` option is a file path pattern), so after
+#        cdxgen made the file, the script starts sbom_exclude.py with the name `axe-core` and the version
+#        of tools/versions.env (AXE_CORE_VERSION): the components of the pinned package are removed from
+#        the SBOM, and a component with another version is NOT removed (fail closed: the license gate
+#        stops for it). The removal is logged. See tools/sbom/README.md (the section The exclusion of
+#        axe-core) and the plan of feat-7 (the Result of the Phase 110).
 #
 # The versions and the checksums are in tools/versions.env (VERSIONS_FILE sets another file, for the
 # tests). The script does not change the system, except for the folder tools/sbom/node_modules (it is
@@ -210,6 +223,12 @@ if [[ ${node_scanned} -eq 1 ]]; then
         --output "${out_dir}/frontend.cdx.json" "$(cd frontend && pwd)"
     [[ -f "${out_dir}/frontend.cdx.json" ]] || die "cdxgen did not make ${out_dir}/frontend.cdx.json"
     log "Wrote ${out_dir}/frontend.cdx.json"
+    # X1: the exclusion of axe-core (the rule is in the header, the reason in tools/sbom/README.md).
+    # cdxgen has no package filter for a pnpm lock file, so the gate removes the pinned package itself.
+    axe_core_version="$(version_of AXE_CORE_VERSION)"
+    uv run --no-project --quiet python "${GATES_DIR}/sbom_exclude.py" \
+        "${out_dir}/frontend.cdx.json" "axe-core" "${axe_core_version}" \
+        || die "The exclusion of axe-core ${axe_core_version} from the frontend SBOM did not run (see above)."
     if [[ ${#node_manifests[@]} -gt 0 ]]; then # a lock file with no package.json declares nothing
         sbom_plausible node "${out_dir}/frontend.cdx.json" "${node_manifests[@]}"
     fi

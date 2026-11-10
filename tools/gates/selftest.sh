@@ -1253,8 +1253,8 @@ frontend_append_case() {
 fe_new_version="9.9.9"
 fe_new_integrity="${other_integrity}"
 dir="$(mk_frontend_root real)"
-expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod and TypeScript, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
-expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod and TypeScript" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod, TypeScript and the test tools" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
 expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
 mkdir -p "${work}/feroot-none"
@@ -1262,8 +1262,11 @@ expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_fron
 
 # Each package: the three places, each alone (ACC-011: a changed version and a changed checksum of each tool)
 # <name> <version key> <integrity key>: kubb and @kubb/core have the version key KUBB_VERSION, so a change of it stops both.
+# The test tools of feat-7-verification-architecture-tools (Phase 110): vitest, @playwright/test, axe-core, fast-check.
 for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
-    "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY"; do
+    "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY" \
+    "vitest|VITEST_VERSION|VITEST_INTEGRITY" "@playwright/test|PLAYWRIGHT_VERSION|PLAYWRIGHT_INTEGRITY" "axe-core|AXE_CORE_VERSION|AXE_CORE_INTEGRITY" \
+    "fast-check|FAST_CHECK_VERSION|FAST_CHECK_INTEGRITY" "vite|VITE_VERSION|VITE_INTEGRITY"; do
     IFS='|' read -r package version_key integrity_key <<<"${entry}"
     version="$(version_of "${version_key}")"
     integrity="$(version_of "${integrity_key}")"
@@ -1291,13 +1294,15 @@ sed -e "s#^ZOD_VERSION=.*#ZOD_VERSION=${fe_new_version}#" -e "s#^ZOD_INTEGRITY=.
 expect 0 "RESULT: PASS" "zod: all three places have the same new version and integrity value" run_frontend_pins "${dir}" "${work}/fever-allthree.env"
 
 # The form of the values in versions.env
-for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION; do
+for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION \
+    VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION; do
     for range in "^$(version_of "${key}")" "latest" "5"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     done
 done
-for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY; do
+for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY \
+    VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY; do
     sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
     expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
@@ -1311,7 +1316,7 @@ frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env
 frontend_file_case pkgtag package.json "but TYPESCRIPT_VERSION in tools/versions.env is 5.9.3" "package.json: a tag and not an exact version" 's#"typescript": "5.9.3"#"typescript": "latest"#'
 frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['zod']" "package.json: a dev dependency in dependencies" \
     's#"dependencies": {#"dependencies": {\n    "typescript": "5.9.3",#'
-frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d;s#"kubb": "5.15.3",#"kubb": "5.15.3"#'
+frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d'
 frontend_file_case pkgextra package.json "\`devDependencies\` has left-pad. It has only" "package.json: a dependency that is not in the list" 's#"typescript": "5.9.3"#"typescript": "5.9.3",\n    "left-pad": "1.3.0"#'
 frontend_file_case pkgpm package.json "has the key \`packageManager\`" "package.json: a packageManager field (it changes the lock file)" 's#"private": true,#"private": true,\n  "packageManager": "pnpm@12.16.1",#'
 frontend_file_case pkgpnpm package.json "has the key \`pnpm\`" "package.json: a pnpm key (settings)" 's#"private": true,#"private": true,\n  "pnpm": {"overrides": {"zod": "3.0.0"}},#'
@@ -1351,6 +1356,109 @@ for name in package.json pnpm-workspace.yaml pnpm-lock.yaml; do
 done
 dir="$(mk_frontend_root files-ok)" && mkdir -p "${dir}/frontend/src" "${dir}/frontend/node_modules" && echo "x" >"${dir}/frontend/tsconfig.json" && echo "x" >"${dir}/frontend/README.md"
 expect 0 "RESULT: PASS" "frontend/ with other files (tsconfig.json, README.md, src, node_modules) passes" run_frontend_pins "${dir}"
+
+# ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-verification-architecture-tools, Phase 110, ACC-011)"
+# JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
+# maven-surefire-plugin: the properties of backend/pom.xml, and the keys JUNIT_VERSION,
+# TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION and MAVEN_SUREFIRE_PLUGIN_VERSION of
+# versions.env. The messages start with `Maven test pins:`. Each tool has a version key, and each
+# case changes one place only.
+real_backend_pom="${REPO_ROOT}/backend/pom.xml"
+junit_version="$(version_of JUNIT_VERSION)"
+tc_version="$(version_of TESTCONTAINERS_VERSION)"
+pg_version="$(version_of POSTGRESQL_VERSION)"
+jqwik_version="$(version_of JQWIK_VERSION)"
+surefire_version="$(version_of MAVEN_SUREFIRE_PLUGIN_VERSION)"
+new_test_version="9.9.9"
+# mk_test_root <name>: a tree with a copy of backend/pom.xml and the Maven Wrapper (the pin check of Maven needs it)
+mk_test_root() {
+    local dir="${work}/testroot-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}/backend"
+    cp "${real_backend_pom}" "${dir}/backend/pom.xml"
+    cp -r "${REPO_ROOT}/backend/.mvn" "${dir}/backend/.mvn"
+    echo "${dir}"
+}
+run_test_pins() { env GATE_WORK_ROOT="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# test_pom_case <name> <exit code> <text> <description> <sed expression>: change the copy of pom.xml with sed
+test_pom_case() {
+    local name="$1" code="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_test_root "${name}")"
+    sed -i -e "${expression}" "${dir}/backend/pom.xml"
+    if cmp -s "${real_backend_pom}" "${dir}/backend/pom.xml"; then
+        echo "FAIL ${description}: the sed expression did not change pom.xml"
+        failed=$((failed + 1))
+        return
+    fi
+    expect "${code}" "${text}" "${description}" run_test_pins "${dir}"
+}
+# test_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+test_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/tver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/tver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_test_pins "${REPO_ROOT}" "${work}/tver-${name}.env"
+}
+
+dir="$(mk_test_root real)"
+expect 0 "Maven test pins: Maven test pins: backend/pom.xml: junit-jupiter ${junit_version}," \
+    "a copy of the real backend/pom.xml has the versions of versions.env" run_test_pins "${dir}"
+expect 0 "Maven test pins: Maven test pins: backend/pom.xml" "the real backend/pom.xml has the versions of versions.env" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# Each tool: the two places, each alone (a changed version). The property is the one that the pom.xml
+# uses for the version (the three modules of Testcontainers have the property testcontainers.version).
+for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontainers|TESTCONTAINERS_VERSION|testcontainers.version|dependency" \
+    "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
+    "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin"; do
+    IFS='|' read -r artifact version_key property kind <<<"${entry}"
+    version="$(version_of "${version_key}")"
+    noun="${kind}"
+    test_versions_case "v-${property//./-}" "but ${version_key} in tools/versions.env is ${new_test_version}" \
+        "${artifact}, one place only: versions.env has another ${version_key}" \
+        "s#^${version_key}=.*#${version_key}=${new_test_version}#"
+    test_pom_case "p-${property//./-}" 1 "has the ${noun} ${artifact} ${new_test_version}, but ${version_key} in tools/versions.env is ${version}" \
+        "${artifact}, one place only: pom.xml has another version (the property)" \
+        "s#<${property}>${version}<#<${property}>${new_test_version}<#"
+done
+# The version in other forms (the property of JUnit is the example)
+test_pom_case literalok 0 "RESULT: PASS" "junit-jupiter: the version is written in the dependency (the same value)" \
+    "s#<version>\${junit.version}</version>#<version>${junit_version}</version>#"
+test_pom_case literalother 1 "has the dependency junit-jupiter ${new_test_version}, but" "junit-jupiter: the version is written in the dependency (another value)" \
+    "s#<version>\${junit.version}</version>#<version>${new_test_version}</version>#"
+test_pom_case noversion 1 "has the dependency junit-jupiter with no <version>" "junit-jupiter: the dependency has no <version>" \
+    "s#<version>\${junit.version}</version>##"
+test_pom_case unknownproperty 1 "is not a version or a <properties> value of the same pom.xml" "junit-jupiter: the version is a property that the pom.xml does not have" \
+    "s#<version>\${junit.version}</version>#<version>\${no.such.property}</version>#"
+test_pom_case range 1 "has the dependency junit-jupiter [5.14.0,6), but" "junit-jupiter: the version is a range" \
+    "s#<version>\${junit.version}</version>#<version>[5.14.0,6)</version>#"
+# A pom.xml with no test tool is no problem for this check (the group ids are other, and the plugin is other)
+dir="$(mk_test_root nodeps)"
+sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>#' \
+    -e 's#<groupId>net.jqwik</groupId>#<groupId>other.jqwik</groupId>#' \
+    -e 's#<groupId>org.testcontainers</groupId>#<groupId>other.tc</groupId>#g' \
+    -e 's#<groupId>org.postgresql</groupId>#<groupId>other.pg</groupId>#' \
+    -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' "${dir}/backend/pom.xml"
+expect 0 "Maven test pins: no pom.xml has a test tool" "a pom.xml with no test tool passes (the generator plugin check and the others still run)" run_test_pins "${dir}"
+# A pom.xml that is not XML
+dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
+expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
+# The form of the values in versions.env, and a key that is not there
+for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION; do
+    for range in "^$(version_of "${key}")" "latest"; do
+        sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/tver-form.env"
+        expect 1 "but it must be an exact version (no range, no tag)" "maven test pins, versions.env: ${key} is not an exact version (${range})" run_test_pins "${REPO_ROOT}" "${work}/tver-form.env"
+    done
+    grep -v "^${key}=" "${real_versions}" >"${work}/tver-missing.env"
+    expect 1 "${key} is not in tools/versions.env" "maven test pins, versions.env has no ${key}" run_test_pins "${REPO_ROOT}" "${work}/tver-missing.env"
+done
+# The checks are separate: a bad version of a test tool does not hide the result of the other checks
+test_versions_case separate "Frontend pin: Frontend:" "a bad version of a test tool: the check of the frontend still passes (and says so)" \
+    "s#^JUNIT_VERSION=.*#JUNIT_VERSION=${new_test_version}#"
 
 # ---------------------------------------------------------------------------------------------
 section "check-sudo.sh (Task 130.145)"
@@ -1450,6 +1558,10 @@ while [[ $# -gt 0 ]]; do
     if [[ "$1" == "--output" ]]; then
         if [[ "${STUB_EMPTY:-}" == "1" ]]; then
             echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[]}' >"$2"
+        elif [[ "${STUB_AXE:-}" == "1" ]]; then
+            # feat-7-verification-architecture-tools, Phase 110: the SBOM has the package axe-core
+            # (MPL-2.0, not in the permitted list), for the test of the exclusion of sbom.sh.
+            echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[{"type":"library","name":"npmlib","version":"1","licenses":[{"license":{"name":"The MIT License (MIT)"}}]},{"type":"library","name":"axe-core","version":"'"${STUB_AXE_VERSION:-4.14.0}"'","licenses":[{"license":{"id":"MPL-2.0"}}]}]}' >"$2"
         else
             echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[{"type":"library","name":"npmlib","version":"1","licenses":[{"license":{"name":"The MIT License (MIT)"}}]}]}' >"$2"
         fi
@@ -1947,6 +2059,49 @@ expect 64 "stub pnpm: the command 'dlx' is not allowed" "the stub stops a dlx ca
 expect 64 "stub pnpm: the command 'view' is not allowed" "the stub stops a view call (the test of the stub)" \
     env PATH="${stubs}:${PATH}" STUB_PNPM_LOG="${pnpm_log}" pnpm view x
 
+# ---------------------------------------------------------------------------------------------
+section "sbom.sh: the exclusion of axe-core from the frontend SBOM (feat-7-verification-architecture-tools, Phase 110, the rule X1)"
+# The tool of the accessibility check (axe-core, MPL-2.0) is not in the permitted list, and the owner
+# approved the use with the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. The tool does not go to
+# users (rule A), so sbom.sh removes the pinned package from the SBOM after cdxgen made it (cdxgen
+# 12.9.0 has no package filter for a pnpm lock file, and its --exclude is a file path pattern).
+root="$(new_tree x1-axe)"
+put "${root}" frontend/package.json '{}'
+expect 0 "removed 1 component(s) axe-core@$(version_of AXE_CORE_VERSION)" "the SBOM has axe-core: the script removes the pinned package (and the run goes on)" sbom_run "${root}" STUB_AXE=1
+if ! grep -q "axe-core" "${root}/build/sbom/frontend.cdx.json"; then
+    echo "ok   the SBOM of the frontend has no axe-core after the exclusion"
+    passed=$((passed + 1))
+else
+    echo "FAIL the SBOM of the frontend has still axe-core after the exclusion"
+    failed=$((failed + 1))
+fi
+expect 0 "RESULT: PASS. 1 component(s)" "the license gate passes the SBOM after the exclusion (the component of the stub)" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+root="$(new_tree x1-no-axe)"
+put "${root}" frontend/package.json '{}'
+expect 0 "no component axe-core@$(version_of AXE_CORE_VERSION) (nothing to remove)" "the SBOM has no axe-core: the exclusion says so (and the run goes on)" sbom_run "${root}"
+# axe-core with another version than the pin: the exclusion does not remove it (the pin is the
+# name and the version of versions.env), and the license gate stops for it (fail closed).
+root="$(new_tree x1-axe-other)"
+put "${root}" frontend/package.json '{}'
+sbom_run "${root}" STUB_AXE=1 STUB_AXE_VERSION=9.9.9 >/dev/null 2>&1 || true
+if grep -q "axe-core" "${root}/build/sbom/frontend.cdx.json"; then
+    echo "ok   axe-core with another version than the pin is not removed"
+    passed=$((passed + 1))
+else
+    echo "FAIL axe-core with another version than the pin is removed (the exclusion is the pinned package only)"
+    failed=$((failed + 1))
+fi
+expect 1 "NOT PERMITTED" "the license gate stops for axe-core with another version (MPL-2.0 is not in the permitted list)" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+# no AXE_CORE_VERSION in versions.env: the script stops before the exclusion (fail closed).
+grep -v '^AXE_CORE_VERSION=' "${real_versions}" >"${work}/versions-x1-none.env"
+root="$(new_tree x1-no-key)"
+put "${root}" frontend/package.json '{}'
+expect 1 "AXE_CORE_VERSION is not set in ${work}/versions-x1-none.env" "versions.env has no AXE_CORE_VERSION: the script stops" \
+    sbom_run "${root}" STUB_AXE=1 VERSIONS_FILE="${work}/versions-x1-none.env"
+
+# ---------------------------------------------------------------------------------------------
 section "sbom.sh: the lock file of cdxgen in tools/sbom/ is not an unscanned manifest (finding E1, feat-16-cdxgen-lockfile, REQ-004)"
 tools_lock='lockfileVersion: 9'
 root="$(new_tree e1-tools-sbom)"
