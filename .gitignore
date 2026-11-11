@@ -37,6 +37,10 @@ target/
 frontend/test-results/
 frontend/playwright-report/
 
+# Output of the mutation tests (feat-7-verification-architecture-tools, Phase 120)
+frontend/mutation-report/
+frontend/.stryker-tmp/
+
 # The failure database of jqwik (the run of a property that is not successful writes it)
 # (feat-7-verification-architecture-tools, Phase 110)
 backend/.jqwik-database

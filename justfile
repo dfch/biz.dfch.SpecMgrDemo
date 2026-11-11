@@ -8,7 +8,9 @@
 # tasks of feat-6-contracts-openapi-pipeline (the generators and the API documentation), and 130.100 and 130.105 are tasks of
 # feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). 110.100 to 110.130
 # are the tasks of feat-7-verification-architecture-tools (the test tools, the recipes test-unit-backend,
-# test-integration-backend, test-unit-frontend, test-e2e, test-random-backend and test-random-frontend). The gate numbers of
+# test-integration-backend, test-unit-frontend, test-e2e, test-random-backend and test-random-frontend), and
+# 120.100 and 120.110 are the tasks of feat-7-verification-architecture-tools (the mutation tests, the recipes
+# mutation-backend and mutation-frontend). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -134,6 +136,14 @@ test-random-backend:
 # Test: the property tests of the pnpm module with fast-check: one that is successful, and one that is not successful (feat-7-verification-architecture-tools, Task 110.130).
 test-random-frontend:
     @{{ just_executable() }} _gate test-random-frontend.sh 110.130 frontend
+
+# Test: the mutation tests of the Maven module with PIT: the run makes the report (HTML and XML in target/pit-reports), and the report has a surviving mutant (feat-7-verification-architecture-tools, Task 120.100).
+mutation-backend:
+    @{{ just_executable() }} _gate mutation-backend.sh 120.100 backend
+
+# Test: the mutation tests of the pnpm module with Stryker: the run makes the report (HTML and JSON in mutation-report/), and the report has a surviving mutant (feat-7-verification-architecture-tools, Task 120.110).
+mutation-frontend:
+    @{{ just_executable() }} _gate mutation-frontend.sh 120.110 frontend
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

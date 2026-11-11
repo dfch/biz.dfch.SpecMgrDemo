@@ -279,7 +279,7 @@ install_frontend() {
     for entry in kubb:KUBB_VERSION @kubb/core:KUBB_VERSION @kubb/plugin-zod:KUBB_PLUGIN_ZOD_VERSION \
         @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION \
         vitest:VITEST_VERSION @playwright/test:PLAYWRIGHT_VERSION axe-core:AXE_CORE_VERSION fast-check:FAST_CHECK_VERSION \
-        vite:VITE_VERSION; do
+        vite:VITE_VERSION @stryker-mutator/core:STRYKER_VERSION @stryker-mutator/vitest-runner:STRYKER_VITEST_RUNNER_VERSION; do
         package="${entry%%:*}" key="${entry##*:}"
         want="$(version_of "${key}")"
         installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \

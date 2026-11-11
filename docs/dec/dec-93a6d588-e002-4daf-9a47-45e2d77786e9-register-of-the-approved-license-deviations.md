@@ -4,7 +4,7 @@ created: '2026-11-09T20:05:19.449+01:00'
 id: 93a6d588-e002-4daf-9a47-45e2d77786e9
 status: accepted
 type: dec
-updated: '2026-11-10T21:00:43.996+01:00'
+updated: '2026-11-11T12:12:28.376+01:00'
 version: 1.0.0
 ---
 
@@ -86,9 +86,17 @@ The tool is axe-core (npm axe-core), the version 4.14.0. The license MPL-2.0 is 
 
 The tool is JaCoCo (org.jacoco:jacoco, the Maven plugin org.jacoco:jacoco-maven-plugin), the version 0.8.16 (the latest on Maven Central at the moment of the decision; the pin is made in the phase 140 of feat-7-verification-architecture-tools). The license EPL-2.0 is read from the LICENSE.md of the repository jacoco/jacoco (the Eclipse Public License Version 2.0). The class of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 is Review. The use is the measurement of the line and the branch coverage of the Maven module (REQ-006 of the feature). The owner approved the deviation on 2026-11-09 (in the chat: "all approved").
 
+### 2026-11-11 - caniuse-lite (CC-BY-4.0), a transitive package of the tool Stryker
+
+The package is caniuse-lite (the data of the browser features), the version 1.0.30001823. The license CC-BY-4.0 is read from the license field of the registry entry registry.npmjs.org/caniuse-lite/1.0.30001823 and the LICENSE of the package tarball (the full text of the Creative Commons Attribution 4.0 International license) (the phase 120 of feat-7-verification-architecture-tools; the evidence is in the Result of the Phase 120 of the plan of that feature). The license has no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, and the package is not in tools/license/permitted-licenses.txt, so the license gate stopped fail closed (REQ-005 of the feature: if a license is not clear, the work stops and the owner makes a decision). The package is a transitive dependency of the tool Stryker (@stryker-mutator/core 10.1.1): the chain in the lock file is @stryker-mutator/instrumenter 10.1.1 to @babel/core 8.0.10 to @babel/helper-compilation-targets 8.0.7 to browserslist 4.29.5 to caniuse-lite 1.0.30001823 (the instrumenter of Stryker has Babel in each released line). The tool does not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9), and the package is not used directly. The owner approved the deviation on 2026-11-11 (in the chat: "(b)", the answer to the question about the license stop of the phase 120 of feat-7-verification-architecture-tools). The package is kept out of the SBOM of the frontend by the rule X1 of tools/gates/sbom.sh (the pinned version CANIUSE_LITE_VERSION, fail closed), in the same way as axe-core (MPL-2.0).
+
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-11 10:57:00.000Z - The deviation for caniuse-lite (CC-BY-4.0) is approved and recorded
+
+The owner approved on 2026-11-11 (in the chat: "(b)", the answer to the question about the license stop of the phase 120 of feat-7-verification-architecture-tools: the targeted deviation with the exclusion of the SBOM, and not a class of the DEC, not the move of the tool to its own project, and not a change of the tool) the deviation for the package caniuse-lite (CC-BY-4.0, the transitive dependency of the tool Stryker, which does not go to users). The dated section of More Information is written, and the package is kept out of the SBOM of the frontend by the rule X1 of sbom.sh (the pinned version, fail closed), in the same way as axe-core. The status stays accepted (the statement of the owner is the permission for this change of an accepted DEC).
 
 ### 2026-11-10 19:59:06.000Z - The pinned version of JUnit is the 5.x line
 

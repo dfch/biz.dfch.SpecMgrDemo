@@ -43,8 +43,18 @@
        the decision).
      - jqwik (net.jqwik:jqwik, EPL-2.0, the deviation DEC above): the property tests. The version is the one of
        tools/versions.env (JQWIK_VERSION).
-     - maven-surefire-plugin (the version in tools/versions.env, MAVEN_SUREFIRE_PLUGIN_VERSION): runs the tests of
-       the JUnit Platform (the JUnit engine and the jqwik engine).
+      - maven-surefire-plugin (the version in tools/versions.env, MAVEN_SUREFIRE_PLUGIN_VERSION): runs the tests of
+        the JUnit Platform (the JUnit engine and the jqwik engine).
+      - PIT (org.pitest:pitest-maven, the build plugin, and org.pitest:pitest-junit5-plugin, the JUnit5 support of
+        PIT as a dependency of the plugin): the mutation tests (the recipe mutation-backend). The versions are the
+        ones of tools/versions.env (PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION). The configuration restricts the run to
+        the generated model code (targetClasses) and to the unit tests of the generated code (targetTests, the class
+        that is not successful and the integration test are no target tests), and it makes the HTML and the XML
+        report in target/pit-reports (the folder is in .gitignore through target/). The plugin has no execution
+        bound to a phase: the recipe starts the goal mutationCoverage after the phase test-compile in one run of
+        ./mvnw (the generator execution of the phase generate-sources adds src/generated/java as a compile source
+        root; without the phase, the project has no compile source root, and the goal skips).
+
 
    The test classes are in src/test/java/biz/dfch/specmgrdemo/testtools/. A class whose name has no suffix `Test`
    (or `IT` for the integration tests) is a case that is not successful (ACC-002 of the plan): the default run of
@@ -92,6 +102,10 @@
     <postgresql.version>42.7.14</postgresql.version>
     <jqwik.version>1.10.2</jqwik.version>
     <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
+    <!-- The mutation tests (feat-7-verification-architecture-tools, Phase 120). Each version is the one of
+         tools/versions.env (just check-pins compares them). -->
+    <pitest.version>1.30.2</pitest.version>
+    <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
 
     <!-- The files that the generators read and write, relative to the folder of this module. -->
     <contract.file>${project.basedir}/../contracts/openapi.yaml</contract.file>
@@ -189,6 +203,48 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
+      </plugin>
+       <!-- The mutation tests (feat-7-verification-architecture-tools, Phase 120, Task 120.100). No execution is
+            bound to a phase: the recipe mutation-backend starts the goal after the phase test-compile in one run
+            of ./mvnw (./mvnw test-compile org.pitest:pitest-maven:<PIT_VERSION>:mutationCoverage
+            -Dcodegen.skip=true). The phase is necessary: the generator execution of the phase generate-sources
+            adds src/generated/java as a compile source root, and the goal skips a project with no compile source
+            root. PIT mutates the compiled classes of the module (target/classes, the generated code; the module
+            has no product code) and runs the target tests on each mutant.
+           The configuration keeps the run small and deterministic (the plan records it, Result of the Phase 120):
+           - targetClasses: the generated model code only. The package biz.dfch.specmgrdemo.api has the interface
+             StatusApi, and an interface has no bytecode with logic, so there is no mutant in it.
+           - targetTests: the unit tests of the generated code only. The class that is not successful (no suffix
+             Test) and the integration test (the suffix IT, it needs the Docker daemon) are no target tests.
+            - outputFormats: the HTML report (the default folder target/pit-reports) and the XML report
+              (mutations.xml, the deterministic source the recipe asserts on for the surviving mutants).
+           The JUnit5 support of PIT (the JUnit engine of the JUnit Platform and the jqwik engine) is the plugin
+           dependency pitest-junit5-plugin: pitest-maven loads the test framework plugins from its own classpath,
+           and not from the test classpath of the module. -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>${pitest.version}</version>
+        <configuration>
+          <targetClasses>
+            <param>biz.dfch.specmgrdemo.model.*</param>
+          </targetClasses>
+          <targetTests>
+            <param>biz.dfch.specmgrdemo.testtools.ErrorCodeTest</param>
+            <param>biz.dfch.specmgrdemo.testtools.ErrorCodePropertyTest</param>
+          </targetTests>
+          <outputFormats>
+            <outputFormat>HTML</outputFormat>
+            <outputFormat>XML</outputFormat>
+          </outputFormats>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>${pitest-junit5-plugin.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.openapitools</groupId>

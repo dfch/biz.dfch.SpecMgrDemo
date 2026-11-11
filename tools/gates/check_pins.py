@@ -124,12 +124,14 @@ jar is in verify_generator_plugin (the sha256 of the jar in the local Maven repo
 against the file, before the plugin generates).
 
 The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011; the test tools of
-feat-7-verification-architecture-tools, Phase 110): the Zod generator Kubb, Zod and TypeScript, and the test tools
-Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of the peer that vitest and the tree of
-Kubb take as a dependency or a peer; without the pin, the resolution of pnpm brings the tree of vite 8 with the
-package lightningcss, MPL-2.0, not in the permitted list). <project-root>/frontend has package.json,
-pnpm-workspace.yaml and pnpm-lock.yaml. The module has eleven direct packages (FRONTEND_PACKAGES below), each with a
-version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
+feat-7-verification-architecture-tools, Phase 110, and the mutation tool Stryker, Phase 120): the Zod generator Kubb,
+Zod and TypeScript, the test tools Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
+the peer that vitest and the tree of Kubb take as a dependency or a peer; without the pin, the resolution of pnpm
+brings the tree of vite 8 with the package lightningcss, MPL-2.0, not in the permitted list), and the mutation tool
+Stryker (the package @stryker-mutator/core, the stryker binary, and the plugin @stryker-mutator/vitest-runner that
+runs Vitest as the test runner; the peer of the plugin is vitest >=2.0.0). <project-root>/frontend has package.json,
+pnpm-workspace.yaml and pnpm-lock.yaml. The module has thirteen direct packages (FRONTEND_PACKAGES below), each with
+a version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
 folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
 
   * a key of FRONTEND_PACKAGES is missing in tools/versions.env, a version is not an exact version, or an integrity value is
@@ -139,23 +141,42 @@ folder with none of them is "no pnpm module"), and it fails closed. The script s
   * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
   * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
     overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
-    its `devDependencies` is not exactly the other ten packages in the exact versions of versions.env;
+    its `devDependencies` is not exactly the other twelve packages in the exact versions of versions.env;
   * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
     only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
-    does not have each of the eleven packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    does not have each of the thirteen packages with `specifier` and `version` as in versions.env (the version can have a suffix in
     brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
     versions.env.
 
 A change of only one of the three places (versions.env, package.json, the lock file) stops the check. The install itself
 (install_frontend in _lib.sh: `pnpm install --frozen-lockfile --ignore-scripts`) compares each tarball with the lock file.
 
-The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110; REQ-001, REQ-002, ACC-011): JUnit,
-Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik, and the test runner
-maven-surefire-plugin. <project-root>/backend has the pom.xml with the test tools in <scope>test</scope> (the cyclonedx
-plugin keeps the test scope out of the SBOM). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and
-MAVEN_TEST_PLUGIN below). The check is always on, and it fails closed. The script stops for each of these:
+The tie of the transitive package caniuse-lite (feat-7-verification-architecture-tools, Phase 120; REQ-002, ACC-011): the
+package is in the tree of Stryker of the pnpm module (the chain @stryker-mutator/core -> @stryker-mutator/instrumenter ->
+@babel/core -> @babel/helper-compilation-targets -> browserslist -> caniuse-lite), and its license CC-BY-4.0 is not in
+tools/license/permitted-licenses.txt (no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9; the deviation is in the
+register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, the section of 2026-11-11). The rule X1 of sbom.sh keeps the pinned
+version out of the SBOM of the frontend, so <project-root>/frontend/pnpm-lock.yaml must resolve caniuse-lite to exactly
+CANIUSE_LITE_VERSION of tools/versions.env. The check is on if the lock file exists (a folder with no lock file is "no
+pnpm module", as for the frontend check), and it fails closed. The script stops for each of these:
 
-  * a key of MAVEN_TEST_DEPENDENCIES or MAVEN_TEST_PLUGIN is missing in tools/versions.env, or the version is not an
+  * CANIUSE_LITE_VERSION is missing in tools/versions.env, or the version is not an exact version;
+  * the lock file cannot be read as YAML (one document, no key twice), or it has no `packages`;
+  * `packages` has no caniuse-lite, or it has caniuse-lite with another version than CANIUSE_LITE_VERSION (or more than
+    one version of the package).
+
+A change of only one of the two places (versions.env, the lock file) stops the check. The package is transitive, so it has
+no entry in frontend/package.json and no integrity key.
+
+The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110 and 120; REQ-001, REQ-002, ACC-011):
+JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik, the test runner
+maven-surefire-plugin, and the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin dependency
+org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT). <project-root>/backend has the pom.xml with the test tools
+in <scope>test</scope> (the cyclonedx plugin keeps the test scope out of the SBOM; the plugin and the plugin dependency
+are in <build><plugins> and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and
+MAVEN_TEST_PLUGINS below). The check is always on, and it fails closed. The script stops for each of these:
+
+  * a key of MAVEN_TEST_DEPENDENCIES or MAVEN_TEST_PLUGINS is missing in tools/versions.env, or the version is not an
     exact version;
   * a pom.xml has one of the test dependencies (or the plugin) with a version that is not the version of
     tools/versions.env (the version can be a `${property}` of the same pom.xml), with no version, or with a version
@@ -307,9 +328,12 @@ GENERATOR_GROUP_ID = "org.openapitools"
 GENERATOR_ARTIFACT_ID = "openapi-generator-maven-plugin"
 POM_NAMESPACE = "{http://maven.apache.org/POM/4.0.0}"
 
-# The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110): the
+# The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110 and 120): the
 # (groupId, artifactId, version key) of each dependency that a pom.xml may have, and the same for the
-# test runner plugin. The three modules of Testcontainers have the version of the core (TESTCONTAINERS_VERSION).
+# plugins (the test runner and the mutation tool). The three modules of Testcontainers have the version of the
+# core (TESTCONTAINERS_VERSION). The dependency pitest-junit5-plugin is a dependency of the plugin pitest-maven
+# (the JUnit5 support of PIT; pitest-maven loads the test framework plugins from its own classpath), and the
+# check finds it with the same search for <dependency> elements as the other dependencies.
 MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("org.junit.jupiter", "junit-jupiter", "JUNIT_VERSION"),
     ("org.testcontainers", "testcontainers", "TESTCONTAINERS_VERSION"),
@@ -317,8 +341,12 @@ MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("org.testcontainers", "postgresql", "TESTCONTAINERS_VERSION"),
     ("org.postgresql", "postgresql", "POSTGRESQL_VERSION"),
     ("net.jqwik", "jqwik", "JQWIK_VERSION"),
+    ("org.pitest", "pitest-junit5-plugin", "PIT_JUNIT5_PLUGIN_VERSION"),
 )
-MAVEN_TEST_PLUGIN = ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION")
+MAVEN_TEST_PLUGINS: tuple[tuple[str, str, str], ...] = (
+    ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION"),
+    ("org.pitest", "pitest-maven", "PIT_VERSION"),
+)
 
 
 class FrontendPackage(NamedTuple):
@@ -330,7 +358,9 @@ class FrontendPackage(NamedTuple):
     integrity_key: str
 
 
-# The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of feat-7-verification-architecture-tools, Phase 110). @kubb/core has the version of `kubb`.
+# The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of
+# feat-7-verification-architecture-tools, Phase 110; the mutation tool Stryker, Phase 120).
+# @kubb/core has the version of `kubb`.
 FRONTEND_PACKAGES = (
     FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
     FrontendPackage("@kubb/core", "devDependencies", "KUBB_VERSION", "KUBB_CORE_INTEGRITY"),
@@ -343,6 +373,13 @@ FRONTEND_PACKAGES = (
     FrontendPackage("axe-core", "devDependencies", "AXE_CORE_VERSION", "AXE_CORE_INTEGRITY"),
     FrontendPackage("fast-check", "devDependencies", "FAST_CHECK_VERSION", "FAST_CHECK_INTEGRITY"),
     FrontendPackage("vite", "devDependencies", "VITE_VERSION", "VITE_INTEGRITY"),
+    FrontendPackage("@stryker-mutator/core", "devDependencies", "STRYKER_VERSION", "STRYKER_INTEGRITY"),
+    FrontendPackage(
+        "@stryker-mutator/vitest-runner",
+        "devDependencies",
+        "STRYKER_VITEST_RUNNER_VERSION",
+        "STRYKER_VITEST_RUNNER_INTEGRITY",
+    ),
 )
 # The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
 FRONTEND_PACKAGE_JSON_KEYS = {
@@ -377,6 +414,13 @@ OASDIFF_ASSET = "oasdiff_{version}_linux_amd64.tar.gz"
 OASDIFF_CHECKSUMS_FILE = "oasdiff-checksums.txt"
 SHA256_VALUE = re.compile(r"[0-9a-f]{64}")
 CHECKSUM_LINE = re.compile(r"([0-9a-f]{64})  (\S+)")
+
+# The tie of the transitive package caniuse-lite (feat-7-verification-architecture-tools, Phase 120): the name of the
+# package in the lock file of frontend/, and the key of tools/versions.env. The rule X1 of sbom.sh excludes the pinned
+# version from the SBOM of the frontend (the deviation DEC, the register), and the lock file is the tie (the package is
+# not a direct package of the module).
+CANIUSE_LITE_PACKAGE = "caniuse-lite"
+CANIUSE_LITE_VERSION_KEY = "CANIUSE_LITE_VERSION"
 
 
 def read_versions(path: Path) -> dict[str, str]:
@@ -953,7 +997,7 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
     """
     label = "Maven test pins"
     problems: list[str] = []
-    for _group, _artifact, key in (*MAVEN_TEST_DEPENDENCIES, MAVEN_TEST_PLUGIN):
+    for _group, _artifact, key in (*MAVEN_TEST_DEPENDENCIES, *MAVEN_TEST_PLUGINS):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
         elif not EXACT_VERSION.fullmatch(versions[key]):
@@ -1000,7 +1044,7 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
                     )
                 else:
                     checked.append(f"{pom}: {artifact} {version}")
-        for group, artifact, key in (MAVEN_TEST_PLUGIN,):
+        for group, artifact, key in MAVEN_TEST_PLUGINS:
             for plugin in project.iter(f"{POM_NAMESPACE}plugin"):
                 if (
                     plugin.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
@@ -1214,9 +1258,62 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
     problems += _check_frontend_lock(folder / "pnpm-lock.yaml", expected)
     note = (
         f"Frontend: {folder}: Kubb, Zod, TypeScript and the test tools "
-        "(Vitest, Playwright, axe-core, fast-check, Vite), package.json and lock file as in tools/versions.env"
+        "(Vitest, Playwright, axe-core, fast-check, Vite), and the mutation tool Stryker, package.json and lock file "
+        "as in tools/versions.env"
     )
     return ("" if problems else note), problems
+
+
+def check_caniuse_lite(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the tie of the transitive package caniuse-lite (see the header). Return a note and the problems.
+
+    The lock file of frontend/ must resolve caniuse-lite to CANIUSE_LITE_VERSION of tools/versions.env (the rule X1
+    of sbom.sh excludes the pinned version from the SBOM of the frontend). The package is transitive, so it has no
+    entry in package.json and no integrity key; the lock file is the tie. A key that is missing, a lock file with
+    no entry of the package, or an entry with another version stops the check (fail closed).
+    """
+    label = "Caniuse-lite pin"
+    problems: list[str] = []
+    version = versions.get(CANIUSE_LITE_VERSION_KEY, "")
+    if CANIUSE_LITE_VERSION_KEY not in versions:
+        problems.append(f"{CANIUSE_LITE_VERSION_KEY} is not in tools/versions.env")
+    elif not EXACT_VERSION.fullmatch(version):
+        problems.append(
+            f"{CANIUSE_LITE_VERSION_KEY} in tools/versions.env is {version!r}, "
+            "but it must be an exact version (no range, no tag)"
+        )
+    if problems:
+        return "", problems
+    lock = root / "frontend" / "pnpm-lock.yaml"
+    if not lock.is_file():
+        return f"{label}: no pnpm module frontend/ (no lock file to tie)", []
+    try:
+        documents = list(yaml.load_all(lock.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+    except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
+        return "", [f"{label}: {lock} cannot be read as YAML: {error}"]
+    if len(documents) != 1 or not isinstance(documents[0], dict):
+        return "", [f"{label}: {lock} has not exactly one YAML document with a mapping"]
+    packages = documents[0].get("packages")
+    if not isinstance(packages, dict):
+        return "", [f"{label}: {lock} has no `packages`"]
+    found: list[str] = []
+    for key in packages:
+        parts = _split_package_key(str(key)) if isinstance(key, str) else None
+        if parts is not None and parts[0] == CANIUSE_LITE_PACKAGE:
+            found.append(parts[1])
+    if not found:
+        problems.append(
+            f"{label}: {lock} has no caniuse-lite in `packages` (the transitive package of Stryker that the rule X1 "
+            "excludes from the SBOM of the frontend)"
+        )
+    elif found != [version]:
+        problems.append(
+            f"{label}: {lock} has caniuse-lite {', '.join(found)} in `packages`, "
+            f"but {CANIUSE_LITE_VERSION_KEY} in tools/versions.env is {version}"
+        )
+    if problems:
+        return "", problems
+    return f"{label}: {lock}: caniuse-lite {version}, the version of tools/versions.env", []
 
 
 def _normalize_name(name: str) -> str:
@@ -1352,6 +1449,9 @@ def main(argv: list[str]) -> int:
         note, frontend_problems = check_frontend(Path(argv[4]), versions)
         print(f"Frontend pin: {note or str(len(frontend_problems)) + ' problem(s)'}")
         problems += frontend_problems
+        note, caniuse_problems = check_caniuse_lite(Path(argv[4]), versions)
+        print(f"Caniuse-lite pin: {note or str(len(caniuse_problems)) + ' problem(s)'}")
+        problems += caniuse_problems
         note, python_problems = check_python_locks(Path(argv[6]), versions)
         print(f"Python lock pin: {note or str(len(python_problems)) + ' problem(s)'}")
         problems += python_problems
@@ -1367,7 +1467,8 @@ def main(argv: list[str]) -> int:
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
         "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version and the jar checksum of the "
         "generator plugin, the jar checksum of the SBOM plugin, the versions of the test tools of the Maven module, "
-        "the module frontend/ and the lock files of the Python tools are the ones of tools/versions.env."
+        "the module frontend/ (and the tie of caniuse-lite of its lock file) and the lock files of the Python tools are "
+        "the ones of tools/versions.env."
     )
     return 0
 

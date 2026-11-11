@@ -1253,7 +1253,7 @@ frontend_append_case() {
 fe_new_version="9.9.9"
 fe_new_integrity="${other_integrity}"
 dir="$(mk_frontend_root real)"
-expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), and the mutation tool Stryker, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
 expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod, TypeScript and the test tools" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
 expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
@@ -1263,10 +1263,14 @@ expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_fron
 # Each package: the three places, each alone (ACC-011: a changed version and a changed checksum of each tool)
 # <name> <version key> <integrity key>: kubb and @kubb/core have the version key KUBB_VERSION, so a change of it stops both.
 # The test tools of feat-7-verification-architecture-tools (Phase 110): vitest, @playwright/test, axe-core, fast-check.
+# The mutation tool of feat-7-verification-architecture-tools (Phase 120): @stryker-mutator/core and
+# @stryker-mutator/vitest-runner.
 for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
     "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY" \
     "vitest|VITEST_VERSION|VITEST_INTEGRITY" "@playwright/test|PLAYWRIGHT_VERSION|PLAYWRIGHT_INTEGRITY" "axe-core|AXE_CORE_VERSION|AXE_CORE_INTEGRITY" \
-    "fast-check|FAST_CHECK_VERSION|FAST_CHECK_INTEGRITY" "vite|VITE_VERSION|VITE_INTEGRITY"; do
+    "fast-check|FAST_CHECK_VERSION|FAST_CHECK_INTEGRITY" "vite|VITE_VERSION|VITE_INTEGRITY" \
+    "@stryker-mutator/core|STRYKER_VERSION|STRYKER_INTEGRITY" \
+    "@stryker-mutator/vitest-runner|STRYKER_VITEST_RUNNER_VERSION|STRYKER_VITEST_RUNNER_INTEGRITY"; do
     IFS='|' read -r package version_key integrity_key <<<"${entry}"
     version="$(version_of "${version_key}")"
     integrity="$(version_of "${integrity_key}")"
@@ -1295,14 +1299,16 @@ expect 0 "RESULT: PASS" "zod: all three places have the same new version and int
 
 # The form of the values in versions.env
 for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION \
-    VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION; do
+    VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION \
+    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION; do
     for range in "^$(version_of "${key}")" "latest" "5"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     done
 done
 for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY \
-    VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY; do
+    VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY \
+    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY; do
     sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
     expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
@@ -1310,6 +1316,23 @@ for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY
 done
 grep -v "^KUBB_VERSION=" "${real_versions}" >"${work}/fever-missing.env"
 expect 1 "KUBB_VERSION is not in tools/versions.env" "frontend, versions.env has no KUBB_VERSION" run_frontend_pins "${REPO_ROOT}" "${work}/fever-missing.env"
+
+# The tie of the transitive package caniuse-lite (feat-7-verification-architecture-tools, Phase 120, the rule X1):
+# the lock file resolves caniuse-lite to CANIUSE_LITE_VERSION of versions.env (the package is not a direct
+# package of the module, so there is no entry in package.json and no integrity key; the lock file is the tie).
+caniuse_version="$(version_of CANIUSE_LITE_VERSION)"
+frontend_versions_case "caniuse-env" "but CANIUSE_LITE_VERSION in tools/versions.env is ${fe_new_version}" "caniuse-lite, one place only: versions.env has another CANIUSE_LITE_VERSION" \
+    "s#^CANIUSE_LITE_VERSION=.*#CANIUSE_LITE_VERSION=${fe_new_version}#"
+frontend_file_case "caniuse-lock" pnpm-lock.yaml "but CANIUSE_LITE_VERSION in tools/versions.env is ${caniuse_version}" "caniuse-lite, one place only: the lock file has another version of caniuse-lite" \
+    "s#^  caniuse-lite@${caniuse_version}:#  caniuse-lite@${fe_new_version}:#"
+frontend_file_case "caniuse-gone" pnpm-lock.yaml "has no caniuse-lite in \`packages\`" "caniuse-lite: the lock file has no entry of caniuse-lite in packages" \
+    "s#^  caniuse-lite@${caniuse_version}:#  canilite-other@${caniuse_version}:#"
+for range in "^${caniuse_version}" "latest" "1"; do
+    sed -e "s#^CANIUSE_LITE_VERSION=.*#CANIUSE_LITE_VERSION=${range}#" "${real_versions}" >"${work}/fever-caniuse-form.env"
+    expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: CANIUSE_LITE_VERSION is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-caniuse-form.env"
+done
+grep -v "^CANIUSE_LITE_VERSION=" "${real_versions}" >"${work}/fever-caniuse-missing.env"
+expect 1 "CANIUSE_LITE_VERSION is not in tools/versions.env" "frontend, versions.env has no CANIUSE_LITE_VERSION" run_frontend_pins "${REPO_ROOT}" "${work}/fever-caniuse-missing.env"
 
 # package.json
 frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env is 5.15.3" "package.json: a range (^) and not an exact version" 's#"kubb": "5.15.3"#"kubb": "^5.15.3"#'
@@ -1360,10 +1383,12 @@ expect 0 "RESULT: PASS" "frontend/ with other files (tsconfig.json, README.md, s
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-verification-architecture-tools, Phase 110, ACC-011)"
 # JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
-# maven-surefire-plugin: the properties of backend/pom.xml, and the keys JUNIT_VERSION,
-# TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION and MAVEN_SUREFIRE_PLUGIN_VERSION of
-# versions.env. The messages start with `Maven test pins:`. Each tool has a version key, and each
-# case changes one place only.
+# maven-surefire-plugin, and the mutation tool PIT (the plugin pitest-maven and its plugin
+# dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120): the
+# properties of backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION,
+# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION and
+# PIT_JUNIT5_PLUGIN_VERSION of versions.env. The messages start with `Maven test pins:`. Each tool
+# has a version key, and each case changes one place only.
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1414,7 +1439,9 @@ expect 0 "Maven test pins: Maven test pins: backend/pom.xml" "the real backend/p
 # uses for the version (the three modules of Testcontainers have the property testcontainers.version).
 for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontainers|TESTCONTAINERS_VERSION|testcontainers.version|dependency" \
     "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
-    "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin"; do
+    "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
+    "pitest-maven|PIT_VERSION|pitest.version|plugin" \
+    "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency"; do
     IFS='|' read -r artifact version_key property kind <<<"${entry}"
     version="$(version_of "${version_key}")"
     noun="${kind}"
@@ -1442,13 +1469,15 @@ sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>
     -e 's#<groupId>net.jqwik</groupId>#<groupId>other.jqwik</groupId>#' \
     -e 's#<groupId>org.testcontainers</groupId>#<groupId>other.tc</groupId>#g' \
     -e 's#<groupId>org.postgresql</groupId>#<groupId>other.pg</groupId>#' \
+    -e 's#<groupId>org.pitest</groupId>#<groupId>other.pitest</groupId>#g' \
     -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' "${dir}/backend/pom.xml"
 expect 0 "Maven test pins: no pom.xml has a test tool" "a pom.xml with no test tool passes (the generator plugin check and the others still run)" run_test_pins "${dir}"
 # A pom.xml that is not XML
 dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
 expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
 # The form of the values in versions.env, and a key that is not there
-for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION; do
+for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION \
+    PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION; do
     for range in "^$(version_of "${key}")" "latest"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/tver-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "maven test pins, versions.env: ${key} is not an exact version (${range})" run_test_pins "${REPO_ROOT}" "${work}/tver-form.env"
@@ -1562,6 +1591,10 @@ while [[ $# -gt 0 ]]; do
             # feat-7-verification-architecture-tools, Phase 110: the SBOM has the package axe-core
             # (MPL-2.0, not in the permitted list), for the test of the exclusion of sbom.sh.
             echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[{"type":"library","name":"npmlib","version":"1","licenses":[{"license":{"name":"The MIT License (MIT)"}}]},{"type":"library","name":"axe-core","version":"'"${STUB_AXE_VERSION:-4.14.0}"'","licenses":[{"license":{"id":"MPL-2.0"}}]}]}' >"$2"
+        elif [[ "${STUB_CANIUSE:-}" == "1" ]]; then
+            # feat-7-verification-architecture-tools, Phase 120: the SBOM has the package caniuse-lite
+            # (CC-BY-4.0, no class in the DEC of the license), for the test of the exclusion of sbom.sh.
+            echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[{"type":"library","name":"npmlib","version":"1","licenses":[{"license":{"name":"The MIT License (MIT)"}}]},{"type":"library","name":"caniuse-lite","version":"'"${STUB_CANIUSE_VERSION:-1.0.30001823}"'","licenses":[{"license":{"id":"CC-BY-4.0"}}]}]}' >"$2"
         else
             echo '{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,"components":[{"type":"library","name":"npmlib","version":"1","licenses":[{"license":{"name":"The MIT License (MIT)"}}]}]}' >"$2"
         fi
@@ -2060,10 +2093,12 @@ expect 64 "stub pnpm: the command 'view' is not allowed" "the stub stops a view 
     env PATH="${stubs}:${PATH}" STUB_PNPM_LOG="${pnpm_log}" pnpm view x
 
 # ---------------------------------------------------------------------------------------------
-section "sbom.sh: the exclusion of axe-core from the frontend SBOM (feat-7-verification-architecture-tools, Phase 110, the rule X1)"
-# The tool of the accessibility check (axe-core, MPL-2.0) is not in the permitted list, and the owner
-# approved the use with the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. The tool does not go to
-# users (rule A), so sbom.sh removes the pinned package from the SBOM after cdxgen made it (cdxgen
+section "sbom.sh: the exclusion of axe-core and caniuse-lite from the frontend SBOM (feat-7-verification-architecture-tools, the rule X1)"
+# The tools of the project (axe-core, the accessibility check, MPL-2.0; Stryker, the mutation tool,
+# the transitive package caniuse-lite of its tree, CC-BY-4.0) have a license that is not in the
+# permitted list, and the owner approved the use with the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9
+# (the section axe-core of 2026-11-09, the section caniuse-lite of 2026-11-11). The tools do not go to
+# users (rule A), so sbom.sh removes the pinned packages from the SBOM after cdxgen made it (cdxgen
 # 12.9.0 has no package filter for a pnpm lock file, and its --exclude is a file path pattern).
 root="$(new_tree x1-axe)"
 put "${root}" frontend/package.json '{}'
@@ -2100,6 +2135,43 @@ root="$(new_tree x1-no-key)"
 put "${root}" frontend/package.json '{}'
 expect 1 "AXE_CORE_VERSION is not set in ${work}/versions-x1-none.env" "versions.env has no AXE_CORE_VERSION: the script stops" \
     sbom_run "${root}" STUB_AXE=1 VERSIONS_FILE="${work}/versions-x1-none.env"
+# The same cases for the package caniuse-lite (the transitive package of Stryker, Phase 120): the
+# exclusion of sbom.sh is the pinned packages, each fail closed.
+root="$(new_tree x1-caniuse)"
+put "${root}" frontend/package.json '{}'
+expect 0 "removed 1 component(s) caniuse-lite@$(version_of CANIUSE_LITE_VERSION)" "the SBOM has caniuse-lite: the script removes the pinned package (and the run goes on)" sbom_run "${root}" STUB_CANIUSE=1
+if ! grep -q "caniuse-lite" "${root}/build/sbom/frontend.cdx.json"; then
+    echo "ok   the SBOM of the frontend has no caniuse-lite after the exclusion"
+    passed=$((passed + 1))
+else
+    echo "FAIL the SBOM of the frontend has still caniuse-lite after the exclusion"
+    failed=$((failed + 1))
+fi
+expect 0 "RESULT: PASS. 1 component(s)" "the license gate passes the SBOM after the exclusion (the component of the stub)" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+root="$(new_tree x1-no-caniuse)"
+put "${root}" frontend/package.json '{}'
+expect 0 "no component caniuse-lite@$(version_of CANIUSE_LITE_VERSION) (nothing to remove)" "the SBOM has no caniuse-lite: the exclusion says so (and the run goes on)" sbom_run "${root}"
+# caniuse-lite with another version than the pin: the exclusion does not remove it (the pin is the
+# name and the version of versions.env), and the license gate stops for it (fail closed).
+root="$(new_tree x1-caniuse-other)"
+put "${root}" frontend/package.json '{}'
+sbom_run "${root}" STUB_CANIUSE=1 STUB_CANIUSE_VERSION=9.9.9 >/dev/null 2>&1 || true
+if grep -q "caniuse-lite" "${root}/build/sbom/frontend.cdx.json"; then
+    echo "ok   caniuse-lite with another version than the pin is not removed"
+    passed=$((passed + 1))
+else
+    echo "FAIL caniuse-lite with another version than the pin is removed (the exclusion is the pinned package only)"
+    failed=$((failed + 1))
+fi
+expect 1 "NOT PERMITTED" "the license gate stops for caniuse-lite with another version (CC-BY-4.0 is not in the permitted list)" \
+    "${GATES_DIR}/license-check.sh" "${root}/build/sbom" "${REPO_ROOT}/tools/license/permitted-licenses.txt"
+# no CANIUSE_LITE_VERSION in versions.env: the script stops before the exclusion (fail closed).
+grep -v '^CANIUSE_LITE_VERSION=' "${real_versions}" >"${work}/versions-x1-none-caniuse.env"
+root="$(new_tree x1-no-caniuse-key)"
+put "${root}" frontend/package.json '{}'
+expect 1 "CANIUSE_LITE_VERSION is not set in ${work}/versions-x1-none-caniuse.env" "versions.env has no CANIUSE_LITE_VERSION: the script stops" \
+    sbom_run "${root}" STUB_CANIUSE=1 VERSIONS_FILE="${work}/versions-x1-none-caniuse.env"
 
 # ---------------------------------------------------------------------------------------------
 section "sbom.sh: the lock file of cdxgen in tools/sbom/ is not an unscanned manifest (finding E1, feat-16-cdxgen-lockfile, REQ-004)"
