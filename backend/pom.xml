@@ -54,6 +54,15 @@
         bound to a phase: the recipe starts the goal mutationCoverage after the phase test-compile in one run of
         ./mvnw (the generator execution of the phase generate-sources adds src/generated/java as a compile source
         root; without the phase, the project has no compile source root, and the goal skips).
+       - JaCoCo (org.jacoco:jacoco-maven-plugin, the build plugin, EPL-2.0, the deviation DEC above): the coverage
+        of the module (the recipe coverage-backend). The version is the one of tools/versions.env (JACOCO_VERSION).
+        The plugin has no execution bound to a phase: the recipe starts the goals prepare-agent, the phase test
+        (the unit tests, the normal run of surefire) and report in one run of ./mvnw, as for the mutation tool
+        pitest-maven. prepare-agent sets the project property argLine, and the test runner maven-surefire-plugin
+        (that has no own argLine) passes it to the forked JVM. The report (HTML and XML) is in target/site/jacoco
+        (the folder is in .gitignore through target/). The configuration has no check goal and no rule: the recipe
+        makes a report and no threshold is set (REQ-006, the walking skeleton sets the threshold from the
+        measured baseline).
 
     The architecture tools (feat-7-verification-architecture-tools, Phase 130, Tasks 130.100 and 130.120; DEC
     9edc1071-4fd0-48b6-a037-1a4cb2331f73). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
@@ -154,6 +163,9 @@
     <spring-boot.version>3.5.16</spring-boot.version>
     <archunit.version>1.5.1</archunit.version>
     <structurizr.version>6.2.4</structurizr.version>
+    <!-- The coverage (feat-7-verification-architecture-tools, Phase 140). The version is the one of
+         tools/versions.env (just check-pins compares it, check_pins.py: check_maven_test_pins). -->
+    <jacoco.version>0.8.16</jacoco.version>
 
     <!-- The files that the generators read and write, relative to the folder of this module. -->
     <contract.file>${project.basedir}/../contracts/openapi.yaml</contract.file>
@@ -334,6 +346,28 @@
             <version>${pitest-junit5-plugin.version}</version>
           </dependency>
         </dependencies>
+      </plugin>
+       <!-- The coverage (feat-7-verification-architecture-tools, Phase 140, Task 140.110). No execution is
+            bound to a phase: the recipe coverage-backend starts the goals prepare-agent, the phase test and
+            report in one run of ./mvnw (the same way as pitest-maven, see above). The goal prepare-agent sets
+            the project property argLine before the phase test runs, and the test runner
+            maven-surefire-plugin (that has no own argLine configuration) passes it to the forked JVM. The
+            goal report reads the execution data (target/jacoco.exec) and makes the report in
+            target/site/jacoco (the HTML report index.html and the XML report jacoco.xml, the parameter
+            formats; the folder is in .gitignore through target/). The XML report is the deterministic
+            source that the recipe asserts on (the counters of the report element). The configuration has
+            no check goal and no rule: the recipe makes a report and no threshold is set (REQ-006). The
+            version is the one of tools/versions.env (JACOCO_VERSION, just check-pins compares it). -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <formats>
+            <format>XML</format>
+            <format>HTML</format>
+          </formats>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.openapitools</groupId>

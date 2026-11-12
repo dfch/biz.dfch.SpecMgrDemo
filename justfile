@@ -10,9 +10,11 @@
 # are the tasks of feat-7-verification-architecture-tools (the test tools, the recipes test-unit-backend,
 # test-integration-backend, test-unit-frontend, test-e2e, test-random-backend and test-random-frontend),
 # 120.100 and 120.110 are the tasks of feat-7-verification-architecture-tools (the mutation tests, the recipes
-# mutation-backend and mutation-frontend), and 130.100 to 130.120 are the tasks of
+# mutation-backend and mutation-frontend), 130.100 to 130.120 are the tasks of
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
-# architecture-frontend and architecture-model). The gate numbers of
+# architecture-frontend and architecture-model), and 140.110 is the task of
+# feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
+# coverage-frontend). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -158,6 +160,14 @@ architecture-frontend:
 # Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model) (feat-7-verification-architecture-tools, Task 130.120).
 architecture-model:
     @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
+
+# Report: the coverage of the Maven module with JaCoCo (the line and the branch coverage, the report in target/site/jacoco, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
+coverage-backend:
+    @{{ just_executable() }} _gate coverage-backend.sh 140.110 backend
+
+# Report: the coverage of the pnpm module with the provider v8 of Vitest (the line coverage, the report in coverage/, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
+coverage-frontend:
+    @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

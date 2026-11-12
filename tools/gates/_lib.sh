@@ -280,7 +280,7 @@ install_frontend() {
         @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION \
         vitest:VITEST_VERSION @playwright/test:PLAYWRIGHT_VERSION axe-core:AXE_CORE_VERSION fast-check:FAST_CHECK_VERSION \
         vite:VITE_VERSION @stryker-mutator/core:STRYKER_VERSION @stryker-mutator/vitest-runner:STRYKER_VITEST_RUNNER_VERSION \
-        archunit:ARCHUNIT_TS_VERSION; do
+        archunit:ARCHUNIT_TS_VERSION @vitest/coverage-v8:VITEST_COVERAGE_V8_VERSION; do
         package="${entry%%:*}" key="${entry##*:}"
         want="$(version_of "${key}")"
         installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \
