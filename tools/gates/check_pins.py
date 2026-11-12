@@ -124,13 +124,14 @@ jar is in verify_generator_plugin (the sha256 of the jar in the local Maven repo
 against the file, before the plugin generates).
 
 The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011; the test tools of
-feat-7-verification-architecture-tools, Phase 110, and the mutation tool Stryker, Phase 120): the Zod generator Kubb,
+feat-7-verification-architecture-tools, Phase 110, the mutation tool Stryker, Phase 120, and the architecture tool
+ArchUniTS, Phase 130): the Zod generator Kubb,
 Zod and TypeScript, the test tools Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
 the peer that vitest and the tree of Kubb take as a dependency or a peer; without the pin, the resolution of pnpm
 brings the tree of vite 8 with the package lightningcss, MPL-2.0, not in the permitted list), and the mutation tool
 Stryker (the package @stryker-mutator/core, the stryker binary, and the plugin @stryker-mutator/vitest-runner that
 runs Vitest as the test runner; the peer of the plugin is vitest >=2.0.0). <project-root>/frontend has package.json,
-pnpm-workspace.yaml and pnpm-lock.yaml. The module has thirteen direct packages (FRONTEND_PACKAGES below), each with
+pnpm-workspace.yaml and pnpm-lock.yaml. The module has fourteen direct packages (FRONTEND_PACKAGES below), each with
 a version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
 folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
 
@@ -141,10 +142,10 @@ folder with none of them is "no pnpm module"), and it fails closed. The script s
   * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
   * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
     overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
-    its `devDependencies` is not exactly the other twelve packages in the exact versions of versions.env;
+    its `devDependencies` is not exactly the other thirteen packages in the exact versions of versions.env;
   * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
     only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
-    does not have each of the thirteen packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    does not have each of the fourteen packages with `specifier` and `version` as in versions.env (the version can have a suffix in
     brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
     versions.env.
 
@@ -168,13 +169,17 @@ pnpm module", as for the frontend check), and it fails closed. The script stops 
 A change of only one of the two places (versions.env, the lock file) stops the check. The package is transitive, so it has
 no entry in frontend/package.json and no integrity key.
 
-The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110 and 120; REQ-001, REQ-002, ACC-011):
-JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik, the test runner
-maven-surefire-plugin, and the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin dependency
-org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT). <project-root>/backend has the pom.xml with the test tools
-in <scope>test</scope> (the cyclonedx plugin keeps the test scope out of the SBOM; the plugin and the plugin dependency
-are in <build><plugins> and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and
-MAVEN_TEST_PLUGINS below). The check is always on, and it fails closed. The script stops for each of these:
+The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110, 120 and 130; REQ-001, REQ-002,
+REQ-003, ACC-011): JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik,
+the test runner maven-surefire-plugin, the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin
+dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools Spring Modulith (the
+artifact org.springframework.modulith:spring-modulith-core and the jar org.springframework.boot:spring-boot that the
+code of Spring Modulith 1.4.14 needs for the module detection), ArchUnit (the artifacts com.tngtech.archunit:archunit
+and com.tngtech.archunit:archunit-junit5) and the reader of the workspace structurizr-client
+(com.structurizr:structurizr-client). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
+(the cyclonedx plugin keeps the test scope out of the SBOM; the plugin and the plugin dependency are in <build><plugins>
+and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and MAVEN_TEST_PLUGINS
+below). The check is always on, and it fails closed. The script stops for each of these:
 
   * a key of MAVEN_TEST_DEPENDENCIES or MAVEN_TEST_PLUGINS is missing in tools/versions.env, or the version is not an
     exact version;
@@ -342,6 +347,11 @@ MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("org.postgresql", "postgresql", "POSTGRESQL_VERSION"),
     ("net.jqwik", "jqwik", "JQWIK_VERSION"),
     ("org.pitest", "pitest-junit5-plugin", "PIT_JUNIT5_PLUGIN_VERSION"),
+    ("org.springframework.modulith", "spring-modulith-core", "SPRING_MODULITH_VERSION"),
+    ("org.springframework.boot", "spring-boot", "SPRING_BOOT_VERSION"),
+    ("com.tngtech.archunit", "archunit", "ARCHUNIT_VERSION"),
+    ("com.tngtech.archunit", "archunit-junit5", "ARCHUNIT_VERSION"),
+    ("com.structurizr", "structurizr-client", "STRUCTURIZR_VERSION"),
 )
 MAVEN_TEST_PLUGINS: tuple[tuple[str, str, str], ...] = (
     ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION"),
@@ -359,7 +369,8 @@ class FrontendPackage(NamedTuple):
 
 
 # The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of
-# feat-7-verification-architecture-tools, Phase 110; the mutation tool Stryker, Phase 120).
+# feat-7-verification-architecture-tools, Phase 110; the mutation tool Stryker, Phase 120; the
+# architecture tool ArchUniTS, Phase 130).
 # @kubb/core has the version of `kubb`.
 FRONTEND_PACKAGES = (
     FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
@@ -380,6 +391,7 @@ FRONTEND_PACKAGES = (
         "STRYKER_VITEST_RUNNER_VERSION",
         "STRYKER_VITEST_RUNNER_INTEGRITY",
     ),
+    FrontendPackage("archunit", "devDependencies", "ARCHUNIT_TS_VERSION", "ARCHUNIT_TS_INTEGRITY"),
 )
 # The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
 FRONTEND_PACKAGE_JSON_KEYS = {
@@ -1258,8 +1270,8 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
     problems += _check_frontend_lock(folder / "pnpm-lock.yaml", expected)
     note = (
         f"Frontend: {folder}: Kubb, Zod, TypeScript and the test tools "
-        "(Vitest, Playwright, axe-core, fast-check, Vite), and the mutation tool Stryker, package.json and lock file "
-        "as in tools/versions.env"
+        "(Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, and the architecture tool "
+        "ArchUniTS, package.json and lock file as in tools/versions.env"
     )
     return ("" if problems else note), problems
 

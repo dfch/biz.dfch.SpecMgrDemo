@@ -1,0 +1,108 @@
+{
+  "configuration" : { },
+  "description" : "The architecture model of the project (DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73). The code must obey this model.",
+  "documentation" : { },
+  "id" : 0,
+  "model" : {
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "components" : [ {
+          "description" : "The generated Spring server interfaces (the top-level package biz.dfch.specmgrdemo.api).",
+          "documentation" : { },
+          "id" : "4",
+          "name" : "api",
+          "relationships" : [ {
+            "description" : "The interfaces of api reference the classes of model",
+            "destinationId" : "5",
+            "id" : "11",
+            "sourceId" : "4",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "Java interface"
+        }, {
+          "description" : "The generated model classes (the top-level package biz.dfch.specmgrdemo.model).",
+          "documentation" : { },
+          "id" : "5",
+          "name" : "model",
+          "tags" : "Element,Component",
+          "technology" : "Java class"
+        } ],
+        "description" : "The Maven module of the backend: the generated Spring server interfaces and the generated model classes.",
+        "documentation" : { },
+        "id" : "2",
+        "name" : "backend",
+        "tags" : "Element,Container",
+        "technology" : "Java 21 (Maven)"
+      }, {
+        "components" : [ {
+          "description" : "The generated TypeScript types (the unit types, the folder frontend/src/generated/types).",
+          "documentation" : { },
+          "id" : "6",
+          "name" : "types",
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "The generated Zod schemas (the unit zod, the folder frontend/src/generated/zod).",
+          "documentation" : { },
+          "id" : "7",
+          "name" : "zod",
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "The tests of the module (the unit test, the folder frontend/src/test).",
+          "documentation" : { },
+          "id" : "8",
+          "name" : "test",
+          "relationships" : [ {
+            "description" : "The tests import the generated Zod schemas",
+            "destinationId" : "7",
+            "id" : "12",
+            "sourceId" : "8",
+            "tags" : "Relationship"
+          }, {
+            "description" : "The tests import the example file of frontend/src",
+            "destinationId" : "9",
+            "id" : "13",
+            "sourceId" : "8",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        }, {
+          "description" : "The files that lie directly in frontend/src (the unit root, today frontend/src/mutation-example.ts).",
+          "documentation" : { },
+          "id" : "9",
+          "name" : "root",
+          "tags" : "Element,Component",
+          "technology" : "TypeScript"
+        } ],
+        "description" : "The pnpm module of the frontend: the generated TypeScript types and the generated Zod schemas.",
+        "documentation" : { },
+        "id" : "3",
+        "name" : "frontend",
+        "relationships" : [ {
+          "description" : "The frontend consumes the API of the backend",
+          "destinationId" : "2",
+          "id" : "10",
+          "sourceId" : "3",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "TypeScript (pnpm)"
+      } ],
+      "description" : "The status API of the project: the backend (the Maven module) and the frontend (the pnpm module).",
+      "documentation" : { },
+      "id" : "1",
+      "name" : "SpecMgrDemo",
+      "tags" : "Element,Software System"
+    } ]
+  },
+  "name" : "SpecMgrDemo",
+  "views" : {
+    "configuration" : {
+      "styles" : { },
+      "terminology" : { }
+    }
+  }
+}

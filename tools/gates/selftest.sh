@@ -1253,7 +1253,7 @@ frontend_append_case() {
 fe_new_version="9.9.9"
 fe_new_integrity="${other_integrity}"
 dir="$(mk_frontend_root real)"
-expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), and the mutation tool Stryker, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, and the architecture tool ArchUniTS, package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
 expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod, TypeScript and the test tools" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
 expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
@@ -1270,7 +1270,8 @@ for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CO
     "vitest|VITEST_VERSION|VITEST_INTEGRITY" "@playwright/test|PLAYWRIGHT_VERSION|PLAYWRIGHT_INTEGRITY" "axe-core|AXE_CORE_VERSION|AXE_CORE_INTEGRITY" \
     "fast-check|FAST_CHECK_VERSION|FAST_CHECK_INTEGRITY" "vite|VITE_VERSION|VITE_INTEGRITY" \
     "@stryker-mutator/core|STRYKER_VERSION|STRYKER_INTEGRITY" \
-    "@stryker-mutator/vitest-runner|STRYKER_VITEST_RUNNER_VERSION|STRYKER_VITEST_RUNNER_INTEGRITY"; do
+    "@stryker-mutator/vitest-runner|STRYKER_VITEST_RUNNER_VERSION|STRYKER_VITEST_RUNNER_INTEGRITY" \
+    "archunit|ARCHUNIT_TS_VERSION|ARCHUNIT_TS_INTEGRITY"; do
     IFS='|' read -r package version_key integrity_key <<<"${entry}"
     version="$(version_of "${version_key}")"
     integrity="$(version_of "${integrity_key}")"
@@ -1300,7 +1301,7 @@ expect 0 "RESULT: PASS" "zod: all three places have the same new version and int
 # The form of the values in versions.env
 for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION \
     VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION \
-    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION; do
+    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION ARCHUNIT_TS_VERSION; do
     for range in "^$(version_of "${key}")" "latest" "5"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
@@ -1308,7 +1309,7 @@ for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION K
 done
 for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY \
     VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY \
-    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY; do
+    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY ARCHUNIT_TS_INTEGRITY; do
     sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
     expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
@@ -1383,12 +1384,15 @@ expect 0 "RESULT: PASS" "frontend/ with other files (tsconfig.json, README.md, s
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-verification-architecture-tools, Phase 110, ACC-011)"
 # JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
-# maven-surefire-plugin, and the mutation tool PIT (the plugin pitest-maven and its plugin
-# dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120): the
-# properties of backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION,
-# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION and
-# PIT_JUNIT5_PLUGIN_VERSION of versions.env. The messages start with `Maven test pins:`. Each tool
-# has a version key, and each case changes one place only.
+# maven-surefire-plugin, the mutation tool PIT (the plugin pitest-maven and its plugin
+# dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120), and the
+# architecture tools Spring Modulith (spring-modulith-core and the jar spring-boot that the code
+# of the core needs), ArchUnit (archunit and archunit-junit5) and structurizr-client (feat-7-
+# verification-architecture-tools, Phase 130): the properties of backend/pom.xml, and the keys
+# JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION,
+# MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION, SPRING_MODULITH_VERSION,
+# SPRING_BOOT_VERSION, ARCHUNIT_VERSION and STRUCTURIZR_VERSION of versions.env. The messages start
+# with `Maven test pins:`. Each tool has a version key, and each case changes one place only.
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1441,7 +1445,12 @@ for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontain
     "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
     "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
     "pitest-maven|PIT_VERSION|pitest.version|plugin" \
-    "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency"; do
+    "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency" \
+    "spring-modulith-core|SPRING_MODULITH_VERSION|spring-modulith.version|dependency" \
+    "spring-boot|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
+    "archunit|ARCHUNIT_VERSION|archunit.version|dependency" \
+    "archunit-junit5|ARCHUNIT_VERSION|archunit.version|dependency" \
+    "structurizr-client|STRUCTURIZR_VERSION|structurizr.version|dependency"; do
     IFS='|' read -r artifact version_key property kind <<<"${entry}"
     version="$(version_of "${version_key}")"
     noun="${kind}"
@@ -1470,6 +1479,10 @@ sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>
     -e 's#<groupId>org.testcontainers</groupId>#<groupId>other.tc</groupId>#g' \
     -e 's#<groupId>org.postgresql</groupId>#<groupId>other.pg</groupId>#' \
     -e 's#<groupId>org.pitest</groupId>#<groupId>other.pitest</groupId>#g' \
+    -e 's#<groupId>org.springframework.modulith</groupId>#<groupId>other.modulith</groupId>#' \
+    -e 's#<groupId>org.springframework.boot</groupId>#<groupId>other.boot</groupId>#' \
+    -e 's#<groupId>com.tngtech.archunit</groupId>#<groupId>other.archunit</groupId>#g' \
+    -e 's#<groupId>com.structurizr</groupId>#<groupId>other.structurizr</groupId>#' \
     -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' "${dir}/backend/pom.xml"
 expect 0 "Maven test pins: no pom.xml has a test tool" "a pom.xml with no test tool passes (the generator plugin check and the others still run)" run_test_pins "${dir}"
 # A pom.xml that is not XML
@@ -1477,7 +1490,7 @@ dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
 expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
 # The form of the values in versions.env, and a key that is not there
 for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION \
-    PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION; do
+    PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION SPRING_MODULITH_VERSION SPRING_BOOT_VERSION ARCHUNIT_VERSION STRUCTURIZR_VERSION; do
     for range in "^$(version_of "${key}")" "latest"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/tver-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "maven test pins, versions.env: ${key} is not an exact version (${range})" run_test_pins "${REPO_ROOT}" "${work}/tver-form.env"

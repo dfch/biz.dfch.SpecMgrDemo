@@ -6,9 +6,9 @@ This folder has the pnpm module and no product code. The folder has the Zod sche
 
 | Path | Content |
 |---|---|
-| `package.json` | The module `frontend`. `zod` is a dependency. `kubb`, `@kubb/core`, `@kubb/plugin-zod`, `@kubb/plugin-ts`, `typescript`, and, since `feat-7-verification-architecture-tools` (Phase 110), `vitest`, `@playwright/test`, `axe-core`, `fast-check` and `vite`, and, since the Phase 120, `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` (Stryker and the plugin that runs Vitest as the test runner) are dependencies for the development of the module. Each version is the one value (no `^` and no `~`). `just check-pins` compares the versions with the keys `KUBB_*`, `ZOD_*`, `TYPESCRIPT_*`, `VITEST_*`, `PLAYWRIGHT_*`, `AXE_CORE_*`, `FAST_CHECK_*`, `VITE_*` and `STRYKER_*` of `tools/versions.env`. The file has no `packageManager` field (pnpm 12.16.1 is pinned by `PNPM_VERSION`, and a different pnpm is not in the release) |
+| `package.json` | The module `frontend`. `zod` is a dependency. `kubb`, `@kubb/core`, `@kubb/plugin-zod`, `@kubb/plugin-ts`, `typescript`, and, since `feat-7-verification-architecture-tools` (Phase 110), `vitest`, `@playwright/test`, `axe-core`, `fast-check` and `vite`, since the Phase 120 `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` (Stryker and the plugin that runs Vitest as the test runner), and, since the Phase 130, `archunit` (ArchUniTS, the architecture testing library for TypeScript; the package ArchUnit TypeScript, the identification is in the plan) are dependencies for the development of the module. Each version is the one value (no `^` and no `~`). `just check-pins` compares the versions with the keys `KUBB_*`, `ZOD_*`, `TYPESCRIPT_*`, `VITEST_*`, `PLAYWRIGHT_*`, `AXE_CORE_*`, `FAST_CHECK_*`, `VITE_*`, `STRYKER_*` and `ARCHUNIT_TS_*` of `tools/versions.env`. The file has no `packageManager` field (pnpm 12.16.1 is pinned by `PNPM_VERSION`, and a different pnpm is not in the release) |
 | `pnpm-workspace.yaml` | `packages: ["."]` and no other line. The SBOM gate scans a pnpm module below `frontend/` only if this file and the lock file are in the folder |
-| `pnpm-lock.yaml` | The lock file. It has an integrity value for each of the 342 packages. Install with `pnpm install --frozen-lockfile --ignore-scripts` |
+| `pnpm-lock.yaml` | The lock file. It has an integrity value for each of the 412 packages. Install with `pnpm install --frozen-lockfile --ignore-scripts` |
 | `kubb.config.mjs` | The configuration of Kubb: the input `../contracts/openapi.yaml`, the output `src/generated` (Kubb deletes the folder first), the plug-ins `@kubb/plugin-ts` (folder `types`) and `@kubb/plugin-zod` (folder `zod`). The option `barrel` of each plug-in is `false`. Each file has the text of Kubb at its start |
 | `generate.mjs` | The runner of Kubb. It uses `createKubb` of `@kubb/core` (`@kubb/core` is a direct dependency for this). It does not use the command `kubb generate`. The command makes one network request at each start. `createKubb` makes no network request. `just generate` starts the runner and sets `KUBB_DISABLE_TELEMETRY=1` and `DO_NOT_TRACK=1` |
 | `tsconfig.json` | The compiler options for `pnpm exec tsc --noEmit --strict` (`just compile`): `moduleResolution` `Bundler` (Kubb writes imports with no file extension) and `lib` `DOM` (Zod uses the type `URL`) |
@@ -21,6 +21,7 @@ This folder has the pnpm module and no product code. The folder has the Zod sche
 | `playwright.config.ts` | The configuration of Playwright for the normal run (headless, the folder `e2e/`, the folder `e2e/negative/` excluded, and the static server of `e2e/serve.mjs` as `webServer`) |
 | `playwright.config.negative.ts` | The configuration of Playwright for the case that is not successful (the folder `e2e/negative/`). The recipe `just test-e2e` runs it and stops for it |
 | `e2e/` | The end-to-end tests (the accessibility check of axe-core, REQ-007). `accessibility.spec.ts` is the normal run (the good page gives zero violations, the bad page gives the violations that axe reports), `negative/no-violations.spec.ts` is the case that is not successful, and `fixtures/` has the two HTML pages and `serve.mjs` (the static server on the loopback address that the `webServer` of the configs starts) |
+| `architecture/` | The architecture tools of the pnpm module (feat-7-verification-architecture-tools, Phase 130). `rules.mjs` is the case that is successful of the rules of ArchUniTS (R1' the module structure in the slice form, R2' the layer rule, R3' the imports rule; the recipe `architecture-frontend`), `rules.broken.mjs` is the case that is not successful (the violated rule, the recipe runs it separately and stops for it), and `compare.mjs` is the frontend side of the test that compares the workspace of `model/` with the units and the dependencies of the code (the recipe `architecture-model`) |
 
 The folder `node_modules/` (the install), `test-results/` and `playwright-report/` (the output of Playwright), and `mutation-report/` and `.stryker-tmp/` (the output of Stryker, Phase 120) are not in git.
 
@@ -37,6 +38,8 @@ just test-unit-frontend    # the unit tests of Vitest, and a test that is not su
 just test-random-frontend  # the property tests of fast-check, one that succeeds and one that is not successful
 just test-e2e              # the end-to-end tests of Playwright with the accessibility check of axe-core, and a test that is not successful
 just mutation-frontend     # the mutation tests of Stryker: the report, and the surviving mutants (Phase 120)
+just architecture-frontend # the architecture rules of ArchUniTS (the layers and the imports): the run is green, and the violated rule is named in the report (Phase 130)
+just architecture-model    # the test that compares the workspace of model/ with the code: the committed run is green, and the two conditions of ACC-003 are demonstrated in a temporary copy (Phase 130)
 ```
 
 The recipes install the module first (`pnpm install --frozen-lockfile --ignore-scripts`), and stop if an installed package has another version than the key of `tools/versions.env`. `just test-e2e` installs the chromium browser of the pinned version of `@playwright/test` in the user cache of the home (no right is necessary; if the browser of the version is in the cache, the install does not download it again).
@@ -45,7 +48,7 @@ Two starts of `just generate` one after the other make the same files. The files
 
 ## Change a version of a package of the module
 
-The version and the integrity value of each of the thirteen packages are in three files: `tools/versions.env` (the source), `package.json` and `pnpm-lock.yaml`. `just check-pins` stops if one file is not the same as the others.
+The version and the integrity value of each of the fourteen packages are in three files: `tools/versions.env` (the source), `package.json` and `pnpm-lock.yaml`. `just check-pins` stops if one file is not the same as the others.
 
 1. Examine the license of the new version and of its new dependencies first (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9). The SBOM gate (`just license-check`) examines the tree again.
 2. Change the version in `package.json` (the one value, and no range). Start `pnpm install --ignore-scripts` in this folder and make the new lock file with the pinned pnpm.
