@@ -54,11 +54,11 @@ The module has no BOM. `spring-boot-dependencies` and a Spring Boot starter are 
 
 `./mvnw dependency:tree` must not show `jakarta.annotation-api`. The two jars have the same package, and they must not be on the same class path.
 
-## The test tools (feat-7-verification-architecture-tools, Phase 110)
+## The test tools (feat-7-verification-architecture-tools, the phases 110 and 130)
 
 The test tools are in the `pom.xml` in the scope `test` (the property of each one is named there). `tools/versions.env` has the same versions, and `just check-pins` compares them. The license of each tool is in the license table of the plan of the feature: JUnit and jqwik are EPL-2.0 (the class Review), and the deviation of the owner is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted 2026-11-09). Testcontainers is MIT, and the JDBC driver is BSD-2-Clause. The scope `test` keeps the tools out of the SBOM (the default `includeTestScope=false` of the cyclonedx plug-in), so the tree of 12 components above is the tree of the module:
 
-| Tool | Version (2026-11-10) | The module has it for |
+| Tool | Version | The module has it for |
 |---|---|---|
 | `org.junit.jupiter:junit-jupiter` | 5.14.4 | The unit tests. The 5.x line and not the 6.x line: jqwik 1.10.2 needs the JUnit Platform 1.14.x |
 | `org.testcontainers:testcontainers`, `org.testcontainers:junit-jupiter`, `org.testcontainers:postgresql` | 1.21.4 | The integration tests (one container). The 1.21.x line: the `junit-jupiter` module has no 2.x release, and the core and the modules are the same line |

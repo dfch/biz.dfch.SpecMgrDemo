@@ -20,9 +20,13 @@ import org.springframework.modulith.core.ApplicationModules;
  * code that exists today). The module structure has no violation (no cycle, no unknown module).
  *
  * <p>The run of the rule is green on the committed code (ACC-002: the case that is successful). The
- * case that is not successful of Spring Modulith is the one of the recipe architecture-backend, part
- * 2 (a violated layer rule of ArchUnit, the rule of the tool that examines the layers in a module):
- * the recipe runs it separately and stops for it.
+ * case that is not successful of ArchUnit (the tool that examines the layers in a module) is the class
+ * {@code BrokenLayerRule} (no suffix {@code Test}, the violated layer rule): the recipe
+ * architecture-backend runs it in part 2 and stops for it. The case that is not successful of Spring
+ * Modulith is part 3 of the same recipe: in a temporary copy of the repository the copy has a new
+ * top-level package ({@code extra}), and the recipe runs this test in the copy
+ * ({@code -Dtest=ModuleStructureTest}) and stops for it: the run of the copy is red, and the report
+ * names the package {@code extra}.
  *
  * <p>The test does not start a Spring context: {@code ApplicationModules.of(...)} derives the modules
  * from the classes on the class path (the classes of the test itself are in the folder

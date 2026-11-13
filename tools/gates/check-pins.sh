@@ -47,12 +47,18 @@
 #   - the jar of the SBOM plugin (feat-6-contracts-openapi-pipeline, ACC-011): tools/sbom/cyclonedx-maven-plugin.sha256
 #     must have the value of CYCLONEDX_MAVEN_PLUGIN_SHA256 (part of the check of the cdxgen project, SBOM_TOOL_DIR).
 #
-#   - the test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110 and 120, ACC-011): the version of
-#     each test dependency (JUnit, Testcontainers, the JDBC driver, jqwik, and the plugin dependency
-#     pitest-junit5-plugin of the mutation tool PIT) and of the plugins (the test runner maven-surefire-plugin
-#     and the mutation tool pitest-maven) in each pom.xml must be the version of the key of the versions file
+#   - the test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110, 120, 130 and 140,
+#     ACC-011): the version of each test dependency (JUnit, Testcontainers, the JDBC driver, jqwik, the plugin
+#     dependency pitest-junit5-plugin of the mutation tool PIT, and the architecture tools
+#     spring-modulith-core, spring-boot, archunit and archunit-junit5 and structurizr-client) and of the
+#     plugins (the test runner maven-surefire-plugin, the mutation tool pitest-maven and the coverage tool
+#     jacoco-maven-plugin) in each pom.xml must be the version of the key of the versions file
 #     (JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
-#     MAVEN_SUREFIRE_PLUGIN_VERSION and PIT_VERSION).
+#     MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION,
+#     ARCHUNIT_VERSION, STRUCTURIZR_VERSION and JACOCO_VERSION). Each test dependency in the direct
+#     <dependencies> section of a pom.xml must have <scope>test</scope> (a scope that is absent is the default
+#     compile of Maven, and stops the check: the cyclonedx plugin keeps the test scope out of the SBOM; a
+#     plugin dependency has no scope and is no problem).
 #
 #   - the tie of the transitive package caniuse-lite (feat-7-verification-architecture-tools, Phase 120, the rule X1):
 #     frontend/pnpm-lock.yaml must resolve caniuse-lite to CANIUSE_LITE_VERSION of the versions file (the package is in

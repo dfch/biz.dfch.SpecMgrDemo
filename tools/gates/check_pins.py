@@ -187,6 +187,10 @@ below). The check is always on, and it fails closed. The script stops for each o
   * a pom.xml has one of the test dependencies (or the plugin) with a version that is not the version of
     tools/versions.env (the version can be a `${property}` of the same pom.xml), with no version, or with a version
     that this script cannot resolve;
+  * a test dependency in the direct `<dependencies>` section of a pom.xml has a `<scope>` that is not `test`, or has
+    no `<scope>` at all (the default of Maven is `compile`): the test tools must stay out of the SBOM (the cyclonedx
+    plugin has `includeTestScope`, the default false). A plugin dependency (for example pitest-junit5-plugin, the
+    JUnit5 support of PIT, in `<build><plugins>`) has no scope and is no problem;
   * a pom.xml cannot be read as XML.
 
 A pom.xml without the test tools is no problem for this check (as for the generator plugin). A change of only one of
@@ -1010,7 +1014,9 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
 
     A pom.xml that has none of the test tools is no problem for this check (as for the generator plugin). A test
     dependency (or the test runner plugin) that is there has the version of tools/versions.env (the version can be a
-    `${property}` of the same pom.xml).
+    `${property}` of the same pom.xml), and a test dependency in the direct `<dependencies>` section of the pom.xml
+    has `<scope>test</scope>` (a scope that is absent is the default compile of Maven, and stops the check; a plugin
+    dependency has no scope and is no problem).
     """
     label = "Maven test pins"
     problems: list[str] = []
@@ -1061,6 +1067,34 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
                     )
                 else:
                     checked.append(f"{pom}: {artifact} {version}")
+        # The scope of the test dependencies: a test tool in the direct <dependencies> section of the
+        # pom.xml must be in the scope test, so the cyclonedx plugin (includeTestScope, the default
+        # false) keeps it out of the SBOM. A scope that is absent is the default compile of Maven, and
+        # stops the check. A plugin dependency (for example pitest-junit5-plugin) is no test
+        # dependency of the module, has no scope, and is no problem.
+        dependencies_node = project.find(f"{POM_NAMESPACE}dependencies")
+        direct_dependencies = [child for child in dependencies_node] if dependencies_node is not None else []
+        for group, artifact, key in MAVEN_TEST_DEPENDENCIES:
+            for dependency in direct_dependencies:
+                if (
+                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
+                    or dependency.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                ):
+                    continue
+                scope = (dependency.findtext(f"{POM_NAMESPACE}scope", default="") or "").strip()
+                if scope == "test":
+                    continue
+                if scope:
+                    problems.append(
+                        f"{label}: {pom} has the dependency {artifact} with <scope>{scope}</scope>, but the test "
+                        "tools must be in the scope test (the cyclonedx plugin keeps the test scope out of the SBOM)"
+                    )
+                else:
+                    problems.append(
+                        f"{label}: {pom} has the dependency {artifact} with no <scope> (the default of Maven is "
+                        "compile), but the test tools must be in the scope test (the cyclonedx plugin keeps the "
+                        "test scope out of the SBOM)"
+                    )
         for group, artifact, key in MAVEN_TEST_PLUGINS:
             for plugin in project.iter(f"{POM_NAMESPACE}plugin"):
                 if (

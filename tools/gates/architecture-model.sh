@@ -99,34 +99,46 @@ frontend_comparison() {
     set -e
 }
 
-# mutate_workspace <workspace file> <mutation>: change the workspace of a copy of the repository
-# (the file of the copy only). The mutations are the two conditions of ACC-003, for the two
-# sides: component-backend-model (remove the component model of the container backend, and the
-# dependency that names it), component-frontend-zod (the same for the component zod of the
-# container frontend), relationship-backend-api-model (remove the dependency api -> model),
-# relationship-frontend-test-zod (remove the dependency test -> zod).
+# mutate_workspace <workspace file> <mutation JSON>: change the workspace of a copy of the
+# repository (the file of the copy only). The mutation is a small JSON object (the values are
+# the names of the elements of the workspace; the helper resolves them to the ids, and a name
+# that the workspace has not stops the helper): {"type": "component", "container": <the
+# container>, "name": <the component>} removes the component and the dependency that names it,
+# and {"type": "relationship", "container": <the container>, "sourceId": <the source component>,
+# "destinationId": <the destination component>} removes the dependency between the two
+# components (the relationships of the workspace are by id; the values of sourceId and
+# destinationId are the names, as in the recipe). The four mutations are the two conditions of
+# ACC-003, for the two sides: the component model of the container backend, the component zod
+# of the container frontend, the dependency api -> model, and the dependency test -> zod.
 mutate_workspace() {
     local file="$1" mutation="$2"
     uv run --no-project --quiet python - "${file}" "${mutation}" <<'PYEOF'
 import json
 import sys
 
-path, mutation = sys.argv[1], sys.argv[2]
+path, mutation_text = sys.argv[1], sys.argv[2]
+try:
+    mutation = json.loads(mutation_text)
+except ValueError as error:
+    sys.exit(f"the mutation is not a JSON object: {error}")
+if not isinstance(mutation, dict):
+    sys.exit(f"the mutation is not a JSON object: {mutation_text}")
 workspace = json.load(open(path, encoding="utf-8"))
 systems = workspace["model"]["softwareSystems"]
-if mutation.startswith("component-"):
-    container_name, component_name = mutation[len("component-"):].split("-", 1)
-elif mutation.startswith("relationship-"):
-    container_name, source_name, destination_name = mutation[len("relationship-"):].split("-")
-else:
-    sys.exit(f"unknown mutation {mutation}")
+kind = mutation.get("type")
+container_name = mutation.get("container")
+if kind not in ("component", "relationship") or not isinstance(container_name, str):
+    sys.exit(f"unknown mutation {mutation_text}")
 container = next(
     (c for s in systems for c in s.get("containers", []) if c.get("name") == container_name), None
 )
 if container is None:
     sys.exit(f"the workspace has no container {container_name}")
 components = container.get("components", [])
-if mutation.startswith("component-"):
+if kind == "component":
+    component_name = mutation.get("name")
+    if not isinstance(component_name, str):
+        sys.exit(f"unknown mutation {mutation_text}")
     target = next((c for c in components if c.get("name") == component_name), None)
     if target is None:
         sys.exit(f"the container {container_name} of the workspace has no component {component_name}")
@@ -142,6 +154,10 @@ if mutation.startswith("component-"):
     for component in container["components"]:
         component["relationships"] = drop(component.get("relationships"))
 else:
+    source_name = mutation.get("sourceId")
+    destination_name = mutation.get("destinationId")
+    if not isinstance(source_name, str) or not isinstance(destination_name, str):
+        sys.exit(f"unknown mutation {mutation_text}")
     ids = {c.get("name"): c.get("id") for c in components}
     if source_name not in ids or destination_name not in ids:
         sys.exit(
@@ -158,7 +174,7 @@ else:
         component["relationships"] = drop(component.get("relationships"))
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(workspace, handle, indent=2)
-print(f"mutated {path}: {mutation}")
+print(f"mutated {path}: {mutation_text}")
 PYEOF
 }
 
@@ -201,7 +217,8 @@ echo
 echo "== ACC-003 (a): a module or a package has no component in the model (a temporary copy of the repository)"
 echo "-- the backend side (the component model of the container backend is removed from the copy of the workspace)"
 copy_work_tree "${work}/a-backend"
-mutate_workspace "${work}/a-backend/model/workspace.json" component-backend-model
+mutate_workspace "${work}/a-backend/model/workspace.json" \
+    '{"type": "component", "container": "backend", "name": "model"}'
 backend_comparison "${work}/a-backend/backend" "${work}/a-backend/model/workspace.json"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the package biz.dfch.specmgrdemo.model has no component in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the package without a component"
@@ -214,7 +231,8 @@ else
 fi
 echo "-- the frontend side (the component zod of the container frontend is removed from the copy of the workspace)"
 copy_work_tree "${work}/a-frontend"
-mutate_workspace "${work}/a-frontend/model/workspace.json" component-frontend-zod
+mutate_workspace "${work}/a-frontend/model/workspace.json" \
+    '{"type": "component", "container": "frontend", "name": "zod"}'
 frontend_comparison "${work}/a-frontend/frontend" "${work}/a-frontend/model/workspace.json"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the unit zod of the frontend has no component in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the unit without a component"
@@ -230,7 +248,8 @@ echo
 echo "== ACC-003 (b): a dependency is not in the model (a temporary copy of the repository)"
 echo "-- the backend side (the dependency api -> model is removed from the copy of the workspace)"
 copy_work_tree "${work}/b-backend"
-mutate_workspace "${work}/b-backend/model/workspace.json" relationship-backend-api-model
+mutate_workspace "${work}/b-backend/model/workspace.json" \
+    '{"type": "relationship", "container": "backend", "sourceId": "api", "destinationId": "model"}'
 backend_comparison "${work}/b-backend/backend" "${work}/b-backend/model/workspace.json"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the dependency biz.dfch.specmgrdemo.api -> biz.dfch.specmgrdemo.model is not in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the dependency that is not in the model"
@@ -243,7 +262,8 @@ else
 fi
 echo "-- the frontend side (the dependency test -> zod is removed from the copy of the workspace)"
 copy_work_tree "${work}/b-frontend"
-mutate_workspace "${work}/b-frontend/model/workspace.json" relationship-frontend-test-zod
+mutate_workspace "${work}/b-frontend/model/workspace.json" \
+    '{"type": "relationship", "container": "frontend", "sourceId": "test", "destinationId": "zod"}'
 frontend_comparison "${work}/b-frontend/frontend" "${work}/b-frontend/model/workspace.json"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the dependency test -> zod of the frontend is not in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the dependency that is not in the model"

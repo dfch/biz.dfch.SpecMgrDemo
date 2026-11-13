@@ -13,11 +13,13 @@ export default defineConfig({
     headless: true,
   },
   // The same static server as the normal run (playwright.config.ts). Playwright starts the server,
-  // waits for the port, and stops it after the run.
+  // waits for the port, and stops it after the run. The port 8377 is the fixture port of both
+  // configs: a process that occupies it stops the run (reuseExistingServer is false, fail closed),
+  // and is not adopted.
   webServer: {
     command: 'node e2e/serve.mjs e2e/fixtures 8377',
     url: 'http://127.0.0.1:8377/good.html',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30000,
   },
 })

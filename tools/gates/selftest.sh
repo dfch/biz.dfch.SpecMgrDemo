@@ -1543,6 +1543,20 @@ test_pom_case unknownproperty 1 "is not a version or a <properties> value of the
     "s#<version>\${junit.version}</version>#<version>\${no.such.property}</version>#"
 test_pom_case range 1 "has the dependency junit-jupiter [5.14.0,6), but" "junit-jupiter: the version is a range" \
     "s#<version>\${junit.version}</version>#<version>[5.14.0,6)</version>#"
+# The scope of the test dependencies (the review finding I3): the test tools must stay out of the SBOM, so a
+# test dependency in the direct <dependencies> section of a pom.xml has <scope>test</scope>. A scope that is
+# absent (the default of Maven is compile) or another scope stops the check; a plugin dependency
+# (pitest-junit5-plugin, in <build><plugins>) has no scope and is no problem.
+test_pom_case noscope 1 "has the dependency junit-jupiter with no <scope> (the default of Maven is compile)" \
+    "junit-jupiter: the dependency has no <scope> (the default compile of Maven stops the check)" \
+    "/<artifactId>junit-jupiter<\/artifactId>/,/<\/dependency>/ s#<scope>test</scope>##"
+test_pom_case wrongscope 1 "has the dependency jqwik with <scope>compile</scope>" \
+    "jqwik: the dependency has another scope than test (compile stops the check)" \
+    "/<artifactId>jqwik<\/artifactId>/,/<\/dependency>/ s#<scope>test</scope>#<scope>compile</scope>#"
+dir="$(mk_test_root pluginscope)"
+expect 0 "Maven test pins: Maven test pins: backend/pom.xml: junit-jupiter ${junit_version}," \
+    "the plugin dependency pitest-junit5-plugin without a scope is no problem for the scope check (a copy of the real pom.xml, checked too: pitest-junit5-plugin $(version_of PIT_JUNIT5_PLUGIN_VERSION))" \
+    run_test_pins "${dir}"
 # A pom.xml with no test tool is no problem for this check (the group ids are other, and the plugin is other)
 dir="$(mk_test_root nodeps)"
 sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>#' \

@@ -32,13 +32,16 @@
 # asserts on: the counters of the report element are the totals over the class set (the
 # covered and the missed lines and branches).
 #
-# The script needs JDK 21 (the Maven Wrapper of the module) and the network for the first
+# The script needs JDK 21 (the Maven Wrapper of the module), uv (the Python of the numbers
+# step, the step that prints the counters of the XML report) and the network for the first
 # run (Maven Central, the plugin and its dependencies). It does not change the repository
 # (the build is in target/, it is in .gitignore). It stops (exit code 1) if the run does
 # not give the expected result.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
+
+require_cmd uv
 
 [[ $# -eq 1 ]] || die "Usage: coverage-backend.sh <backend dir>"
 backend_dir="$1"
