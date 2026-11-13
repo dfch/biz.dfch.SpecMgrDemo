@@ -63,6 +63,28 @@
 #        value of an OPTIONAL dependency of cdxgen does not stop the install: pnpm logs the error, does not
 #        install that package (it does not run), and returns exit code 0. A required package stops it.
 #        If no Node manifest is scanned, the script does not install (no network is necessary).
+#   X1   The exclusion of the pinned packages axe-core and caniuse-lite from the FRONTEND SBOM only
+#        (feat-7-verification-architecture-tools; axe-core: Phase 110, Task 110.120, caniuse-lite:
+#        Phase 120, Task 120.110): the two packages must not reach the SBOM. cdxgen includes the
+#        devDependencies and the tree of the pnpm module in the SBOM, and the license of each package is
+#        not in tools/license/permitted-licenses.txt:
+#        - axe-core (a devDependency of frontend/, the accessibility check of the end-to-end test):
+#          MPL-2.0, the class Review, with the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9
+#          (accepted 2026-11-09, the section axe-core of the register).
+#        - caniuse-lite (a transitive package of the mutation tool Stryker, the chain through the
+#          instrumenter of Stryker, Babel and browserslist): CC-BY-4.0, no class in DEC
+#          84c37f7d-08cb-457d-8ab3-1db37dba9bc9, with the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9
+#          (the section of 2026-11-11 of the register).
+#        The common ground: the tools do not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9),
+#        so the license of the tools is checked in the plan of the feature (the license table and the
+#        register of the deviations), and the packages must not reach the SBOM. cdxgen 12.9.0 has no
+#        package filter for a pnpm lock file (its `--exclude` is a file path pattern), so after
+#        cdxgen made the file, the script starts sbom_exclude.py with the name and the version of each
+#        pinned package (AXE_CORE_VERSION and CANIUSE_LITE_VERSION of tools/versions.env): the components
+#        of the pinned packages are removed from the SBOM, and a component with another version is NOT
+#        removed (fail closed, for each package: the license gate stops for it). The removal is logged.
+#        See tools/sbom/README.md (the section The exclusion of the pinned packages from the SBOM of the
+#        frontend) and the plan of feat-7 (the Result of the Phase 110 and the Result of the Phase 120).
 #
 # The versions and the checksums are in tools/versions.env (VERSIONS_FILE sets another file, for the
 # tests). The script does not change the system, except for the folder tools/sbom/node_modules (it is
@@ -210,6 +232,13 @@ if [[ ${node_scanned} -eq 1 ]]; then
         --output "${out_dir}/frontend.cdx.json" "$(cd frontend && pwd)"
     [[ -f "${out_dir}/frontend.cdx.json" ]] || die "cdxgen did not make ${out_dir}/frontend.cdx.json"
     log "Wrote ${out_dir}/frontend.cdx.json"
+    # X1: the exclusion of the pinned packages (the rule is in the header, the reason in tools/sbom/README.md).
+    # cdxgen has no package filter for a pnpm lock file, so the gate removes the pinned packages itself.
+    axe_core_version="$(version_of AXE_CORE_VERSION)"
+    caniuse_lite_version="$(version_of CANIUSE_LITE_VERSION)"
+    uv run --no-project --quiet python "${GATES_DIR}/sbom_exclude.py" \
+        "${out_dir}/frontend.cdx.json" "axe-core" "${axe_core_version}" "caniuse-lite" "${caniuse_lite_version}" \
+        || die "The exclusion of axe-core ${axe_core_version} and caniuse-lite ${caniuse_lite_version} from the frontend SBOM did not run (see above)."
     if [[ ${#node_manifests[@]} -gt 0 ]]; then # a lock file with no package.json declares nothing
         sbom_plausible node "${out_dir}/frontend.cdx.json" "${node_manifests[@]}"
     fi

@@ -6,7 +6,15 @@
 # feat-5-foundation-monorepo-ci, 110.115 is the task of feat-6-contracts-openapi-pipeline (the lint gate), and
 # 115.110 is the task of feat-6-contracts-openapi-pipeline (the gate for breaking changes), 120.120 and 120.130 are the
 # tasks of feat-6-contracts-openapi-pipeline (the generators and the API documentation), and 130.100 and 130.105 are tasks of
-# feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). The gate numbers of
+# feat-6-contracts-openapi-pipeline too (the gate for generated code, and the tests of the build gates). 110.100 to 110.130
+# are the tasks of feat-7-verification-architecture-tools (the test tools, the recipes test-unit-backend,
+# test-integration-backend, test-unit-frontend, test-e2e, test-random-backend and test-random-frontend),
+# 120.100 and 120.110 are the tasks of feat-7-verification-architecture-tools (the mutation tests, the recipes
+# mutation-backend and mutation-frontend), 130.100 to 130.120 are the tasks of
+# feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
+# architecture-frontend and architecture-model), and 140.110 is the task of
+# feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
+# coverage-frontend). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -108,6 +116,58 @@ test-generate-gate:
 # Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code and the build gates with their own tests too).
 test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates
     @{{ just_executable() }} _gate selftest.sh 130.145
+
+# Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
+test-unit-backend:
+    @{{ just_executable() }} _gate test-unit-backend.sh 110.100 backend
+
+# Test: the integration tests of the Maven module with Testcontainers (one container), and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
+test-integration-backend:
+    @{{ just_executable() }} _gate test-integration-backend.sh 110.100 backend
+
+# Test: the unit tests of the pnpm module with Vitest, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.110).
+test-unit-frontend:
+    @{{ just_executable() }} _gate test-unit-frontend.sh 110.110 frontend
+
+# Test: the end-to-end tests with Playwright and the accessibility check of axe-core, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.120).
+test-e2e:
+    @{{ just_executable() }} _gate test-e2e.sh 110.120 frontend
+
+# Test: the property tests of the Maven module with jqwik: one that is successful, and one that is not successful (feat-7-verification-architecture-tools, Task 110.130).
+test-random-backend:
+    @{{ just_executable() }} _gate test-random-backend.sh 110.130 backend
+
+# Test: the property tests of the pnpm module with fast-check: one that is successful, and one that is not successful (feat-7-verification-architecture-tools, Task 110.130).
+test-random-frontend:
+    @{{ just_executable() }} _gate test-random-frontend.sh 110.130 frontend
+
+# Test: the mutation tests of the Maven module with PIT: the run makes the report (HTML and XML in target/pit-reports), and the report has a surviving mutant (feat-7-verification-architecture-tools, Task 120.100).
+mutation-backend:
+    @{{ just_executable() }} _gate mutation-backend.sh 120.100 backend
+
+# Test: the mutation tests of the pnpm module with Stryker: the run makes the report (HTML and JSON in mutation-report/), and the report has a surviving mutant (feat-7-verification-architecture-tools, Task 120.110).
+mutation-frontend:
+    @{{ just_executable() }} _gate mutation-frontend.sh 120.110 frontend
+
+# Test: the architecture tests of the Maven module with Spring Modulith (R1, the module structure) and ArchUnit (R2, the layer rule): the run is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.100).
+architecture-backend:
+    @{{ just_executable() }} _gate architecture-backend.sh 130.100 backend
+
+# Test: the architecture tests of the pnpm module with ArchUniTS (the layers and the imports of the frontend): the run of the rules is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.110).
+architecture-frontend:
+    @{{ just_executable() }} _gate architecture-frontend.sh 130.110 frontend
+
+# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model) (feat-7-verification-architecture-tools, Task 130.120).
+architecture-model:
+    @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
+
+# Report: the coverage of the Maven module with JaCoCo (the line and the branch coverage, the report in target/site/jacoco, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
+coverage-backend:
+    @{{ just_executable() }} _gate coverage-backend.sh 140.110 backend
+
+# Report: the coverage of the pnpm module with the provider v8 of Vitest (the line coverage, the report in coverage/, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
+coverage-frontend:
+    @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

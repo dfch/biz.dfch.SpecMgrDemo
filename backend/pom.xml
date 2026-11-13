@@ -17,15 +17,97 @@
   verify_generator_plugin). The version of the plugin in this file and the version in tools/versions.env must
   be the same: `just check-pins` checks it.
 
-  The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
-     - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
-       with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
-       for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
-       the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
-       retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
-    - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
-      swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
--->
+   The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
+      - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
+        with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
+        for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
+        the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
+        retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
+     - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
+       swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+
+   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The module has no
+   product code, so the tests exercise the generated code (the example module). The license of each tool is in the
+   license table of the plan; the two tools of the class Review (JUnit and jqwik, both EPL-2.0) have the deviation
+   DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the register of the approved deviations, accepted 2026-11-09). Every
+   test tool is in <scope>test</scope>, so the cyclonedx plugin (includeTestScope, the default false) keeps them out
+   of the SBOM: the licenses that the SBOM gate checks are the ones of the main dependencies above.
+     - JUnit (org.junit.jupiter:junit-jupiter): the unit tests. The version is the one of tools/versions.env
+       (JUNIT_VERSION). The 5.x line and not the 6.x line: jqwik 1.10.2 needs the JUnit Platform 1.14.x, and the
+       engines of the two lines do not mix (the plan records the decision).
+     - Testcontainers (org.testcontainers:testcontainers and the module org.testcontainers:postgresql,
+       org.testcontainers:junit-jupiter): the integration tests (one lightweight container, postgres:16-alpine, the
+       PostgreSQL license; the driver org.postgresql:postgresql is BSD-2-Clause). The version is the one of
+       tools/versions.env (TESTCONTAINERS_VERSION, POSTGRESQL_VERSION). The 1.21.x line and not the 2.x core: the
+       junit-jupiter module has no 2.x release, and the core and the modules must be the same line (the plan records
+       the decision).
+     - jqwik (net.jqwik:jqwik, EPL-2.0, the deviation DEC above): the property tests. The version is the one of
+       tools/versions.env (JQWIK_VERSION).
+      - maven-surefire-plugin (the version in tools/versions.env, MAVEN_SUREFIRE_PLUGIN_VERSION): runs the tests of
+        the JUnit Platform (the JUnit engine and the jqwik engine).
+      - PIT (org.pitest:pitest-maven, the build plugin, and org.pitest:pitest-junit5-plugin, the JUnit5 support of
+        PIT as a dependency of the plugin): the mutation tests (the recipe mutation-backend). The versions are the
+        ones of tools/versions.env (PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION). The configuration restricts the run to
+        the generated model code (targetClasses) and to the unit tests of the generated code (targetTests, the class
+        that is not successful and the integration test are no target tests), and it makes the HTML and the XML
+        report in target/pit-reports (the folder is in .gitignore through target/). The plugin has no execution
+        bound to a phase: the recipe starts the goal mutationCoverage after the phase test-compile in one run of
+        ./mvnw (the generator execution of the phase generate-sources adds src/generated/java as a compile source
+        root; without the phase, the project has no compile source root, and the goal skips).
+       - JaCoCo (org.jacoco:jacoco-maven-plugin, the build plugin, EPL-2.0, the deviation DEC above): the coverage
+        of the module (the recipe coverage-backend). The version is the one of tools/versions.env (JACOCO_VERSION).
+        The plugin has no execution bound to a phase: the recipe starts the goals prepare-agent, the phase test
+        (the unit tests, the normal run of surefire) and report in one run of ./mvnw, as for the mutation tool
+        pitest-maven. prepare-agent sets the project property argLine, and the test runner maven-surefire-plugin
+        (that has no own argLine) passes it to the forked JVM. The report (HTML and XML) is in target/site/jacoco
+        (the folder is in .gitignore through target/). The configuration has no check goal and no rule: the recipe
+        makes a report and no threshold is set (REQ-006, the walking skeleton sets the threshold from the
+        measured baseline).
+
+    The architecture tools (feat-7-verification-architecture-tools, Phase 130, Tasks 130.100 and 130.120; DEC
+    9edc1071-4fd0-48b6-a037-1a4cb2331f73). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
+    out of the SBOM, as for the test tools above. The versions are the ones of tools/versions.env (SPRING_MODULITH_VERSION,
+    ARCHUNIT_VERSION and STRUCTURIZR_VERSION; just check-pins compares them, check_pins.py: check_maven_test_pins).
+      - Spring Modulith (org.springframework.modulith:spring-modulith-core): the module structure of the module
+        (R1, the recipe architecture-backend). The 1.4.x line and not the 2.x line: the core of the 2.x line (2.1.2,
+        the last general-availability release) has the dependencies spring-core and spring-context 7.0.9, and the
+        test support of the 2.x line (spring-modulith-test) has the Spring Boot 4 dependencies; the module has the
+        Spring Framework 6.2.19 line and no Spring Boot (the plan records the decision). The core of 1.4.14 has the
+        dependencies spring-core and spring-context 6.2.19, the same versions as the module, and it gives the
+        module structure assertions (ApplicationModules.of(...), verify(), detectViolations()); the JUnit test
+        starts them without a Spring context. The test support artifact of 1.4.14 (spring-modulith-test) is not in
+        the module: its annotation @ApplicationModuleTest boots a Spring context (the annotation is wired to
+        @SpringBootTest), and the module has no Spring Boot.
+      - Spring Boot (org.springframework.boot:spring-boot, the scope test): a dependency of the code of Spring
+        Modulith 1.4.14 that the POM of the artifact does not declare. The factory ApplicationModules.of(...) of
+        the core starts the lookup of the detection strategy
+        (org.springframework.modulith.core.ApplicationModuleDetectionStrategyLookup), and that lookup calls the
+        method applyTo of the class ConfigDataEnvironmentPostProcessor of this artifact in each start (a start
+        without the jar stops with the error NoClassDefFoundError). The version 3.5.16 is the one that the line
+        1.4.x of Spring Modulith has as its optional dependency (the POM of the core names 3.5.16 for
+        spring-boot-autoconfigure), and its dependencies are spring-core and spring-context 6.2.19, the same
+        versions as the module (no other jar enters the test class path). The module has no class of Spring Boot,
+        and no context of Spring Boot starts: the jar is in the scope test, and it stays out of the SBOM.
+      - ArchUnit (com.tngtech.archunit:archunit and archunit-junit5): the layer rule of the module (R2, the recipe
+        architecture-backend), and the source of the package dependencies of the comparison with the model (the
+        recipe architecture-model). The core of Spring Modulith has the dependency archunit 1.4.2; the module names
+        1.5.1, and the resolution of Maven gives 1.5.1 (the nearest dependency wins).
+      - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
+        (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The module has no product code
+        and no other reader of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
+        (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
+        module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
+        in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
+
+
+    The test classes are in src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and
+    120) and in src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of the phase 130: the
+    module structure R1, the layer rule R2 and the comparison with the model of the recipe architecture-model). A
+    class whose name has no suffix `Test` (or `IT` for the integration tests) is a case that is not successful
+    (ACC-002 of the plan): the default run of surefire does not start it, and the recipes run it separately and stop
+    for it (tools/gates/test-*-*.sh and tools/gates/architecture-*.sh). The suffix IT keeps the integration tests
+    out of the unit run.
+ -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -60,6 +142,30 @@
     <jakarta-validation.version>3.0.2</jakarta-validation.version>
     <jackson-annotations.version>2.21</jackson-annotations.version>
     <tomcat-annotations-api.version>10.1.61</tomcat-annotations-api.version>
+    <!-- The test tools (feat-7-verification-architecture-tools, Phase 110). Each version is the one of
+         tools/versions.env (just check-pins compares them). The scope of every test tool is test. -->
+    <junit.version>5.14.4</junit.version>
+    <testcontainers.version>1.21.4</testcontainers.version>
+    <postgresql.version>42.7.14</postgresql.version>
+    <jqwik.version>1.10.2</jqwik.version>
+    <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
+    <!-- The mutation tests (feat-7-verification-architecture-tools, Phase 120). Each version is the one of
+         tools/versions.env (just check-pins compares them). -->
+    <pitest.version>1.30.2</pitest.version>
+    <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
+    <!-- The architecture tools (feat-7-verification-architecture-tools, Phase 130). Each version is the one of
+          tools/versions.env (just check-pins compares them). The scope of every architecture tool is test.
+          Spring Modulith is the 1.4.x line and not the 2.x line (the 2.x line needs the Spring Framework 7 line,
+          the module has 6.2.19; see the header comment). -->
+    <spring-modulith.version>1.4.14</spring-modulith.version>
+    <!-- The Spring Boot jar that the code of Spring Modulith 1.4.14 needs for the module detection (see the
+         header comment). The 3.5.x line is the one of the Spring Framework 6.2.x line of the module. -->
+    <spring-boot.version>3.5.16</spring-boot.version>
+    <archunit.version>1.5.1</archunit.version>
+    <structurizr.version>6.2.4</structurizr.version>
+    <!-- The coverage (feat-7-verification-architecture-tools, Phase 140). The version is the one of
+         tools/versions.env (just check-pins compares it, check_pins.py: check_maven_test_pins). -->
+    <jacoco.version>0.8.16</jacoco.version>
 
     <!-- The files that the generators read and write, relative to the folder of this module. -->
     <contract.file>${project.basedir}/../contracts/openapi.yaml</contract.file>
@@ -102,10 +208,167 @@
       <version>${tomcat-annotations-api.version}</version>
       <scope>provided</scope>
     </dependency>
+    <!-- The test tools (the scope test keeps them out of the SBOM, see the header comment). -->
+    <!-- JUnit 5 (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9). The 5.x line: jqwik needs the
+         JUnit Platform 1.14.x. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Testcontainers (MIT): the core, the JUnit module and the PostgreSQL module, the 1.21.x line (see the header). -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- The JDBC driver of the container (BSD-2-Clause, test scope only: not in the SBOM). -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- jqwik (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9): the property tests. -->
+    <dependency>
+      <groupId>net.jqwik</groupId>
+      <artifactId>jqwik</artifactId>
+      <version>${jqwik.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- The architecture tools (feat-7-verification-architecture-tools, Phase 130; see the header comment). The
+         scope test keeps them out of the SBOM. -->
+    <!-- Spring Modulith (Apache-2.0): the module structure (R1). The 1.4.x line (the module has the Spring
+         Framework 6.2.19 line; the 2.x line needs the 7 line, the plan records the decision). -->
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-core</artifactId>
+      <version>${spring-modulith.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- The jar that the module detection of Spring Modulith 1.4.14 calls in each start (the class
+         ConfigDataEnvironmentPostProcessor; see the header comment). Its dependencies are spring-core and
+         spring-context 6.2.19, the versions of the module. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot</artifactId>
+      <version>${spring-boot.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- ArchUnit (Apache-2.0, the bundled OW2 ASM is BSD-3-Clause): the layer rule (R2) and the package
+         dependencies of the comparison with the model. -->
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit</artifactId>
+      <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- structurizr-client (Apache-2.0): the reader of the workspace of model/ (the JSON reader and the model
+         classes). The comparison test of the recipe architecture-model (Task 130.120). -->
+    <dependency>
+      <groupId>com.structurizr</groupId>
+      <artifactId>structurizr-client</artifactId>
+      <version>${structurizr.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <!-- The test runner (feat-7-verification-architecture-tools, Phase 110). The version is the one of
+           tools/versions.env (MAVEN_SUREFIRE_PLUGIN_VERSION). The default includes of surefire (Test*, *Test,
+           *Tests, *TestCase) keep the cases that are not successful (the classes without a suffix, see the header)
+           out of the unit run. The tests of the JUnit Platform (the JUnit engine and the jqwik engine) are found
+           without further configuration. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+      </plugin>
+       <!-- The mutation tests (feat-7-verification-architecture-tools, Phase 120, Task 120.100). No execution is
+            bound to a phase: the recipe mutation-backend starts the goal after the phase test-compile in one run
+            of ./mvnw (./mvnw test-compile org.pitest:pitest-maven:<PIT_VERSION>:mutationCoverage
+            -Dcodegen.skip=true). The phase is necessary: the generator execution of the phase generate-sources
+            adds src/generated/java as a compile source root, and the goal skips a project with no compile source
+            root. PIT mutates the compiled classes of the module (target/classes, the generated code; the module
+            has no product code) and runs the target tests on each mutant.
+           The configuration keeps the run small and deterministic (the plan records it, Result of the Phase 120):
+           - targetClasses: the generated model code only. The package biz.dfch.specmgrdemo.api has the interface
+             StatusApi, and an interface has no bytecode with logic, so there is no mutant in it.
+           - targetTests: the unit tests of the generated code only. The class that is not successful (no suffix
+             Test) and the integration test (the suffix IT, it needs the Docker daemon) are no target tests.
+            - outputFormats: the HTML report (the default folder target/pit-reports) and the XML report
+              (mutations.xml, the deterministic source the recipe asserts on for the surviving mutants).
+           The JUnit5 support of PIT (the JUnit engine of the JUnit Platform and the jqwik engine) is the plugin
+           dependency pitest-junit5-plugin: pitest-maven loads the test framework plugins from its own classpath,
+           and not from the test classpath of the module. -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>${pitest.version}</version>
+        <configuration>
+          <targetClasses>
+            <param>biz.dfch.specmgrdemo.model.*</param>
+          </targetClasses>
+          <targetTests>
+            <param>biz.dfch.specmgrdemo.testtools.ErrorCodeTest</param>
+            <param>biz.dfch.specmgrdemo.testtools.ErrorCodePropertyTest</param>
+          </targetTests>
+          <outputFormats>
+            <outputFormat>HTML</outputFormat>
+            <outputFormat>XML</outputFormat>
+          </outputFormats>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>${pitest-junit5-plugin.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+       <!-- The coverage (feat-7-verification-architecture-tools, Phase 140, Task 140.110). No execution is
+            bound to a phase: the recipe coverage-backend starts the goals prepare-agent, the phase test and
+            report in one run of ./mvnw (the same way as pitest-maven, see above). The goal prepare-agent sets
+            the project property argLine before the phase test runs, and the test runner
+            maven-surefire-plugin (that has no own argLine configuration) passes it to the forked JVM. The
+            goal report reads the execution data (target/jacoco.exec) and makes the report in
+            target/site/jacoco (the HTML report index.html and the XML report jacoco.xml, the parameter
+            formats; the folder is in .gitignore through target/). The XML report is the deterministic
+            source that the recipe asserts on (the counters of the report element). The configuration has
+            no check goal and no rule: the recipe makes a report and no threshold is set (REQ-006). The
+            version is the one of tools/versions.env (JACOCO_VERSION, just check-pins compares it). -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <formats>
+            <format>XML</format>
+            <format>HTML</format>
+          </formats>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>

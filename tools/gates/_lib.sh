@@ -277,7 +277,10 @@ install_frontend() {
         || die "pnpm install --frozen-lockfile --ignore-scripts failed in ${frontend_dir} (see above). Nothing was generated."
     local entry package key want installed
     for entry in kubb:KUBB_VERSION @kubb/core:KUBB_VERSION @kubb/plugin-zod:KUBB_PLUGIN_ZOD_VERSION \
-        @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION; do
+        @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION \
+        vitest:VITEST_VERSION @playwright/test:PLAYWRIGHT_VERSION axe-core:AXE_CORE_VERSION fast-check:FAST_CHECK_VERSION \
+        vite:VITE_VERSION @stryker-mutator/core:STRYKER_VERSION @stryker-mutator/vitest-runner:STRYKER_VITEST_RUNNER_VERSION \
+        archunit:ARCHUNIT_TS_VERSION @vitest/coverage-v8:VITEST_COVERAGE_V8_VERSION; do
         package="${entry%%:*}" key="${entry##*:}"
         want="$(version_of "${key}")"
         installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \
@@ -285,5 +288,5 @@ install_frontend() {
         [[ "${installed}" == "${want}" ]] \
             || die "The installed ${package} has the version '${installed}', but ${key} in ${VERSIONS_FILE} is '${want}'."
     done
-    log "The installed Kubb, Zod and TypeScript have the versions of tools/versions.env"
+    log "The installed Kubb, Zod, TypeScript and the test tools have the versions of tools/versions.env"
 }

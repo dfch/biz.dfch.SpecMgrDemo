@@ -18,6 +18,13 @@
 #     api-docs (Task 130.110). The job api-docs keeps the HTML as an artifact, and has no `if:`. The jobs that
 #     need Java, Node or pnpm have the setup actions with the versions of tools/versions.env. The owner makes
 #     the new jobs required checks of the rulesets (phase 135 of feat-6).
+#   - feat-7-verification-architecture-tools added the jobs test-unit-backend, test-integration-backend,
+#     test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend,
+#     mutation-frontend, architecture-backend, architecture-frontend and architecture-model (Task 140.100).
+#     The tools run as a report without a threshold (the DEC about verification: the walking skeleton sets the
+#     threshold from the baseline of the plan): no artifact upload (the reports are console reports), and no
+#     `if:`. The checkouts have no `fetch-depth: 0` (the recipes need no base branch and no history). The
+#     owner makes the new jobs required checks of the rulesets (an open item of the plan).
 
 name: CI
 
@@ -272,6 +279,224 @@ jobs:
           path: build/api-docs/
           if-no-files-found: error
           retention-days: 90
+
+  # The jobs of feat-7-verification-architecture-tools (Task 140.100, ACC-001): each starts one recipe of the
+  # tools of this feature, as a report without a threshold (the walking skeleton sets the threshold from the
+  # baseline of the plan). The reports are console reports: no artifact upload, and no `if:` (an open item of
+  # the plan: the owner may want the HTML reports as artifacts later). The checkouts have no `fetch-depth: 0`
+  # (the recipes need no base branch). The versions of the setup actions are the ones of tools/versions.env
+  # (just check-pins compares them).
+  # Unit tests of the Maven module (JUnit, the property tests of jqwik and the architecture tests are in the
+  # normal run of surefire). The recipe needs JDK 21 (the Maven Wrapper) and the network for the first run
+  # (Maven Central).
+  test-unit-backend:
+    name: test-unit-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just test-unit-backend
+
+  # Integration tests of the Maven module (Testcontainers, one container postgres:16-alpine). The runner has
+  # Docker (the recipe needs the Docker daemon and pulls the image; the timeout is the long one for it).
+  test-integration-backend:
+    name: test-integration-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just test-integration-backend
+
+  # Unit tests of the pnpm module (Vitest). The recipe needs Node and pnpm (the frozen install from the lock
+  # file) and the network for the first run (the npm registry).
+  test-unit-frontend:
+    name: test-unit-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just test-unit-frontend
+
+  # End-to-end tests with Playwright and the accessibility check of axe-core. The recipe downloads the
+  # chromium browser for the pinned version into the user cache of the runner (no right is necessary, about
+  # 126 MB on a fresh runner - the timeout is the long one for the download), and starts it headless (the
+  # runner image has the shared libraries of a headless chromium; the first real run of the job is the
+  # verification, an open item of the plan).
+  test-e2e:
+    name: test-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just test-e2e
+
+  # The property tests of the Maven module with jqwik (the engine of the JUnit Platform). Same needs as
+  # test-unit-backend.
+  test-random-backend:
+    name: test-random-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just test-random-backend
+
+  # The property tests of the pnpm module with fast-check. Same needs as test-unit-frontend.
+  test-random-frontend:
+    name: test-random-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just test-random-frontend
+
+  # The mutation tests of the Maven module with PIT (the report in target/pit-reports, the console summary of
+  # the run). Same needs as test-unit-backend.
+  mutation-backend:
+    name: mutation-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just mutation-backend
+
+  # The mutation tests of the pnpm module with Stryker (the report in mutation-report/, the console summary of
+  # the run). Same needs as test-unit-frontend.
+  mutation-frontend:
+    name: mutation-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just mutation-frontend
+
+  # The architecture tests of the Maven module with Spring Modulith and ArchUnit (the report on the console).
+  # Same needs as test-unit-backend.
+  architecture-backend:
+    name: architecture-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - run: just architecture-backend
+
+  # The architecture tests of the pnpm module with ArchUniTS (the report on the console). Same needs as
+  # test-unit-frontend.
+  architecture-frontend:
+    name: architecture-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just architecture-frontend
+
+  # The test that compares the Structurizr workspace with the modules, the packages and the dependencies. The
+  # recipe needs JDK 21 (the Maven Wrapper, the side of the backend), Node and pnpm (the side of the frontend)
+  # and uv (the script mutates the workspace of the temporary copies of the repository with a Python script,
+  # `uv run --no-project`). The run makes two copies of the repository and two runs of Maven in them (the
+  # warm run on the machine of the author is about 23 seconds; the timeout is 15 minutes).
+  architecture-model:
+    name: architecture-model
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just architecture-model
 
   # The tests of the gates themselves: the license gate with its fixtures, and the other
   # gates with good and bad input.

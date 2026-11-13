@@ -57,6 +57,39 @@ When the owner sets the jobs: add the five names to the `contexts` of the call a
 
 `compile` and `check-generated` must be added as required checks **together**: `compile` alone does not stop a broken committed generated Java file, because the Maven build makes the Java code again (from `contracts/openapi.yaml`) before it compiles it, and `check-generated` stops the same file (it compares the committed code with a new generation, before and after the build).
 
+#### Jobs that feat-7-verification-architecture-tools added (not set yet)
+
+These eleven jobs are in `.github/workflows/ci.yml` since phase 140 of feat-7 (Task 140.100, 2026-11-12), and
+`tools/gates/required-setup.txt` has a line for each. They run the verification tools of feat-7 (unit and
+integration tests, end-to-end tests with the accessibility check, mutation tests, property tests with random
+data, architecture tests, and the comparison of the Structurizr workspace with the code). The tools operate as
+a report without a threshold (the DEC 361678a6: no gate must stop a pull request before the walking skeleton
+obeys it; the walking skeleton sets each threshold - the coverage and the mutation score - from the baseline
+measured in the plan of feat-7): a red test or a failed run stops the job, but a low coverage or a low mutation
+score does not. They are not set as required checks in the rulesets yet: the column "Set" of this table says No
+for each row, and the owner sets them (as in phase 135 of feat-6) when the first run of the jobs is green. The
+first real run of the jobs is with the push of feat-7 (the agent cannot run GitHub CI from the machine; the
+static checks `just check-workflows` and `just check-pins` pass - an open item of the plan of feat-7).
+
+| Check (job) | Recipe | What it stops | Gate in DEC 361678a6 | Set in the rulesets of `dev` and `main` |
+|---|---|---|---|---|
+| `test-unit-backend` | `just test-unit-backend` | A unit test of the Maven module that is red (JUnit, the property tests of jqwik and the architecture tests are in the normal run of surefire) | 6 (the tests part; the threshold for the coverage is the walking skeleton) | No (the owner sets it, an open item of feat-7) |
+| `test-integration-backend` | `just test-integration-backend` | An integration test of the Maven module that is red (Testcontainers, one container postgres:16-alpine; the runner has Docker) | 6 (the tests part) | No (the owner sets it, an open item of feat-7) |
+| `test-unit-frontend` | `just test-unit-frontend` | A unit test of the pnpm module that is red (Vitest) | 6 (the tests part) | No (the owner sets it, an open item of feat-7) |
+| `test-e2e` | `just test-e2e` | An end-to-end test that is red, or a violation of the accessibility check (Playwright with the chromium browser, and axe-core; the recipe downloads the browser on the fresh runner) | 8 | No (the owner sets it, an open item of feat-7) |
+| `test-random-backend` | `just test-random-backend` | A property test of the Maven module that is red (jqwik, the engine of the JUnit Platform) | 6 (the tests part) | No (the owner sets it, an open item of feat-7) |
+| `test-random-frontend` | `just test-random-frontend` | A property test of the pnpm module that is red (fast-check) | 6 (the tests part) | No (the owner sets it, an open item of feat-7) |
+| `mutation-backend` | `just mutation-backend` | A run of the mutation tool PIT that fails (the report is a console report and in target/pit-reports; a surviving mutant does not stop the job - no threshold for the mutation score, that is the walking skeleton) | 7 (the tool part; the threshold is the walking skeleton) | No (the owner sets it, an open item of feat-7) |
+| `mutation-frontend` | `just mutation-frontend` | A run of the mutation tool Stryker that fails (the report is a console report and in mutation-report/; a surviving mutant does not stop the job - no threshold for the mutation score, that is the walking skeleton) | 7 (the tool part; the threshold is the walking skeleton) | No (the owner sets it, an open item of feat-7) |
+| `architecture-backend` | `just architecture-backend` | An architecture rule of the Maven module that is violated (Spring Modulith: the module structure; ArchUnit: the layer rule) | 5 | No (the owner sets it, an open item of feat-7) |
+| `architecture-frontend` | `just architecture-frontend` | An architecture rule of the pnpm module that is violated (ArchUniTS: the module structure in the slice form, the layers, and the imports) | 5 | No (the owner sets it, an open item of feat-7) |
+| `architecture-model` | `just architecture-model` | A comparison of the Structurizr workspace with the code that is not successful (a package or a unit without a component in the model, or a dependency that is not in the model) | 5 (the comparison of the model) | No (the owner sets it, an open item of feat-7) |
+
+When the owner sets the jobs: add the eleven names to the `contexts` of the call above, and to the
+`required_status_checks` of the ruleset JSON for `main` and of the real ruleset of `dev` (id 26472506). GitHub
+shows a check in the list only after it ran once in the last 7 days, so open a pull request first - the first
+real run of these jobs is with the push of the feature (an open item of the plan of feat-7).
+
 ## Steps in the web page
 
 1. Open the repository on GitHub. Go to Settings, Branches (or Settings, Rules, Rulesets).
@@ -280,10 +313,10 @@ allowed actions, and the version file.
 | 2. Traceability check | None. GitHub issue #8 is for it | No feature yet. The owner makes a FEAT later |
 | 3. Linter and check for breaking changes of the OpenAPI file | feat-6-contracts-openapi-pipeline | Jobs `lint` and `breaking-changes` exist in `ci.yml` (phase 130). They are required checks in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
 | 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline | Job `check-generated` exists in `ci.yml` (phase 130). It is a required check in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
-| 5. Architecture tests | feat-7-verification-architecture-tools (expected) | Not started |
-| 6. Unit tests and integration tests with a threshold for coverage | feat-7 (tools) and the walking skeleton (thresholds) (expected) | Not started |
-| 7. Threshold for the mutation score | feat-7 (tools) and the walking skeleton (thresholds) (expected) | Not started |
-| 8. End-to-end tests with an accessibility check | feat-7 (tools) and the walking skeleton (expected) | Not started |
+| 5. Architecture tests | feat-7-verification-architecture-tools | Jobs `architecture-backend`, `architecture-frontend` and `architecture-model` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold). They are not set as required checks in the rulesets of `dev` and `main` yet (the owner sets them, an open item of feat-7) |
+| 6. Unit tests and integration tests with a threshold for coverage | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `test-unit-backend` and `test-integration-backend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the coverage is the walking skeleton). They are not set as required checks in the rulesets of `dev` and `main` yet (the owner sets them, an open item of feat-7) |
+| 7. Threshold for the mutation score | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `mutation-backend` and `mutation-frontend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the mutation score is the walking skeleton). They are not set as required checks in the rulesets of `dev` and `main` yet (the owner sets them, an open item of feat-7) |
+| 8. End-to-end tests with an accessibility check | feat-7 (tools) and the walking skeleton (the feature is not yet created) | Job `test-e2e` (with the accessibility check of axe-core) exists in `ci.yml` (phase 140 of feat-7, as a report without a threshold). It is not set as a required check in the rulesets of `dev` and `main` yet (the owner sets it, an open item of feat-7) |
 | 9. Security checks (the SBOM part is in `license-check`) | None. GitHub issue #8 is for it | No feature yet. The owner makes a FEAT later |
 
   Gates 2 and 9 have no feature. The branch protection of this version cannot have them. Until a
