@@ -12,21 +12,25 @@
 # playwright does not download it again (the install is idempotent).
 #
 # Part 1, the case that is successful: the run of the end-to-end tests (`pnpm exec playwright
-# test`, the config playwright.config.ts, headless, no display). The tests open the HTML fixtures of
-# the folder e2e/fixtures/ (the config starts the static server of e2e/serve.mjs on the loopback
-# address, waits for the port, and stops it after the run; no server of the script is necessary).
-# The accessibility check uses the package axe-core directly: the test reads the source of
-# axe.min.js from node_modules (and not a wrapper package, the license table names axe-core),
-# injects it into the page, and runs axe. The good page gives zero violations, and the bad page
-# (an image without alt, and a text with low contrast) gives the violations that axe reports
-# (the rules image-alt and color-contrast). The run is green (exit code 0), and the summary of
-# playwright has a passed test and no failed one.
+# test --reporter=line`, the config playwright.config.ts, headless, no display). The reporter line
+# is forced on both runs: the default reporter of Playwright in CI (no TTY) prints no title for a
+# passed test, and the titles are what the recipe asserts on (the first real run of the job on
+# GitHub, PR 46, 2026-11-13, was red for this assertion only; the reporter line is stable in TTY
+# and in CI). The tests open the HTML fixtures of the folder e2e/fixtures/ (the config starts the
+# static server of e2e/serve.mjs on the loopback address, waits for the port, and stops it after
+# the run; no server of the script is necessary). The accessibility check uses the package axe-core
+# directly: the test reads the source of axe.min.js from node_modules (and not a wrapper package,
+# the license table names axe-core), injects it into the page, and runs axe. The good page gives
+# zero violations, and the bad page (an image without alt, and a text with low contrast) gives the
+# violations that axe reports (the rules image-alt and color-contrast). The run is green (exit code
+# 0), and the summary of playwright has a passed test and no failed one.
 #
 # Part 2, the case that is not successful (ACC-002): the spec of the folder e2e/negative/ expects
 # no violations on the page with violations. The config of part 1 does not start the folder, so
 # the committed run is green. The script runs the spec with the config playwright.config.negative.ts
-# and stops for it: axe-core reports the violations of the page, the test of Playwright fails (exit
-# code not 0), and the output names the violations.
+# and the reporter line (the same reason as part 1) and stops for it: axe-core reports the
+# violations of the page, the test of Playwright fails (exit code not 0), and the output names the
+# violations.
 #
 # The script needs Node and pnpm (install_frontend in _lib.sh installs the module from the lock file
 # with `pnpm install --frozen-lockfile --ignore-scripts`, and stops if an installed package has
@@ -75,7 +79,7 @@ fi
 echo
 echo "== the case that is successful (Playwright and axe-core)"
 set +e
-run_output="$(pnpm exec playwright test 2>&1)"
+run_output="$(pnpm exec playwright test --reporter=line 2>&1)"
 run_code=$?
 set -e
 if [[ ${run_code} -ne 0 ]]; then
@@ -103,7 +107,7 @@ fi
 echo
 echo "== the case that is not successful (ACC-002)"
 set +e
-run_output="$(pnpm exec playwright test --config playwright.config.negative.ts 2>&1)"
+run_output="$(pnpm exec playwright test --config playwright.config.negative.ts --reporter=line 2>&1)"
 run_code=$?
 set -e
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the bad page has no violations"* && "${run_output}" == *"image-alt"* && "${run_output}" == *"color-contrast"* ]]; then
