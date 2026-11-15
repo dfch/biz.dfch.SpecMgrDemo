@@ -4,7 +4,7 @@ created: '2026-11-03T07:54:08.480+01:00'
 id: feat-7-verification-architecture-tools
 status: review
 type: feat
-updated: '2026-11-15T05:48:27.627+01:00'
+updated: '2026-11-15T06:41:48.547+01:00'
 version: 1.0.0
 ---
 
@@ -404,8 +404,8 @@ The open items for the owner and the review (the first run of the jobs is the ve
 
 - The real run of the jobs: closed on 2026-11-15 with the run of the push of `5d6da82` (the run 43676184131 of 2026-11-15): the first real run of the eleven jobs on GitHub (PR 46, 2026-11-13) was green for ten, the job test-e2e was red for the title assertion of the recipe (the fix is the forced reporter line of 2026-11-13 in `tools/gates/test-e2e.sh`, see the Updates), and the run is green for all eleven jobs of the feature, the job test-e2e among them (29 s, the forced reporter line operates on the runner). The item is closed with this evidence.
 - The shared libraries of chromium: closed on 2026-11-13 with the first real run of the job on the runner of GitHub (PR 46): the headless chromium started on the runner, and the tests of the job ran green (the libraries of the image are sufficient, and no workaround is necessary). The first real run of the other ten jobs was green too. (The red of the job test-e2e in that run was not the libraries: the e2e tests passed on the runner, and the red was the title assertion of the recipe, fixed in `tools/gates/test-e2e.sh`, see the Updates.)
-- The required checks: the owner sets the eleven jobs as required checks of the rulesets of `dev` and `main` (the table of branch-protection.md, the column "Set"; GitHub shows a check in the list only after it ran once in the last 7 days, so the push of the feature first).
-- The artifacts: the reports of the new jobs are console reports (no artifact upload, no `if:`). If the owner wants the HTML reports (target/pit-reports of PIT, mutation-report/ of Stryker, target/site/jacoco of JaCoCo, and coverage/ of the provider of Vitest) as artifacts of the jobs, it is a change of the workflow and of required-setup.txt (the action actions/upload-artifact, the step with the `if:` of the SBOM upload as the form that the gate allows): a decision of the owner.
+- The required checks: closed on 2026-11-15: the owner set the eleven jobs as required checks of the rulesets of `dev` and `main` (the eleven jobs ran in the last 7 days of the runs of PR 46, and were selectable for that reason). The table of branch-protection.md (the section of the jobs of this feature) has the column "Set" = Yes for the eleven rows, and the merge of a pull request to `dev` or to `main` needs the eleven checks green from this round.
+- The artifacts: decided on 2026-11-15: the reports of the jobs stay as console reports (no artifact upload, no `if:`), and the form of the workflow of the phase 140 is unchanged. If the HTML reports (target/pit-reports of PIT, mutation-report/ of Stryker, target/site/jacoco of JaCoCo, and coverage/ of the provider of Vitest) are wanted as artifacts of the jobs later, it is a change of the workflow and of required-setup.txt (the action actions/upload-artifact, the step with the `if:` of the SBOM upload as the form that the gate allows).
 
 The coverage (Task 140.110, REQ-006): the tools run as a report, and no threshold is set anywhere (the proof is below). The walking skeleton sets the threshold from the measured baseline (the decision is below; the recipe is local, no CI job of the coverage in this feature, the interpretation of ACC-001 is below).
 
@@ -514,7 +514,7 @@ The evidence (the runs of 2026-11-12, the exit code of each recipe is 0):
 
 ### Current Status
 
-**As of 2026-11-15**: the work of the feature is complete (the phases 100 to 140 are done and committed; the status of the feature is review). The second post-implementation review (the agent feat-reviewer, 2026-11-14) found no error and no gap: its findings D1 (the record of the total of the self-test) and I1 (the display of the surviving mutant of the two recipes of the mutation, the reader that exits early on a live pipe) are fixed, its finding I2 (the observation of the output of jqwik, the flag hideAntiAiClause of the engine) stays the decision of the owner, the record of the round is in the Updates, and the CI run of 2026-11-15 (the run 43676184131 of the push of `5d6da82`) is green for the eleven jobs of the feature (the job test-e2e with the forced reporter line included, the open item of the green run is closed, the evidence is in the Result of the Phase 140 and in the Updates). The current total of the self-test is 987 ok, 0 failed (`just test-gates`, the run of 2026-11-14). The six acceptance criteria are ticked with the pointers above. What the owner examines in the review (the task 150.100): the license table (21 rows, the evidence in the Result of the Phase 100), the result of the ArchUniTS examination and the verdict for RSK 025202ba (the Result of the Phase 130), and the open items of the Result of the Phase 140 (the setting of the eleven jobs as required checks in the rulesets, the possible artifacts of the HTML reports, and the observation about the output of jqwik that asks an agent to disregard the results — the engine has a flag hideAntiAiClause; a version or a tool decision is for the owner).
+**As of 2026-11-15**: the work of the feature is complete (the phases 100 to 140 are done and committed; the status of the feature is review). The second post-implementation review (the agent feat-reviewer, 2026-11-14) found no error and no gap: its findings D1 (the record of the total of the self-test) and I1 (the display of the surviving mutant of the two recipes of the mutation, the reader that exits early on a live pipe) are fixed, its finding I2 (the observation of the output of jqwik, the flag hideAntiAiClause of the engine) is decided with the default (the pinned jqwik stays), the record of the round is in the Updates, and the CI run of 2026-11-15 (the run 43676184131 of the push of `5d6da82`) is green for the eleven jobs of the feature (the job test-e2e with the forced reporter line included, the open item of the green run is closed, the evidence is in the Result of the Phase 140 and in the Updates). The current total of the self-test is 987 ok, 0 failed (`just test-gates`, the run of 2026-11-14). The six acceptance criteria are ticked with the pointers above. The open items of the Result of the Phase 140 are closed (the required checks are set by the owner of 2026-11-15, and the decisions of the owner of 2026-11-15 keep the console reports and the pinned jqwik; the record is in the Updates). What the owner examines in the review (the task 150.100): the license table (21 rows, the evidence in the Result of the Phase 100) and the result of the ArchUniTS examination and the verdict for RSK 025202ba (the Result of the Phase 130); the merge of the pull request is after the examination.
 
 ### Blockers
 
@@ -523,6 +523,12 @@ None.
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 05:25:17.000Z - The owner closes the open items of the review: the required checks are set, and the decisions of the artifacts and of jqwik are the default
+
+- The required checks: the owner set the eleven jobs of the feature as required checks of the rulesets of `dev` and `main` (2026-11-15; the table of branch-protection.md has the column "Set" = Yes for the eleven rows, the heading of the section is "(required)", the rows 5 to 8 of the gate table of "Points that need your attention" say the jobs are required checks (2026-11-15), and the merge of a pull request to `dev` or to `main` needs the eleven checks green from this round).
+- The artifacts: the owner decides the default (2026-11-15): the reports of the jobs stay as console reports (no artifact upload, no change of the form of the workflow); the item of the Result of the Phase 140 is closed.
+- The observation of jqwik (the finding I2 of the second review of 2026-11-14): the owner decides the default (2026-11-15): the pinned jqwik (1.10.2) stays (no flag hideAntiAiClause, no version change); the observation stays in the Result of the Phase 110 as the record.
 
 #### 2026-11-15 04:46:55.000Z - The CI run after the push of the fix round (the run 43676184131 of 2026-11-15): the eleven jobs of the feature are green, and the open item of the green run of test-e2e is closed
 
@@ -564,9 +570,9 @@ The handover for the next session (the open items, one list):
 
 - The first real run of the eleven jobs of the CI with the push: done (PR 46, 2026-11-13), green for ten, the job test-e2e red for the title assertion of the recipe (the fix is in `tools/gates/test-e2e.sh`), and the green run of the job test-e2e after the fix is verified by the run 43676184131 of 2026-11-15 (green for all eleven jobs of the feature, the job test-e2e in 29 s; the evidence is in the Result of the Phase 140 and in the Updates).
 - The shared libraries of chromium on the runner of GitHub for the job test-e2e: closed (PR 46, 2026-11-13), the first real run of the job started the headless chromium and the tests ran green on the runner (the first real run of the other ten jobs was green too; the item of the Result of the Phase 140 is closed with the evidence).
-- The setting of the eleven jobs as required checks of the rulesets of `dev` and `main` (the table of branch-protection.md, the column Set = No).
-- The possible artifacts of the HTML reports of the jobs (the change of the workflow and of required-setup.txt, a decision of the owner).
-- The observation about the output of jqwik that asks an agent to disregard the results (the engine has the flag hideAntiAiClause; a version or a tool decision is for the owner; the observation is in the Result of the Phase 110).
+- The setting of the eleven jobs as required checks of the rulesets of `dev` and `main`: done (2026-11-15; the table of branch-protection.md, the column Set = Yes for the eleven rows).
+- The possible artifacts of the HTML reports of the jobs: decided (2026-11-15): the reports stay as console reports (no change of the workflow and of required-setup.txt).
+- The observation about the output of jqwik that asks an agent to disregard the results: decided (2026-11-15): the pinned jqwik stays (no flag hideAntiAiClause, no version change); the observation stays in the Result of the Phase 110 as the record.
 
 #### 2026-11-12 23:45:00.000Z - The ACC-002 walk found the case that is not successful of Spring Modulith; the fix is part 3 of the recipe architecture-backend
 
