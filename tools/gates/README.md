@@ -138,6 +138,31 @@ No action is new: all are in `tools/license/allowed-actions.txt`. The timeouts a
 each job, and 30 for the two jobs with the long download or the container (`test-integration-backend`
 pulls the image of the container, and `test-e2e` downloads the browser on the fresh runner).
 
+## The CI jobs of `feat-8-traceability-security-gates`
+
+The four jobs `traceability`, `vuln-scan`, `secret-scan` and `workflow-scan` (Task 140.100) are in
+`.github/workflows/ci.yml`, and each has a line in `required-setup.txt`, as the jobs of feat-5, feat-6 and feat-7. Each
+job has the name of its recipe and starts only `just <recipe>`. The workflow has `on: pull_request` and
+`permissions: contents: read` only, and the four jobs do not change this (`just check-workflows` checks it). All four
+checkouts have `persist-credentials: false`. `traceability` is Gate 2 and stops the pull request for an error (exit code 1).
+The three others are the reports of Gate 9: a finding does not stop the job, a failure of the tool does (see "The security
+gates (Gate 9)"). CodeQL has no job: it is the hosted default setup of GitHub (REQ-006), so the gate `check-workflows` does
+not change. The jobs are not required checks in the rulesets yet. The owner sets them with the steps in
+`branch-protection.md` in the folder of feat-5 (the section for the jobs of feat-8). That file also has the decision of the
+owner about a report that is a required check.
+
+| Job (= recipe) | Actions (with `actions/checkout` and `extractions/setup-just`) | `fetch-depth: 0` | Timeout | The cause |
+|---|---|---|---|---|
+| `traceability` | `astral-sh/setup-uv` | No | 10 | The script runs in the hash-locked environment of specmgr (`uv`), reads files only, and needs no history |
+| `vuln-scan` | `astral-sh/setup-uv`, `actions/setup-java`, `actions/setup-node`, `pnpm/action-setup` | Yes (as `license-check`) | 30 | The recipe makes the SBOM files first (`sbom`: Maven Wrapper, cdxgen, `uv`), downloads OSV-Scanner (a sha256 is compared), and asks `api.osv.dev`. This is the job that uses the network, so it has the long timeout of the SBOM jobs |
+| `secret-scan` | None | Yes | 10 | The recipe scans the range `<base>..HEAD` and stops for a shallow clone that has no merge base |
+| `workflow-scan` | `astral-sh/setup-uv` | No | 10 | zizmor comes from the lock file `tools/python/zizmor.lock` (`--offline`, no network at the run) |
+
+No action is new: all are in `tools/license/allowed-actions.txt`, and the inputs (the versions of the setup actions) are the
+same as in the other jobs (`just check-pins` compares them with `tools/versions.env`). The first real run of the jobs is the
+CI run of the pull request of the feature (the agent cannot run GitHub CI from the machine; `just check-workflows`,
+`just check-pins` and `just check-sudo` pass).
+
 ## The gate for generated code
 
 `just check-generated` (`check-generated.sh`, test: `test-check-generated-gate.sh`, ACC-004 and ACC-009 of feat-6). The folders are `<backend dir>/src/generated` and `<frontend dir>/src/generated`. The folders are committed.
@@ -213,7 +238,8 @@ of a later threshold with a baseline file are in `tools/security/README.md`. `ju
 (a finding with exit code 0, and a failure of the tool with exit code 1) for each tool, with stubs and with the real tools
 (ACC-005). CodeQL, the fourth security tool, is the hosted default setup of GitHub and has no recipe.
 
-The recipes are not in the CI workflow yet (Phase 140 of the plan adds the four jobs and the lines of `required-setup.txt`).
+The four CI jobs (`traceability`, `vuln-scan`, `secret-scan` and `workflow-scan`) are in `.github/workflows/ci.yml` since
+Phase 140 of the plan. See "The CI jobs of `feat-8-traceability-security-gates`" below. CodeQL has no job (no workflow file).
 
 ## Rules of the review of feat-5
 

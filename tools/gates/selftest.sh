@@ -467,8 +467,8 @@ expect 2 "has no job" "required-setup.txt has no job" run_real_wf "${work}/wf-re
 printf 'ci.yml validate\nci.yml validate\n' >"${work}/required-twice.txt"
 expect 2 "is twice in the file" "required-setup.txt has a job twice" run_real_wf "${work}/wf-real" "${work}/required-twice.txt"
 expect 2 "cannot read" "required-setup.txt does not exist" run_real_wf "${work}/wf-real" "${work}/no-such-required.txt"
-# the data file of the repository is the one that the workflow needs: each of the 23 jobs is in it
-expect 0 "23 run step(s)" "required-setup.txt of the repository has the 23 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, and 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model)" run_real_wf "${work}/wf-real"
+# the data file of the repository is the one that the workflow needs: each of the 27 jobs is in it
+expect 0 "27 run step(s)" "required-setup.txt of the repository has the 27 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model, and 4 of feat-8: traceability, vuln-scan, secret-scan, workflow-scan)" run_real_wf "${work}/wf-real"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh (Task 130.142)"

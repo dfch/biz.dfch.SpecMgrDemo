@@ -4,7 +4,7 @@ created: '2026-11-03T07:53:33.591+01:00'
 id: feat-5-foundation-monorepo-ci
 status: done
 type: feat
-updated: '2026-11-03T22:23:58.483+01:00'
+updated: '2026-11-15T12:42:15.670+01:00'
 version: 1.0.0
 ---
 
@@ -318,6 +318,18 @@ The JDK, Maven and Node are build and run tools. None of them goes to users. The
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 13:15:00.000Z - Record only: gates 2 and 9 now have the feature feat-8-traceability-security-gates
+
+This entry is a record. The agent did not change the earlier text of this plan. The time of this entry is the local time with the letter Z, as for the entries of feat-8.
+
+The sentences above and below (Out of Scope, Design Notes, Blockers, and the entries of Updates) say that the traceability gate and the security checks (gates 2 and 9 of DEC 361678a6-f941-473b-a058-1ba2bacf7d3d) have no feature at this time, and that the owner makes a FEAT for GitHub issue #8 later. This was correct when it was written. It is not correct now: the feature feat-8-traceability-security-gates (GitHub issue #8) gives both gates.
+
+1. Gate 2: the recipe `just traceability` (the check of the references, of `x-specmgr-req`, of the identifiers in the model and in the tests, and of an approved REQ that has no VCR).
+2. Gate 9: the recipes `just vuln-scan` (OSV-Scanner), `just secret-scan` (gitleaks) and `just workflow-scan` (zizmor), as reports with no threshold, and CodeQL as the hosted default setup of GitHub. CodeQL has no recipe and no CI job. This is an exception to REQ-002 and REQ-009 of this plan (a gate is a recipe that runs on the machine of a developer). The deviation is in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9.
+3. CI: `.github/workflows/ci.yml` has the four jobs `traceability`, `vuln-scan`, `secret-scan` and `workflow-scan` (one `run:` step each), and `tools/gates/required-setup.txt` has a line for each (Task 140.100 of feat-8). The gates `check-workflows`, `check-pins` and `check-sudo` pass for them.
+4. Branch protection: `branch-protection.md` in the folder of this feature has the four jobs (the table, the entry for gates 2 and 9, the statement of the exception for CodeQL) and the steps for the owner (the required checks of the rulesets of `dev` and `main`, the Dependabot alerts and the secret scanning for the patterns that are not of a provider). The four jobs are not required checks until the owner does these steps.
+5. The open items of this plan that name gates 2 and 9 (the Blockers, the Design Notes, and item 5 of the handoff) are therefore resolved by feat-8. The status of this plan (`done`) does not change.
 
 #### 2026-11-03 21:23:19.000Z - Handoff at the end of the third session (replaces the second handoff)
 

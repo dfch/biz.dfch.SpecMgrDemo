@@ -20,6 +20,10 @@ The security tools run as **reports with no threshold** (REQ-005). The owner tur
 CodeQL is the fourth security tool. It is the hosted default setup of GitHub and has no recipe and no file in the
 repository (see the plan, Phase 130, and the deviation in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9).
 
+The CI jobs have the names of the recipes (`vuln-scan`, `secret-scan`, `workflow-scan`, and `traceability` for Gate 2). The
+job `vuln-scan` uses the network and has the timeout of 30 minutes. CodeQL has no job (no workflow file). The owner adds the
+check names to the rulesets (`branch-protection.md` in the folder of feat-5-foundation-monorepo-ci).
+
 ## A finding and a failure of the tool
 
 A report with no finding and a tool that did not run look the same to a reader, so the recipes keep the two cases apart.
