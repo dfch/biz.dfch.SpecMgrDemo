@@ -1,0 +1,5 @@
+"""A reader whose function has another form: one more parameter (a self-test of tools/gates/traceability.py, ACC-004)."""
+
+
+def find_references(text, kinds):
+    return []

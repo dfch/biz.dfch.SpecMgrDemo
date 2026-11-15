@@ -46,6 +46,16 @@ The recipes install the module first (`pnpm install --frozen-lockfile --ignore-s
 
 Two starts of `just generate` one after the other make the same files. The files have no time value, no version of Kubb and no path of the machine (REQ-011, ACC-013). The schema of the list of error codes is in the file `src/generated/zod/errorCodeSchema.ts` (the value `errorCodeSchema`). `just test-generate-gate` compares its `.options` with the list in the OpenAPI file and with the Java enum (ACC-008).
 
+## The identifier of the VCR in the name of a test
+
+A test that verifies a requirement has the identifier of its VCR document in its title: the text `vcr:<uuid>` in the title of `describe`, `it` or `test` of Vitest and Playwright (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, `feat-8-traceability-security-gates`).
+
+```ts
+describe('the status schema vcr:00000000-0000-4000-8000-000000000000', () => { ... })
+```
+
+The recipe `just traceability` reads the files `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts` and `.cts` in `src/test/` and in `e2e/` (not `node_modules`). A `vcr:<uuid>` after a quote character counts, and a line that starts with a comment mark is not read. The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test title. The check does not read the report of the test run. No test has a `vcr:` today, because the only REQ has the status `draft` and no VCR. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
+
 ## Change a version of a package of the module
 
 The version and the integrity value of each of the fifteen packages are in three files: `tools/versions.env` (the source), `package.json` and `pnpm-lock.yaml`. `just check-pins` stops if one file is not the same as the others.

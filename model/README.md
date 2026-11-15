@@ -52,3 +52,22 @@ describe the code, and the code must obey the model).
 The dependency of the container level `frontend` -> `backend` is in the workspace as the model of the project (the
 frontend consumes the API of the backend), and it is not compared by the two sides (the comparison is on the level of
 the packages of the module and of the units of the frontend).
+
+## The property `specmgr-req` (traceability)
+
+An element of the workspace has the identifier of its REQ document in the property `specmgr-req` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, `feat-8-traceability-security-gates`). The value is one identifier, or a list of identifiers that the character comma separates:
+
+```json
+"properties" : {
+  "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0"
+}
+```
+
+A property of Structurizr is a text, so the list is one text (`"<uuid>,<uuid>"`; a space after the comma is allowed). Each identifier must be the identifier of a REQ document in `docs/req/`. The recipe `just traceability` reads the property from each software system, container and component of the workspace:
+
+- **Error** (the gate stops): an identifier that is not the identifier of a REQ document, or a value that is not an identifier.
+- **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-req`.
+
+The element of a requirement is the component that makes it. The component `api` has the identifier of the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`). Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.
+
+The comparison tests (`just architecture-model`) accept the key `properties` of a software system, a container and a component, and they do not use its values. The side of the backend (structurizr-java) reads the key. The side of the frontend (`frontend/architecture/compare.mjs`) accepts the key, and stops if its value is not a map of texts.

@@ -1,0 +1,5 @@
+"""A reader module that has no function find_references (a self-test of tools/gates/traceability.py, ACC-004)."""
+
+
+def read_references(text):
+    return []

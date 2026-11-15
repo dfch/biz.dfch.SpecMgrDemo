@@ -1,0 +1,5 @@
+"""A reader whose function raises an error (a self-test of tools/gates/traceability.py, ACC-004)."""
+
+
+def find_references(text):
+    raise RuntimeError("the reader is broken")

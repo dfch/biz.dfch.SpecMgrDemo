@@ -14,7 +14,8 @@
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
 # architecture-frontend and architecture-model), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
-# coverage-frontend). The gate numbers of
+# coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
+# traceability check: the recipes traceability and test-traceability-gate). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -113,8 +114,8 @@ test-build-gates:
 test-generate-gate:
     @{{ just_executable() }} _gate test-generate-gate.sh 120.120
 
-# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code and the build gates with their own tests too).
-test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates
+# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code, the build gates and the traceability check with their own tests too).
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
@@ -168,6 +169,14 @@ coverage-backend:
 # Report: the coverage of the pnpm module with the provider v8 of Vitest (the line coverage, the report in coverage/, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
 coverage-frontend:
     @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
+
+# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, and for an approved REQ with no VCR. It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
+traceability:
+    @{{ just_executable() }} _gate traceability.sh 110.130 .
+
+# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, and a reader of references with another form (ACC-004) (feat-8-traceability-security-gates, Task 110.150).
+test-traceability-gate:
+    @{{ just_executable() }} _gate test-traceability-gate.sh 110.150
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

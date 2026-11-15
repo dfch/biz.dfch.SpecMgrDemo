@@ -4,7 +4,7 @@ created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
 status: planning
 type: feat
-updated: '2026-11-15T09:44:07.312+01:00'
+updated: '2026-11-15T11:32:54.940+01:00'
 version: 1.0.0
 ---
 
@@ -86,7 +86,7 @@ The security tools are OSV-Scanner (known vulnerabilities in the dependencies, f
 
 - GitHub issue #23 (the pinning of the dependencies of `cyclonedx-maven-plugin`), issue #31 (the cost of pull requests for documents) and issue #45 (the Python environment of the self-test).
 
-- The VCR and the SYSRS entry of REQ 1ca335d7-969a-443e-9392-165fdeea99a0 (steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519), and new REQ documents. The owner decides in Task 110.100 if the feature adds them.
+- The VCR and the SYSRS entry of REQ 1ca335d7-969a-443e-9392-165fdeea99a0 (steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519), and new REQ documents. The owner decided in Task 110.100 (2026-11-15) that the feature adds neither the VCR nor the SYSRS entry.
 
 - The change of the check levels from warning to error for the links of the model and the tests.
 
@@ -218,19 +218,19 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 
 #### Phase 110: Gate 2, the Traceability Check
 
-- [ ] Task 110.100: Read the VCR document structure and the REQ status values. Define "an approved REQ has a VCR" with these (the link between a VCR and a REQ), and ask the owner if the feature adds the VCR and the SYSRS entry for REQ 1ca335d7-969a-443e-9392-165fdeea99a0 as a positive example. Do not assume the answer
+- [x] Task 110.100: Read the VCR document structure and the REQ status values. Define "an approved REQ has a VCR" with these (the link between a VCR and a REQ), and ask the owner if the feature adds the VCR and the SYSRS entry for REQ 1ca335d7-969a-443e-9392-165fdeea99a0 as a positive example. Do not assume the answer. Done on 2026-11-15: an approved REQ is a REQ with the status `accepted` or `implemented`, and the VCR of a REQ is a VCR whose section `## Verifies` has the reference `REQ <uuid>` of the REQ (see the Decisions Made). The owner answered that the feature adds neither the VCR nor the SYSRS entry (the positive case is shown by the fixtures only)
 
-- [ ] Task 110.110: Write the script of the traceability check. It runs in the hash-locked environment of specmgr, imports `find_references` and applies the table of checks of the Design Notes. It prints each finding with the file and the rule, and the warnings apart from the errors
+- [x] Task 110.110: Write the script of the traceability check. It runs in the hash-locked environment of specmgr, imports `find_references` and applies the table of checks of the Design Notes. It prints each finding with the file and the rule, and the warnings apart from the errors. Done on 2026-11-15: `tools/gates/traceability.py` (the checks) and `tools/gates/traceability.sh` (the hash-locked environment). It examines the form of `find_references` before each run (exit code 2 if it is not the expected form)
 
-- [ ] Task 110.120: Write the reader of the identifiers in the Structurizr workspace (`specmgr-req`) and in the test sources (`vcr:<uuid>`) for the backend and the frontend
+- [x] Task 110.120: Write the reader of the identifiers in the Structurizr workspace (`specmgr-req`) and in the test sources (`vcr:<uuid>`) for the backend and the frontend. Done on 2026-11-15: the functions `read_model` and `read_tests` in `tools/gates/traceability.py`. The tests are the `.java` and `.kt` files in `backend/src/test/`, and the TypeScript and JavaScript files in `frontend/src/test/` and `frontend/e2e/`
 
-- [ ] Task 110.130: Write the recipe and the gate script in `tools/gates/` in the form of the other gates. Fix the recipe names of Phase 120 and of the CI jobs
+- [x] Task 110.130: Write the recipe and the gate script in `tools/gates/` in the form of the other gates. Fix the recipe names of Phase 120 and of the CI jobs. Done on 2026-11-15: the recipe `traceability` (script `traceability.sh`, number 110.130) and the recipe `test-traceability-gate`. The names for the next phases do not change: `vuln-scan`, `secret-scan` and `workflow-scan`, and the CI jobs have the names of the recipes (`traceability`, `vuln-scan`, `secret-scan`, `workflow-scan`). The CI workflow and `required-setup.txt` are not changed (Phase 140)
 
-- [ ] Task 110.140: Add the property `specmgr-req` to the component of `model/workspace.json` that the REQ 1ca335d7-969a-443e-9392-165fdeea99a0 needs. Run the architecture tests of feat-7-verification-architecture-tools (`just architecture-model`) to show that the property does not break the comparison
+- [x] Task 110.140: Add the property `specmgr-req` to the component of `model/workspace.json` that the REQ 1ca335d7-969a-443e-9392-165fdeea99a0 needs. Run the architecture tests of feat-7-verification-architecture-tools (`just architecture-model`) to show that the property does not break the comparison. Done on 2026-11-15: the component `api` has the property. The first run of `just architecture-model` showed that the frontend side (`frontend/architecture/compare.mjs`, a strict reader) stopped for the key `properties`, so the script accepts the key now (see the Decisions Made). The run is green after that change (6 ok, 0 failed)
 
-- [ ] Task 110.150: Write the fixtures and the self-test: each case of ACC-002 and ACC-003, the case that is successful, and the test of ACC-004 (the function of the reader). Add the self-test to `just test-gates`
+- [x] Task 110.150: Write the fixtures and the self-test: each case of ACC-002 and ACC-003, the case that is successful, and the test of ACC-004 (the function of the reader). Add the self-test to `just test-gates`. Done on 2026-11-15: `tools/gates/test-traceability-gate.sh` (45 cases) with `tools/gates/fixtures/traceability/` and `tools/gates/fixtures/traceability-reader/`. The recipe `test-traceability-gate` is a prerequisite of `test-gates`
 
-- [ ] Task 110.160: Write the conventions (`specmgr-req` and `vcr:<uuid>`) and the check levels in `tools/gates/README.md` and in the READMEs of `model/` and of the tests. Tell the owner that DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 does not have them
+- [x] Task 110.160: Write the conventions (`specmgr-req` and `vcr:<uuid>`) and the check levels in `tools/gates/README.md` and in the READMEs of `model/` and of the tests. Tell the owner that DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 does not have them. Done on 2026-11-15: the section "The traceability check (Gate 2)" in `tools/gates/README.md`, and the sections in `model/README.md`, `backend/README.md` and `frontend/README.md`. The DEC is not changed. The notice for the owner is in the Blockers and in the entry of Updates of 2026-11-15 11:35
 
 #### Phase 120: Gate 9, the Security Recipes
 
@@ -284,7 +284,11 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 
 **Update 2026-11-15 (Task 100.130)**: The owner decided on option (a): a deviation for the OSV data. The dated section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" and an entry of Updates are in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the one-time permission of the owner; no other change, the status is not changed). The row of the license table has the result Review, and Task 100.130 is done. No row of the license table has the result open. Task 100.160 stays open: the owner has not yet reviewed the whole table. The conditions of the deviation apply to Phase 120 (`vuln-scan`): a report only, the repository has counts and finding identifiers only, the attribution is kept (the README of the security gates), no copy of the records, and no use of the option `--licenses` of OSV-Scanner.
 
+**Update 2026-11-15 (Phase 110)**: Phase 110 is done (Tasks 110.100 to 110.160). The recipe `just traceability` (Gate 2) and its test `just test-traceability-gate` exist, and the test is a part of `just test-gates`. The real repository passes (the only REQ has the status `draft`, no VCR is needed, and all 193 unique references of the 58 document files have a target). The component `api` of `model/workspace.json` has the property `specmgr-req` with the identifier of the REQ "The System Gives Its Status". The CI workflow and `required-setup.txt` are not changed (Phase 140). The next step is Phase 120 (the security recipes).
+
 ### Blockers
+
+- The conventions `specmgr-req` (the property of an element of the model) and `vcr:<uuid>` (the text in the name of a test) are not in DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342. The DEC says only "a `properties` entry" for the model and "the name or an annotation" for a test. The conventions are now in `tools/gates/README.md`, `model/README.md`, `backend/README.md`, `frontend/README.md` and in this plan. The agent did not change the DEC. The owner decides if the conventions go into More Information of the DEC (this needs a one-time permission), and if the annotation stays an option (the check reads the name only). The same for the definition of an "approved REQ" (the status `accepted` or `implemented`): the DEC says "an approved REQ" and the REQ has no status `approved`.
 
 - The owner must review the whole license table and the deviation texts of CodeQL and of the OSV data (Task 100.160). Both deviations are written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. For CodeQL, the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security). For the OSV data, the agent did not read the terms of Google for the service or the license texts of the single sources, and it cannot exclude a record with the license CC-BY-SA 4.0 or CC-BY-NC-ND 4.0 from an ecosystem that the project does not have. A person who has competence in the law has not examined either section.
 
@@ -292,11 +296,22 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 
 - GitHub issue #31 (the cost of pull requests for documents) is not decided. It can change which gates run for a pull request that has only documents.
 
-- The conventions `specmgr-req` and `vcr:<uuid>` are not in DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342. The owner decides if they go into the DEC (Task 110.160).
-
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 11:35:00.000Z - Phase 110: Gate 2, the traceability check
+
+The agent did Tasks 110.100 to 110.160. The time of this entry is the local time with the letter Z, as for the earlier entries.
+
+1. Definitions (Task 110.100): the REQ model has the statuses `draft`, `proposed`, `accepted`, `superseded`, `deprecated`, `rejected` and `implemented` (no `approved`), and the VCR model has `draft`, `progress`, `complete` and `approved`. A VCR has exactly one link, the section `## Verifies` (`REQ <uuid>: <title>` or `UC <uuid>: <title>`). The check defines "an approved REQ has a VCR" this way: an approved REQ is a REQ with the status `accepted` or `implemented`, and a VCR of a REQ is a VCR whose section `## Verifies` has the reference `REQ <uuid>` of this REQ (any VCR status). The owner answered the question about the positive example: the feature adds neither the VCR nor the SYSRS entry for REQ 1ca335d7-969a-443e-9392-165fdeea99a0. The positive case is shown by the fixtures only.
+2. The check (Tasks 110.110, 110.120): `tools/gates/traceability.py` and `tools/gates/traceability.sh`. The rules are `reference-has-no-target`, `openapi-req-not-found`, `model-id-has-no-document`, `test-vcr-has-no-document` and `approved-req-has-no-vcr` (errors, exit code 1), and `approved-req-has-no-model-element` and `approved-req-vcr-not-in-test` (warnings, exit code 0). The output has the warnings and the errors as two parts, and each finding has the file (with the line if there is one) and the rule. Exit code 2 is for an input that cannot be read, and for a reader of references with another form. The script imports `find_references` of the pinned specmgr and has no second copy of the syntax of the references. It examines the form of the function before each run (the parameter `text`, and the pairs for a probe text).
+3. Recipes and names (Task 110.130): `just traceability` (`traceability.sh`, 110.130) and `just test-traceability-gate` (`test-traceability-gate.sh`, 110.150). The recipe names of the next phases and the names of the CI jobs do not change: `vuln-scan`, `secret-scan`, `workflow-scan` and `traceability`. The CI workflow and `required-setup.txt` are not changed (Phase 140).
+4. Model (Task 110.140): the component `api` of `model/workspace.json` has `"specmgr-req": "1ca335d7-969a-443e-9392-165fdeea99a0"`. The first run of `just architecture-model` was not green: the backend side (structurizr-java) read the key, but the frontend side (`frontend/architecture/compare.mjs`, a strict reader) stopped for the key `properties` (exit code 2, and the four steps of ACC-003 that use the frontend were not successful). The agent changed `compare.mjs`: the software system, the container and the component can have the key `properties` (a map of texts, and the script stops if the value is not a map of texts), and the script does not use the values. The second run was green (6 ok, 0 failed).
+5. Fixtures and self-test (Task 110.150): `tools/gates/test-traceability-gate.sh` has 45 cases. The case that is successful, the five errors of ACC-002 (a reference with no target: a REQ, a FEAT and an identifier of another type; an `x-specmgr-req` that is not a REQ: no document and a DEC; an identifier in the model with no document: no document and a VCR; a `vcr:<uuid>` with no document in the backend, in the frontend and in the end-to-end tests; an approved REQ with no VCR, with the status `implemented` and `accepted`), the two warnings of ACC-003 (exit code 0), the other statuses of a REQ (no error), the input that cannot be read (exit code 2), and the form of the reader (ACC-004: no function, another parameter, another result, another case of the type, an error, a module that does not exist). It also runs the entry `traceability.sh` on the real repository.
+6. Conventions (Task 110.160): the sections are in `tools/gates/README.md`, `model/README.md`, `backend/README.md` and `frontend/README.md`. The agent also changed one sentence in `contracts/README.md` (it said that GitHub issue #8 has the check of the `x-specmgr-req`) and one sentence in `tools/README.md`. DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 does not have the conventions `specmgr-req` and `vcr:<uuid>`, and not the definition of an approved REQ. The agent did not change the DEC. This is the notice for the owner (see the Blockers).
+7. The real run: `just traceability` passes (58 document files, 193 unique references, all have a target, 1 REQ with the status `draft`, 0 VCR, 1 identifier in the OpenAPI file, 1 in the model, 0 in the tests, no warning). The check found no reference in the repository that has no target, so no reference is excluded.
+8. The agent changed no setting of the repository, no workflow, no DEC and not `required-setup.txt`. The changes are not committed.
 
 #### 2026-11-15 09:44:00.000Z - Task 100.130: the owner accepts a deviation for the OSV data, and the section is in the register DEC
 
@@ -333,6 +348,17 @@ The agent wrote the plan after the planning session of 2026-11-15. The agent rea
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 11:35:00.000Z - Phase 110: the definition of an approved REQ, the answer about the VCR and the SYSRS entry, and the details of the check
+
+1. **An approved REQ** is a REQ with the status `accepted` or `implemented`. The REQ model has no status `approved`, and DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 says "an approved REQ". `accepted` is the status that says that a person accepted the requirement, and `implemented` is the status after it. The statuses `draft` and `proposed` are not accepted, and `superseded`, `deprecated` and `rejected` are not valid requirements any more. The owner can change the set in `APPROVED_REQ_STATUSES` of `tools/gates/traceability.py`. This is a decision of the agent that the owner has not reviewed.
+2. **The VCR of a REQ** is a VCR whose section `## Verifies` has the reference `REQ <uuid>` of the REQ. This is the only link that the VCR model has. Any VCR status counts (`draft`, `progress`, `complete`, `approved`), because the plan says "has a VCR". The owner can ask for a stronger rule (for example a VCR with the status `approved`) when the first approved REQ exists.
+3. **The VCR and the SYSRS entry for REQ 1ca335d7-969a-443e-9392-165fdeea99a0**: the owner decided on 2026-11-15 that the feature adds neither. The REQ keeps the status `draft`, and the positive case of the check is shown by the fixtures only. The steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519 stay for the feature for the walking skeleton.
+4. **Recipe names and CI jobs**: `traceability`, `vuln-scan`, `secret-scan` and `workflow-scan`, as the plan said. No reason to change them was found. The self-test is the recipe `test-traceability-gate`, a prerequisite of `test-gates`.
+5. **The model**: the property `specmgr-req` is read from each object of the `model` of the workspace (a software system, a container, a component), and each identifier must be the identifier of a REQ document (the key is named for the REQ, so the identifier of another document type is an error with the same rule). The agent changed `frontend/architecture/compare.mjs` to accept the key `properties`, because the strict reader of feat-7-verification-architecture-tools stopped for it. The change does not compare the values.
+6. **The tests**: one regular expression for all languages (`vcr:<uuid>`), read in the `.java` and `.kt` files of `backend/src/test/` and in the TypeScript and JavaScript files of `frontend/src/test/` and `frontend/e2e/`. The text counts if a quote character is before it in the line and the line is not a comment line. The check reads the text of the source and not the report of the test run. A `vcr:` text with no UUID is not read.
+7. **The input**: a file or a folder that the check needs and that does not exist (`contracts/openapi.yaml`, `model/workspace.json`, `.specmgr/feat/`, the three test folders) stops the check with exit code 2. A missing input must not make the gate pass.
+8. **The documents that count as targets**: the documents directly in `docs/<type>/` and the feature folders of `.specmgr/feat/` that have a `README.md`. A reference with the right identifier and the wrong type has no target. The reader `find_references` is called for the whole body of a document, and the line number in the message is the first line of the document that has the identifier.
 
 #### 2026-11-15 09:44:00.000Z - OSV data: a deviation in the register DEC (option (a))
 
