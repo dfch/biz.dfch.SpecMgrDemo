@@ -4,7 +4,7 @@ created: '2026-11-03T07:54:08.480+01:00'
 id: feat-7-verification-architecture-tools
 status: review
 type: feat
-updated: '2026-11-13T20:37:30.000+01:00'
+updated: '2026-11-15T00:53:09.472+01:00'
 version: 1.0.0
 ---
 
@@ -514,7 +514,7 @@ The evidence (the runs of 2026-11-12, the exit code of each recipe is 0):
 
 ### Current Status
 
-**As of 2026-11-13**: the work of the feature is complete (the phases 100 to 140 are done and committed; the status of the feature is review). The six acceptance criteria are ticked with the pointers above. What the owner examines in the review (the task 150.100): the license table (21 rows, the evidence in the Result of the Phase 100), the result of the ArchUniTS examination and the verdict for RSK 025202ba (the Result of the Phase 130), and the open items of the Result of the Phase 140 (the green run of the job test-e2e after the fix of the first real run (PR 46: ten of the eleven jobs green, the shared libraries of chromium on the runner verified), the setting of the eleven jobs as required checks in the rulesets, the possible artifacts of the HTML reports, and the observation about the output of jqwik that asks an agent to disregard the results — the engine has a flag hideAntiAiClause; a version or a tool decision is for the owner).
+**As of 2026-11-14**: the work of the feature is complete (the phases 100 to 140 are done and committed; the status of the feature is review). The second post-implementation review (the agent feat-reviewer, 2026-11-14) found no error and no gap: its findings D1 (the record of the total of the self-test) and I1 (the display of the surviving mutant of the two recipes of the mutation, the reader that exits early on a live pipe) are fixed, its finding I2 (the observation of the output of jqwik, the flag hideAntiAiClause of the engine) stays the decision of the owner, and the record of the round is in the Updates. The current total of the self-test is 987 ok, 0 failed (`just test-gates`, the run of 2026-11-14). The six acceptance criteria are ticked with the pointers above. What the owner examines in the review (the task 150.100): the license table (21 rows, the evidence in the Result of the Phase 100), the result of the ArchUniTS examination and the verdict for RSK 025202ba (the Result of the Phase 130), and the open items of the Result of the Phase 140 (the green run of the job test-e2e after the fix of the first real run (PR 46: ten of the eleven jobs green, the shared libraries of chromium on the runner verified), the setting of the eleven jobs as required checks in the rulesets, the possible artifacts of the HTML reports, and the observation about the output of jqwik that asks an agent to disregard the results — the engine has a flag hideAntiAiClause; a version or a tool decision is for the owner).
 
 ### Blockers
 
@@ -523,6 +523,14 @@ None.
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-14 23:51:54.000Z - The second post-implementation review of the feature (the agent feat-reviewer): the findings D1 and I1 are fixed, and the finding I2 stays the decision of the owner
+
+The second post-implementation review of the feature (the agent feat-reviewer, 2026-11-14) found one discrepancy (D1) and two improvements (I1 and I2), and no error and no gap. The findings D1 and I1 are fixed by this change, and the finding I2 is examined and stays the decision of the owner:
+
+- D1: the plan recorded the total of the self-test last in the run of 2026-11-12 (984 ok, 0 failed, two times in the Result of the Phase 140), and the fix round of 2026-11-13 added the three self-test cases of the scope check of `check_pins.py` (the entry of the fix round says "the selftest has the new cases", and the total of the plan stayed the one of 2026-11-12). The two records of 2026-11-12 stay as they are (they are accurate for their date), and the current total is recorded by this entry: `just test-gates` gives 987 ok, 0 failed (the 984 of the run of 2026-11-12, plus the three cases of the scope check of 2026-11-13).
+- I1: the display of the surviving mutant of the part 2 of the recipe `mutation-frontend` used the awk program with `count == 4 {exit}` on the live pipe of the output of the run, and the display of the recipe `mutation-backend` used `head -n 1` on the live pipe of the first grep. A reader that exits early on a live pipe, while the writer of the pipe still has output to deliver, can die with SIGPIPE under `set -euo pipefail` (the death of the recipe with exit code 141: the run of the recipe `mutation-frontend` gave exit code 141 once, before the final summary line, and ten subsequent runs gave exit code 0 — a red that is not the red of a failing part, and the recipes are the jobs of the CI of the phase 140, that the owner sets as required checks). The scripts now consume the output fully before they slice it: the awk program of `mutation-frontend.sh` prints the four lines and skips the rest, and not exits after them, and `mutation-backend.sh` captures the line of the first surviving mutant into the variable `survived_line` (the `grep -m 1` reads the file and writes into the command substitution, and not into a live pipe), and extracts the five fields from the variable. The displayed lines are byte-identical to before (the proof: the stress test of the mechanism with the synthetic output larger than the pipe buffer — the old forms die with exit code 141, and the new forms give exit code 0 with the same displayed lines — and three runs of each recipe after the change: the exit code 0 of each run, and the diff of the displayed lines against the capture of before is empty). The other pipelines of the scripts (the FAIL branches) are unchanged.
+- I2: the observation of the output of jqwik (the line of the report of each property that asks an agent to disregard the results, and the flag hideAntiAiClause of the engine) is examined, and it stays the decision of the owner: the observation and the flag are already recorded in the plan (the Result of the Phase 110, and the open item of the handover of the review), and a version or a tool decision is for the owner (the finding is closed as recorded, owner decision).
 
 #### 2026-11-13 19:37:30.000Z - The post-implementation review (the agent feat-reviewer): the findings E1, G1, D1 to D5 and I1 to I4 are fixed
 

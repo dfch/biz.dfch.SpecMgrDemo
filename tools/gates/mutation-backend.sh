@@ -94,8 +94,13 @@ if [[ ${survived} -ge 1 ]]; then
     echo "ok   the report has ${survived} mutant(s) with the status SURVIVED"
     passed=$((passed + 1))
     # One mutation is one line of the XML file: the line of the first surviving mutant, with its class, method,
-    # line number, mutator and description.
-    grep -o "<mutation[^>]*status='SURVIVED'.*" "${report_dir}/mutations.xml" | head -n 1 \
+    # line number, mutator and description. The line is captured into a variable first, and the fields
+    # are extracted from the variable (the grep reads the file and writes into the command substitution,
+    # and not into a live pipe): a reader that exits early on a live pipe (the head -n 1 of before),
+    # while the writer still has output to deliver, can die with SIGPIPE under set -euo pipefail
+    # (the recipe must give exit code 0 when the run is green).
+    survived_line="$(grep -m 1 -o "<mutation[^>]*status='SURVIVED'.*" "${report_dir}/mutations.xml")"
+    printf '%s\n' "${survived_line}" \
         | grep -oE "<mutatedClass>[^<]*</mutatedClass>|<mutatedMethod>[^<]*</mutatedMethod>|<lineNumber>[0-9]+</lineNumber>|<mutator>[^<]*</mutator>|<description>[^<]*</description>" \
         | sed -e 's/^/     | /'
 else

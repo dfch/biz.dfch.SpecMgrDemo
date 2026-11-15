@@ -92,8 +92,12 @@ if [[ ${survived} -ge 1 ]]; then
     echo "ok   the report has ${survived} mutant(s) with the status Survived"
     passed=$((passed + 1))
     # The first block of a surviving mutant of the output of the run (the clear-text reporter:
-    # the mutator, the file and the line, and the change).
-    printf '%s\n' "${run_output}" | awk '/^\[Survived\]/{found = 1} found {print; count++} count == 4 {exit}' \
+    # the mutator, the file and the line, and the change). The awk program prints the four
+    # lines and skips the rest, and not exits after them: the output of the run can be larger
+    # than the pipe buffer, and a reader that exits early on a live pipe, while the writer
+    # still has output to deliver, dies with SIGPIPE under set -euo pipefail (the recipe must
+    # give exit code 0 when the run is green).
+    printf '%s\n' "${run_output}" | awk '/^\[Survived\]/{found = 1} found && count < 4 {print; count++}' \
         | sed -e 's/^/     | /'
 else
     echo "FAIL the report has no mutant with the status Survived (the deterministic ones are the"
