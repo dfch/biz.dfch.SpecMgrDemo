@@ -20,7 +20,7 @@ closes the part of finding G2 (the review of feat-5-foundation-monorepo-ci) that
 | `specmgr.lock` | specmgr with the extra `mcp` (`SPECMGR_VERSION`), 44 packages | `validate-docs.sh` (`just validate`) |
 | `pyyaml.lock` | PyYAML (`PYYAML_VERSION`), 1 package | `check-workflows.sh`, `check-pins.sh` |
 | `license-expression.lock` | `license-expression` (`LICENSE_EXPRESSION_VERSION`) and `boolean.py`, 2 packages | `license-check.sh` (`just license-check`) |
-| `zizmor.lock` | zizmor (`ZIZMOR_VERSION`), 1 package (the wheel has the binary and no dependency). The recipe `workflow-scan` of `feat-8-traceability-security-gates` will use it | (Phase 120 of `feat-8-traceability-security-gates`) |
+| `zizmor.lock` | zizmor (`ZIZMOR_VERSION`), 1 package (the wheel has the binary and no dependency). The recipe `workflow-scan` of `feat-8-traceability-security-gates` uses it | `workflow-scan.sh` (`feat-8-traceability-security-gates`, Task 120.130) |
 | `make-locks.sh` | The script that writes the four lock files | You, to change a version |
 
 The lock files are for Python 3.13 (`PYTHON_VERSION` of `tools/versions.env`) and for all platforms
