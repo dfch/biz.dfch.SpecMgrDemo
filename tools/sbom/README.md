@@ -51,6 +51,52 @@ SBOM. To change the version of the plug-in: change `CYCLONEDX_MAVEN_PLUGIN_VERSI
 `CYCLONEDX_MAVEN_PLUGIN_SHA256` in `tools/versions.env` and the file in this folder in one commit (the
 value is the sha256 of the jar on Maven Central, checked against the `.sha1` file of Maven Central).
 
+## The exclusion of the pinned packages from the SBOM of the frontend (feat-7-verification-architecture-tools, Phase 110 and 120)
+
+`sbom.sh` removes the two pinned packages from `frontend.cdx.json` after cdxgen made the file, and
+before the license gate reads it. The removal is the step `sbom_exclude.py` in `tools/gates/` (the rule
+X1 in the header of `sbom.sh`), and it removes, for each package, the components of the pinned package,
+the entry of the `dependencies` section of the package, and the references to it. A component with
+another version of a package is not removed: the exclusion is the pinned packages only, and a different
+version stops the license gate as a finding (fail closed, for each package).
+
+The packages, and the reasons (each has a dated section in the deviation DEC
+93a6d588-e002-4daf-9a47-45e2d77786e9, the register of the approved license deviations):
+
+- `axe-core` (the pinned version, `AXE_CORE_VERSION` of `tools/versions.env`): the accessibility check of
+  the end-to-end test (the recipe `test-e2e`) uses the package as a devDependency of `frontend/`, and
+  cdxgen includes the devDependencies in the SBOM. The license MPL-2.0 is not in
+  `tools/license/permitted-licenses.txt` (the file is derived from the class Permitted of DEC
+  84c37f7d-08cb-457d-8ab3-1db37dba9bc9). The owner approved the use of the tool with the deviation DEC
+  (accepted 2026-11-09, the section axe-core of the register).
+- `caniuse-lite` (the pinned version, `CANIUSE_LITE_VERSION` of `tools/versions.env`): the package is a
+  transitive package of the mutation tool Stryker (the chain @stryker-mutator/core ->
+  @stryker-mutator/instrumenter -> @babel/core -> @babel/helper-compilation-targets -> browserslist ->
+  caniuse-lite, in `frontend/pnpm-lock.yaml`), and cdxgen includes the tree in the SBOM. The license
+  CC-BY-4.0 has no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 and is not in the permitted list.
+  The owner approved the deviation with the section of 2026-11-11 of the register DEC.
+
+The common ground: the tools are development tools, they do not go to users, so rule A of the DEC
+applies, the license of the tools is checked in the license table of the plan of the feature (the row
+names the DEC), and the packages are kept out of the SBOM. The version of caniuse-lite is not a direct
+pin of the module (the package is transitive, and there is no entry in `frontend/package.json` and no
+integrity key): `just check-pins` ties the lock file to `CANIUSE_LITE_VERSION` instead (the check
+`Caniuse-lite pin`: the lock file must resolve the package to exactly the pinned version).
+
+Why the removal is a step of the gate and not a flag of cdxgen: cdxgen 12.9.0 has no package filter for
+a pnpm lock file. Its `--exclude` option is a file path pattern (the control check: the pattern
+`pnpm-lock.yaml` excludes the lock file from the scan, and no pattern for the package name removes the
+package from the BOM that cdxgen makes from the lock file). The check is documented in the plan of
+`feat-7-verification-architecture-tools` (the Result of the Phase 110 and the Result of the Phase 120),
+and the self-test of the gate (`selftest.sh`, the section of the rule X1) has the cases, for each
+package: the removal, the no-op, a component with another version (the license gate stops for it), and a
+missing version key (the script stops).
+
+To change the version of one of the two packages: change the key in `tools/versions.env` (and, for
+caniuse-lite, the lock file of `frontend/` with the new resolution, in the same commit). `just
+check-pins` stops if the two places are not the same, and the exclusion of `sbom.sh` is the pinned
+package only.
+
 ## Install
 
 `sbom.sh` starts this command in this folder when it scans a Node manifest:

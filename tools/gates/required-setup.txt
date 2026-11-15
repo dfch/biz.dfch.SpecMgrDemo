@@ -10,7 +10,11 @@
 #     and versions) are the work of check-pins.sh.
 #
 # A new job, a new workflow file or a new action in a job needs a change of this file first. The jobs lint,
-# breaking-changes, check-generated, compile and api-docs are the jobs of feat-6-contracts-openapi-pipeline (Task 130.110). CODEOWNERS
+# breaking-changes, check-generated, compile and api-docs are the jobs of feat-6-contracts-openapi-pipeline (Task 130.110).
+# The jobs test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend,
+# test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend and
+# architecture-model are the jobs of feat-7-verification-architecture-tools (Task 140.100; the tools run as a
+# report without a threshold, no artifact upload, and the checkouts have no fetch-depth: 0). CODEOWNERS
 # covers this folder (/tools/), so the owner reviews each change.
 #
 # Format: <workflow file> <job> <action>...   (one line for each job; the actions are in any order)
@@ -26,3 +30,14 @@ ci.yml check-generated actions/checkout extractions/setup-just actions/setup-jav
 ci.yml compile actions/checkout extractions/setup-just actions/setup-java actions/setup-node pnpm/action-setup
 ci.yml api-docs actions/checkout extractions/setup-just actions/setup-java actions/upload-artifact
 ci.yml test-gates actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
+ci.yml test-unit-backend actions/checkout extractions/setup-just actions/setup-java
+ci.yml test-integration-backend actions/checkout extractions/setup-just actions/setup-java
+ci.yml test-unit-frontend actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
+ci.yml test-e2e actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
+ci.yml test-random-backend actions/checkout extractions/setup-just actions/setup-java
+ci.yml test-random-frontend actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
+ci.yml mutation-backend actions/checkout extractions/setup-just actions/setup-java
+ci.yml mutation-frontend actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
+ci.yml architecture-backend actions/checkout extractions/setup-just actions/setup-java
+ci.yml architecture-frontend actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
+ci.yml architecture-model actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
