@@ -4,7 +4,7 @@ created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
 status: planning
 type: feat
-updated: '2026-11-15T12:11:49.526+01:00'
+updated: '2026-11-15T12:45:00.000+01:00'
 version: 1.0.0
 ---
 
@@ -188,6 +188,48 @@ The options for the owner: (a) accept the use of the data as a deviation in the 
 
 The decision of the owner (2026-11-15): option (a). The owner accepted a deviation for the OSV data, with the conditions that the use is a report only, that the project keeps the attribution, that the repository has only counts and finding identifiers, and that the project does not store or redistribute the records. The agent wrote the dated section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" and an entry of Updates in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, with the one-time permission of the owner (no other change of the DEC, the status is not changed). The section has the sources and licenses as found (with CC-BY-SA 4.0, and CC-BY-NC-ND 4.0 / Chainguard for Wolfi), what OSV-Scanner sends to api.osv.dev, the conditions, the exposure that the project cannot exclude, and what happens if the condition ends (the recipe `vuln-scan` and its CI job must be switched off until the owner decides again). The agent did not read the terms of Google for the service or the license texts of the single sources, and a person who has competence in the law has not examined the section (this is in the section and in the Blockers). The result of the row is Review, as for CodeQL, and the license table has no row with the result open.
 
+#### Baseline
+
+The baseline is the measured state of the findings of the four security tools on 2026-11-15 (Phase 130, ACC-009). **No threshold is set.** Each value is a count for a report, and no gate, recipe, CI job or file in the repository compares a run with these values. The owner or the feature for the walking skeleton can set a threshold from them later (a threshold must then be new compared with a baseline file, see `tools/security/README.md`). The agent wrote no baseline file for the tools.
+
+The date and the scope of the runs:
+
+| Item | Value |
+|---|---|
+| CodeQL: the scan | The default setup of GitHub, state `configured` (languages: actions, java-kotlin, javascript, javascript-typescript, python, typescript; query suite `default`; schedule weekly). The run `CodeQL Setup` (43689662335) was `completed` with the result `success` on 2026-11-15 (07:22 UTC) and its four jobs `Analyze (...)` were `success` |
+| CodeQL: what was analyzed | The default branch `dev` at the commit `ecd5ee200e39bc6a77685774da4b6a9748b2cf7a` (the head of `dev` on 2026-11-15 at the read). The branch `feat-8` is not pushed, so the baseline of CodeQL is that of `dev` and does not have the changes of this feature. The four analyses have `error` and `warning` empty, and the build mode is `none` |
+| CodeQL: the version | CodeQL 2.27.4 (the version of the analyses, `tool.version`). It is not pinned (the setup is hosted, see the section CodeQL) |
+| The three recipes: what was scanned | The working tree of the branch `feat-8` at the commit `399ab939a279bffe55043ea8d94d0645a7014e21` (7 commits after `origin/dev` = `ecd5ee2`, with no change in the working tree). The runs were on 2026-11-15 between 12:34 and 12:38 (UTC+01:00, 11:34 to 11:38 UTC) |
+
+CodeQL (Task 130.110). The agent read the analyses with `gh api repos/dfch/biz.dfch.SpecMgrDemo/code-scanning/analyses` (4 analyses) and the alerts with `gh api repos/dfch/biz.dfch.SpecMgrDemo/code-scanning/alerts --paginate` (the state open, dismissed and fixed, and the ref `refs/heads/dev`: 0 alerts each). The token had the scope for the read of the alerts. The `rules_count` is the number of queries that the analysis ran:
+
+| Language (the category of the analysis) | Analyzed commit | Queries | Alerts | Critical | High | Medium | Low | Note / Error |
+|---|---|---|---|---|---|---|---|---|
+| actions (`/language:actions`) | `ecd5ee2` | 17 | 0 | 0 | 0 | 0 | 0 | |
+| java-kotlin (`/language:java-kotlin`) | `ecd5ee2` | 76 | 0 | 0 | 0 | 0 | 0 | |
+| javascript-typescript (`/language:javascript-typescript`) | `ecd5ee2` | 87 | 0 | 0 | 0 | 0 | 0 | The labels `javascript` and `typescript` of the setup are covered by this one analysis |
+| python (`/language:python`) | `ecd5ee2` | 43 | 0 | 0 | 0 | 0 | 0 | |
+| Total | | 223 | 0 | 0 | 0 | 0 | 0 | |
+
+The first scan is complete: an analysis exists for each of the four languages with the result `success`, and the first scan of `dev` has no alert. An empty list of alerts is a valid result. It says that the default queries found nothing on this commit. It does not say that the code has no vulnerability.
+
+Recipes (Task 130.120). The recipes ran as in CI: `just vuln-scan` (it makes the SBOM files first), `just secret-scan` (the base `origin/dev`) and `just workflow-scan`. Each recipe ended with exit code 0 (a report with no threshold, ACC-005).
+
+| Tool | Version | Result | Findings | By severity |
+|---|---|---|---|---|
+| OSV-Scanner | 2.7.1 (the pin of `tools/versions.env`, `osv-scalibr` 0.5.3, build 2026-11-09, sha256 of the binary compared at the install) | The tool exit code was 1 (findings), the recipe ended with 0 | 5 vulnerabilities in 2 of the 432 packages of the two SBOM files (`backend.cdx.json` 12 packages, 0 findings; `frontend.cdx.json` 420 packages, 5 findings) | 0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown (the summary line of the report). The CVSS is 6.9 for 1 finding and 6.3 for 4 findings. The identifiers: `minimatch` 10.2.6 (GHSA-g3hv-75wg-m249); `qs` 6.15.1 (GHSA-4mjr-xmp4-gh2g, GHSA-6pq8-jhm2-2vcw, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx). All are in the npm ecosystem, and the report names a fixed version for each |
+| gitleaks | 8.30.1 (the pin of `tools/versions.env`, sha256 of the archive compared at the install) | The tool exit code was 0 (no finding) | 0 in the files (a copy of the 2.64 MB of the files that git knows or `.gitignore` does not ignore), 0 in the history `origin/dev..HEAD` (7 commits). The run of Phase 120 over the whole history (158 commits) also had 0 | No severity (gitleaks has none). The rules are the default rules of the release (`useDefault = true`, the allowlist `tools/security/gitleaks.toml` has no entry) |
+| zizmor | 1.32.0 (the lock file `tools/python/zizmor.lock`, `--offline`) | The tool exit code was 13 (findings), the recipe ended with 0 | 12 findings in 1 workflow file (`.github/workflows/ci.yml`): 11 shown and 1 suppressed. The 11 shown are all the audit `artipacked` ("credential persistence through GitHub Actions artifacts": `actions/checkout` has no `persist-credentials: false`, 11 of the 23 steps `actions/checkout`). The summary does not say which finding is the suppressed one, and the repository has no `zizmor` ignore comment or configuration file | 0 informational, 0 low, 11 medium, 0 high (the summary line of the report, `12 findings (1 suppressed, 11 unsafe fixes)`). The suppressed finding is not in the count of the severities, so the severities add up to 11 |
+
+The state of the databases and rules (Task 130.120):
+
+- OSV-Scanner: the query goes online to `api.osv.dev` for the packages of the SBOM files. The data is **not pinned** and not a snapshot of this repository: the count depends on the state of OSV.dev at the time of the query (2026-11-15, 12:34 to 12:35 UTC+01:00), and a later run can give another count for the same files. The tool does not print a version or a date of the database. The SBOM files are the output of `just sbom` of the same commit (`cdxgen` 12.9.0 and `cyclonedx-maven-plugin`, with `axe-core` and `caniuse-lite` removed by the script, see feat-7-verification-architecture-tools). The option `--licenses` was not used, and the records are not stored (the conditions of the deviation for the OSV data in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9). The repository has the counts and the finding identifiers only. The data is OSV.dev (https://osv.dev) with the licenses of its sources (for example the GitHub Advisory Database, CC-BY 4.0).
+- gitleaks: no database. The rules are built into the release 8.30.1 (the pin fixes them).
+- zizmor: no database. The audits are built into the release 1.32.0, and `--offline` turns off the audits that need the network (no token). The pin fixes the rules.
+- CodeQL: the queries are those of the hosted `default` query suite and the version of CodeQL is 2.27.4 on the date of the analysis (2026-11-15, 07:23 to 07:24 UTC). It is not pinned: GitHub updates it, and the weekly schedule runs it again.
+
+The values to keep (the counts for the later comparison): CodeQL 0 alerts (actions 0, java-kotlin 0, javascript-typescript 0, python 0); OSV-Scanner 5 (0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown); gitleaks 0; zizmor 12 (11 shown: 0 informational, 0 low, 11 medium, 0 high; 1 suppressed).
+
 ### Related Decisions
 
 - DEC 361678a6-f941-473b-a058-1ba2bacf7d3d: Use a Test Pyramid and Blocking Gates for Verification
@@ -248,11 +290,11 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 
 - [x] Task 130.100: Show the exact `gh api` command for the default setup of CodeQL to the owner. Run it only after the approval, and record the command and the result. Done on 2026-11-15: the owner approved with "CodeQL: go ahead", and the command was run (see Updates). The agent did not show the exact command before the run (see the entry of Updates)
 
-- [ ] Task 130.110: Wait for the first complete scan, and read the alerts with `gh api repos/{owner}/{repo}/code-scanning/alerts`. Record the number of alerts for each language and each severity
+- [x] Task 130.110: Wait for the first complete scan, and read the alerts with `gh api repos/{owner}/{repo}/code-scanning/alerts`. Record the number of alerts for each language and each severity. Done on 2026-11-15: the first scan was complete when the agent looked (the run `CodeQL Setup` 43689662335 `success`, 4 analyses with `error` empty, all on `dev` at `ecd5ee2`), and the alerts are 0 for each language and each severity (see the subsection Baseline)
 
-- [ ] Task 130.120: Run the three recipes on the repository, and record the baseline (the number of findings of each severity for OSV-Scanner, the number of findings of gitleaks, the number of findings of zizmor). Record the date, the version of each tool and the state of the databases
+- [x] Task 130.120: Run the three recipes on the repository, and record the baseline (the number of findings of each severity for OSV-Scanner, the number of findings of gitleaks, the number of findings of zizmor). Record the date, the version of each tool and the state of the databases. Done on 2026-11-15: OSV-Scanner 2.7.1 5 findings (all Medium), gitleaks 8.30.1 0 findings, zizmor 1.32.0 12 findings (11 Medium shown, 1 suppressed); the date, the versions and the state of the databases are in the subsection Baseline
 
-- [ ] Task 130.130: Write the baseline in the subsection Baseline of the Design Notes, with the values of Task 130.110 and 130.120. Do not set a threshold (ACC-009)
+- [x] Task 130.130: Write the baseline in the subsection Baseline of the Design Notes, with the values of Task 130.110 and 130.120. Do not set a threshold (ACC-009). Done on 2026-11-15: the subsection Baseline of the Design Notes has the values, and it says that no threshold is set. The agent wrote no baseline file for the tools
 
 #### Phase 140: CI and Branch Protection
 
@@ -288,6 +330,8 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 
 **Update 2026-11-15 (Phase 120)**: Phase 120 is done (Tasks 120.100 to 120.140). The recipes `just vuln-scan` (OSV-Scanner, the prerequisite is `sbom`), `just secret-scan` (gitleaks) and `just workflow-scan` (zizmor, `--offline`) exist, and each runs as a report with no threshold: a finding ends with exit code 0, and a failure of the tool ends with exit code 1 (ACC-005). One function separates the two cases for the three tools (`tools/gates/_security.sh`). The binaries of OSV-Scanner and gitleaks are installed to `build/tools/` with the sha256 of `tools/versions.env` (ACC-006), and zizmor from its lock file. The self-test `just test-security-gates` (137 cases, with stubs and with the three real tools) is a prerequisite of `just test-gates`. The first real runs on the repository are not the baseline (Phase 130): OSV-Scanner 5 vulnerabilities (all Medium) in 2 packages of the frontend SBOM, gitleaks 0 findings, zizmor 12 findings (11 shown and 1 suppressed, all `artipacked`, Medium). The allowlist of gitleaks (`tools/security/gitleaks.toml`, covered by CODEOWNERS) has no entry because there is no false positive. The CI workflow and `required-setup.txt` are not changed (Phase 140). The next step is Phase 130 (CodeQL and the baseline).
 
+**Update 2026-11-15 (Phase 130)**: Phase 130 is done (Tasks 130.100 to 130.130). The first CodeQL scan of `dev` is complete (4 analyses, one for each language group, at the commit `ecd5ee2`, no error) and has 0 alerts. The three recipes ran on the branch `feat-8` (commit `399ab93`): OSV-Scanner 5 vulnerabilities (all Medium), gitleaks 0 findings, zizmor 12 findings (11 shown, all `artipacked` and Medium, 1 suppressed). The values, the dates, the versions and the state of the databases are in the subsection Baseline of the Design Notes. No threshold is set and no baseline file is written (ACC-009; the criterion stays open until the review of Phase 150). The CodeQL baseline is that of `dev`, because `feat-8` is not pushed. The agent changed no setting of the repository (it used `gh api` for GET only), no workflow, no DEC and no file other than this plan. The next step is Phase 140 (CI and branch protection).
+
 ### Blockers
 
 - The conventions `specmgr-req` (the property of an element of the model) and `vcr:<uuid>` (the text in the name of a test) are not in DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342. The DEC says only "a `properties` entry" for the model and "the name or an annotation" for a test. The conventions are now in `tools/gates/README.md`, `model/README.md`, `backend/README.md`, `frontend/README.md` and in this plan. The agent did not change the DEC. The owner decides if the conventions go into More Information of the DEC (this needs a one-time permission), and if the annotation stays an option (the check reads the name only). The same for the definition of an "approved REQ" (the status `accepted` or `implemented`): the DEC says "an approved REQ" and the REQ has no status `approved`.
@@ -301,6 +345,15 @@ The decision of the owner (2026-11-15): option (a). The owner accepted a deviati
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 12:45:00.000Z - Phase 130: CodeQL scan read and baseline of the four security tools
+
+The agent did Tasks 130.110 to 130.130 (Task 130.100 was done before). The time of this entry is the local time with the letter Z, as for the earlier entries.
+
+1. CodeQL (Task 130.110): the agent used `gh api` with GET only (`code-scanning/default-setup`, `code-scanning/analyses`, `code-scanning/alerts` with `--paginate` and the states open, dismissed and fixed and the ref `refs/heads/dev`, `actions/runs` and `actions/runs/43689662335/jobs`). The setting is `configured` (actions, java-kotlin, javascript, javascript-typescript, python, typescript; `default`; weekly). The run `CodeQL Setup` 43689662335 is `completed`/`success` and its four jobs `Analyze (...)` are `success` (`Adjust Configuration` was skipped). The four analyses (`/language:actions`, `/language:java-kotlin`, `/language:javascript-typescript`, `/language:python`) are on `refs/heads/dev` at the commit `ecd5ee200e39bc6a77685774da4b6a9748b2cf7a` (the head of `dev` at the read), with `error` and `warning` empty, CodeQL 2.27.4, build mode `none`, and 17, 76, 87 and 43 queries. The alerts: 0 in every state. The first scan was complete at the first read, so the agent did not wait. The token had the scope for the read of the alerts.
+2. Recipes (Task 130.120): `just vuln-scan`, `just secret-scan` and `just workflow-scan` ran on `feat-8` at `399ab93` (7 commits after `origin/dev`, the working tree was clean before and after the runs). OSV-Scanner 2.7.1: 5 vulnerabilities in 2 of 432 packages, 0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown (the summary line of the report). gitleaks 8.30.1: 0 in the files and 0 in `origin/dev..HEAD` (7 commits). zizmor 1.32.0: `12 findings (1 suppressed, 11 unsafe fixes): 0 informational, 0 low, 11 medium, 0 high`. Each recipe ended with exit code 0.
+3. Baseline (Task 130.130): the subsection Baseline of the Design Notes has the tables, the date and time, the commits, the versions and the state of the databases (the OSV data is queried online and is not pinned; gitleaks and zizmor have the rules in the release; CodeQL is not pinned). It says that no threshold is set. The agent wrote no baseline file for the tools and set no threshold.
+4. The agent changed no setting of the repository, no workflow, no DEC and no file other than this plan. The changes are not committed. The acceptance criteria ACC-007 and ACC-009 are not ticked: Task 150.100 does that with the evidence, and ACC-007 also needs the review of the owner (Task 100.160).
 
 #### 2026-11-15 12:15:00.000Z - Phase 120: Gate 9, the security recipes
 
@@ -363,6 +416,14 @@ The agent wrote the plan after the planning session of 2026-11-15. The agent rea
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 12:45:00.000Z - Phase 130: the baseline is the state of `dev` for CodeQL and of `feat-8` for the recipes, and a zero is a value
+
+1. **The scan of CodeQL is that of `dev`**: the default setup scans the default branch and the pull requests, and `feat-8` is not pushed. So the baseline of CodeQL is the commit `ecd5ee2` of `dev`, and it does not have the code of this feature. The recipes ran on the commit of `feat-8` (`399ab93`), which has the files of this feature. The two scopes are in the subsection Baseline. The plan did not say which commit.
+2. **A count of zero is recorded as a value**: CodeQL has 0 alerts and gitleaks has 0 findings. The agent did not treat this as a missing scan, because the analyses exist with the result `success` and no error (the check of "complete" was the run, the four jobs, and the four analyses). The `rules_count` of each analysis is in the table to show that queries ran.
+3. **The zizmor count has 12, and the severities add up to 11**: the summary line of zizmor says `12 findings (1 suppressed, ...)` and counts the severities of the 11 shown findings. The agent recorded both numbers as zizmor prints them and did not invent the suppressed finding. The owner can ask for a look at the suppressed finding when a threshold is set.
+4. **The OSV counts are those of the time of the query**: the data is queried online and is not pinned, so the baseline of OSV-Scanner is a measure of 2026-11-15 and not a value that a later run must reproduce. The deviation of the OSV data limits what the repository keeps (counts and finding identifiers).
+5. **No threshold and no baseline file**: as the owner decided (see "One feature for Gate 2 and Gate 9, and no threshold for a security tool"), the values are in this plan only, and nothing in the repository reads them.
 
 #### 2026-11-15 12:15:00.000Z - Phase 120: the function, the exit codes, the scan of gitleaks, the empty SBOM and the allowlist
 
