@@ -4,7 +4,7 @@ created: '2026-11-09T20:05:19.449+01:00'
 id: 93a6d588-e002-4daf-9a47-45e2d77786e9
 status: accepted
 type: dec
-updated: '2026-11-11T12:12:28.376+01:00'
+updated: '2026-11-15T08:22:27.000+01:00'
 version: 1.0.0
 ---
 
@@ -90,9 +90,27 @@ The tool is JaCoCo (org.jacoco:jacoco, the Maven plugin org.jacoco:jacoco-maven-
 
 The package is caniuse-lite (the data of the browser features), the version 1.0.30001823. The license CC-BY-4.0 is read from the license field of the registry entry registry.npmjs.org/caniuse-lite/1.0.30001823 and the LICENSE of the package tarball (the full text of the Creative Commons Attribution 4.0 International license) (the phase 120 of feat-7-verification-architecture-tools; the evidence is in the Result of the Phase 120 of the plan of that feature). The license has no class in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9, and the package is not in tools/license/permitted-licenses.txt, so the license gate stopped fail closed (REQ-005 of the feature: if a license is not clear, the work stops and the owner makes a decision). The package is a transitive dependency of the tool Stryker (@stryker-mutator/core 10.1.1): the chain in the lock file is @stryker-mutator/instrumenter 10.1.1 to @babel/core 8.0.10 to @babel/helper-compilation-targets 8.0.7 to browserslist 4.29.5 to caniuse-lite 1.0.30001823 (the instrumenter of Stryker has Babel in each released line). The tool does not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9), and the package is not used directly. The owner approved the deviation on 2026-11-11 (in the chat: "(b)", the answer to the question about the license stop of the phase 120 of feat-7-verification-architecture-tools). The package is kept out of the SBOM of the frontend by the rule X1 of tools/gates/sbom.sh (the pinned version CANIUSE_LITE_VERSION, fail closed), in the same way as axe-core (MPL-2.0).
 
+### 2026-11-15 - CodeQL (GitHub CodeQL Terms) as the hosted default setup of GitHub
+
+The tool is CodeQL, the code analysis of GitHub. The terms are the file `LICENSE.md` of the repository github/codeql-cli-binaries ("GitHub CodeQL Terms and Conditions"), which the agent read on 2026-11-15 (the plan of feat-8-traceability-security-gates, Task 100.140, has the evidence). These terms are not an open source license, so the class of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 is Review, and the DEC does not have a class for them. The terms permit the analysis of an Open Source Codebase (a codebase with an OSI-approved license), and the creation of CodeQL databases for CI of such a codebase that is hosted and maintained on GitHub.com. They do not permit the use with a codebase that is not an Open Source Codebase (for example a private repository), unless the user has a paid customer license for GitHub Advanced Security. The terms are per user, and they do not permit a hosted offer of the software by a third party. The queries of the repository github/codeql are MIT (the license of the GitHub API, not read from the file).
+
+The use is the code analysis of the repository with the hosted default setup of GitHub (REQ-006 of feat-8-traceability-security-gates). GitHub runs the engine. The project does not download or install the engine, no workflow file and no recipe starts it, and it is a report with no threshold. The tool does not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9), and it is not in the SBOM.
+
+Conditions of this deviation:
+
+- The condition for the use is that the repository is public, has an OSI-approved license (AGPL-3.0-only) and is on GitHub.com. If one of these stops to be true, for example in a derived private repository (GOL 330a042f-8be7-4358-b451-25a4dfcba359), this deviation does not apply, and the default setup must be turned off or covered by a license for GitHub Advanced Security. The hosted setup gives no scan for a private repository without such a license, so the case fails safely.
+- The version of CodeQL and of its queries is not pinned, and the scan does not run on a developer machine. This is an exception to REQ-002 and REQ-009 of feat-5-foundation-monorepo-ci (one entry point, `just`, for local work and for CI).
+- The agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security). This section covers only the CodeQL Terms. A person who has competence in the law must examine the section, in the same way as for the other rows of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9.
+
+The owner approved the deviation on 2026-11-15 (in the chat: "I give the one-time permission for DEC 93a6d588" and "CodeQL: go ahead", after the choice of the hosted default setup).
+
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-15 08:30:00.000Z - The deviation for CodeQL (GitHub CodeQL Terms) is recorded
+
+The owner gave a permission for one time to make this change, and no other change (statement of the owner on 2026-11-15, in the chat: "I give the one-time permission for DEC 93a6d588"). The agent added the dated section "CodeQL (GitHub CodeQL Terms) as the hosted default setup of GitHub" to More Information. The reason is the plan of feat-8-traceability-security-gates (Task 100.140, Task 100.160): the owner chose the hosted default setup of CodeQL for the code analysis, and the terms of CodeQL are not an open source license. The text of the Decision Outcome and the other sections are not changed. The status is not changed.
 
 ### 2026-11-11 10:57:00.000Z - The deviation for caniuse-lite (CC-BY-4.0) is approved and recorded
 
