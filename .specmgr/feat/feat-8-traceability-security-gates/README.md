@@ -4,7 +4,7 @@ created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
 status: review
 type: feat
-updated: '2026-11-15T13:21:23.952+01:00'
+updated: '2026-11-15T13:32:13.062+01:00'
 version: 1.0.0
 ---
 
@@ -406,6 +406,10 @@ Related: issue #8 (feature feat-8-traceability-security-gates, pull request <PR>
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 13:40:00.000Z - Phase 120: fix of a test that depended on a cached binary (CI run 43713530630)
+
+The case "the REAL OSV-Scanner without the network" of `tools/gates/test-security-gates.sh` failed in CI (PR #47, job `test-gates`): on a clean runner `build/tools/` has no OSV-Scanner, so the proxy that refuses connections also stopped the download of the binary (`Download failed`), and the case never started the tool. Locally the binary was cached, so the case passed. The scripts are right. The fix is in the test only: it installs the real OSV-Scanner first (`install_osv_scanner`, with the network and the sha256 check, no proxy in the shell), and the proxy is set only for the start of the scan. The real gitleaks was already installed by `install_gitleaks` before its cases, and the real zizmor is installed by the script from the lock file; no other case sets a proxy. The run from a clean state (the folders `build/tools/osv-scanner-*` and `build/tools/gitleaks-*` deleted) passes (138 cases).
 
 #### 2026-11-15 13:25:00.000Z - Phase 150: review of the acceptance criteria, status review, comments written, AGPL blocker recorded
 

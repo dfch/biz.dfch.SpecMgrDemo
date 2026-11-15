@@ -343,7 +343,13 @@ expect_fail "Download failed" "install_osv_scanner: a cache whose .sha256 is not
 
 # The REAL OSV-Scanner (the download of the release, the sha256 of the pin) without the network: a proxy that
 # refuses the connection. This is the real failure of the tool (no network). The files of the SBOM have one package.
+# The real binary is installed FIRST, here, with the network and the sha256 check (install_osv_scanner, no proxy
+# variable is set in this shell). The proxy is set only for the start of the scan (the `env` of the case below), and
+# not for the install: on a clean machine (a CI runner) build/tools/ has no binary, and a proxy that refuses the
+# connection would also stop the download of the binary, which is not the case that this test shows.
 real_osv_home="${REPO_ROOT}/build/tools"
+OSV_SCANNER_HOME="${real_osv_home}" install_osv_scanner
+check "the real OSV-Scanner has the pinned version ${osv_version}" test "$("${OSV_SCANNER_BIN}" --version | head -n 1)" == "osv-scanner version: ${osv_version}"
 cat >"${work}/sbom-real.cdx.json" <<'JSON'
 {"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"library","name":"qs","version":"6.15.1","purl":"pkg:npm/qs@6.15.1","bom-ref":"pkg:npm/qs@6.15.1"}]}
 JSON
@@ -509,7 +515,9 @@ echo "not an archive" >"${work}/gl-notar"
 expect_fail "has not the files gitleaks and LICENSE" "install_gitleaks: a file that is not the archive (with the right sha256) stops the install" \
     install_gl "${work}/gl-notar-home" "file://${work}/gl-notar" "$(make_versions glnotar GITLEAKS_SHA256 "$(sha256sum "${work}/gl-notar" | cut -d' ' -f1)")"
 
-# --- the REAL gitleaks in temporary repositories. The real binary is the install of the gate (build/tools/).
+# --- the REAL gitleaks in temporary repositories. The real binary is the install of the gate (build/tools/). It is
+# installed here, with the network and the sha256 check, before the cases start the script (no case depends on a binary
+# that an earlier run left in build/tools/, and no case sets a proxy or blocks the network).
 install_gitleaks
 real_gl="${GITLEAKS_BIN}"
 check "the real gitleaks has the pinned version ${gitleaks_version}" test "$("${real_gl}" version)" == "${gitleaks_version}"
