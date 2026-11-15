@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
-status: planning
+status: review
 type: feat
-updated: '2026-11-15T13:15:00.000+01:00'
+updated: '2026-11-15T13:21:23.952+01:00'
 version: 1.0.0
 ---
 
@@ -40,25 +40,25 @@ The security tools are OSV-Scanner (known vulnerabilities in the dependencies, f
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: `just` has a recipe for the traceability check and a recipe for each of the three security tools, and CI starts only these recipes.
+- [x] ACC-001: `just` has a recipe for the traceability check and a recipe for each of the three security tools, and CI starts only these recipes. Evidence (2026-11-15, Phase 150): `just --list` shows `traceability`, `vuln-scan`, `secret-scan` and `workflow-scan`. `.github/workflows/ci.yml` has the four jobs with the same names, and each has one `run:` step `just <recipe>`. `just check-workflows` passes (27 `run:` steps, each is `just <recipe>`, the new jobs are in `tools/gates/required-setup.txt`).
 
-- [ ] ACC-002: The traceability check stops for each of these: a reference that has no target, an `x-specmgr-req` that is not the identifier of a REQ, an identifier in the model or in a test that has no document, and an approved REQ that has no VCR. The self-test shows each case with a fixture, and it shows the case that is successful.
+- [ ] ACC-002: The traceability check stops for each of these: a reference that has no target, an `x-specmgr-req` that is not the identifier of a REQ, an identifier in the model or in a test that has no document, and an approved REQ that has no VCR. The self-test shows each case with a fixture, and it shows the case that is successful. Evidence: `just test-traceability-gate` (`tools/gates/test-traceability-gate.sh`, fixtures in `tools/gates/fixtures/traceability/`) ends with `traceability gate: 45 ok, 0 failed`. It has the case that is successful, the reference that has no target (REQ, FEAT and another type), the `x-specmgr-req` that is not a REQ (no document, a DEC), the identifier in the model and in a test (backend, frontend, end-to-end) that has no document, and the approved REQ with no VCR (`accepted` and `implemented`).
 
-- [ ] ACC-003: The traceability check gives a warning, and no stop, for an approved REQ that has no element in the model or whose VCR is not in the name of a test. The self-test shows both warnings.
+- [x] ACC-003: The traceability check gives a warning, and no stop, for an approved REQ that has no element in the model or whose VCR is not in the name of a test. The self-test shows both warnings. Evidence: the same run of `just test-traceability-gate` has the two warnings (`approved-req-has-no-model-element` and `approved-req-vcr-not-in-test`), and each ends with exit code 0.
 
-- [ ] ACC-004: The script of the traceability check gets its references from the reader of the pinned specmgr. A self-test stops if the function of the reader is not there or has a different form.
+- [x] ACC-004: The script of the traceability check gets its references from the reader of the pinned specmgr. A self-test stops if the function of the reader is not there or has a different form. Evidence: `tools/gates/traceability.py` imports `find_references` of the pinned specmgr (no second copy of the syntax), and `just traceability` prints that the form of the reader is the expected form. The self-test (fixtures in `tools/gates/fixtures/traceability-reader/`) shows exit code 2 for no function, another parameter, another result, another case of the type, an error and a module that does not exist.
 
-- [ ] ACC-005: Each security recipe ends with exit code 0 for a finding and with an exit code that is not 0 for a failure of the tool. The self-test of each recipe shows the two cases.
+- [x] ACC-005: Each security recipe ends with exit code 0 for a finding and with an exit code that is not 0 for a failure of the tool. The self-test of each recipe shows the two cases. Evidence: `just test-security-gates` ends with `RESULT: 137 ok, 0 failed` (the function `security_classify` and `run_security_tool` in `tools/gates/_security.sh`, a stub and the real tool for each recipe: a finding gives exit code 0, a failure of the tool gives exit code 1). The baseline runs of Phase 130 also ended with exit code 0 for findings.
 
-- [ ] ACC-006: The pins of OSV-Scanner, gitleaks and zizmor are in `tools/versions.env` and are checked by `just check-pins`. The binary of gitleaks and of OSV-Scanner has a sha256, and zizmor has a lock file with hashes.
+- [x] ACC-006: The pins of OSV-Scanner, gitleaks and zizmor are in `tools/versions.env` and are checked by `just check-pins`. The binary of gitleaks and of OSV-Scanner has a sha256, and zizmor has a lock file with hashes. Evidence: `tools/versions.env` has `OSV_SCANNER_VERSION=2.7.1` and `OSV_SCANNER_SHA256`, `GITLEAKS_VERSION=8.30.1` and `GITLEAKS_SHA256`, and `ZIZMOR_VERSION=1.32.0`. `tools/python/zizmor.lock` has the hashes (12). `just check-pins` passes (it compares the checksums with the vendor files in `tools/security/` and the lock files, 4 lock files, 48 entries).
 
-- [ ] ACC-007: CodeQL runs as the default setup, and the first scan is complete. The deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted by the owner).
+- [x] ACC-007: CodeQL runs as the default setup, and the first scan is complete. The deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted by the owner). Evidence (read-only `gh api` GET on 2026-11-15, Phase 150): `code-scanning/default-setup` gives `state: configured` (actions, java-kotlin, javascript, javascript-typescript, python, typescript; `default`; weekly). `code-scanning/analyses` has the four analyses (`/language:actions`, `/language:java-kotlin`, `/language:javascript-typescript`, `/language:python`) on `dev` at `ecd5ee2`, with `error` empty, CodeQL 2.27.4. The first scan is complete (the run `CodeQL Setup` 43689662335, `success`), and the alerts are 0. The register DEC (status `accepted`) has the dated section "CodeQL (GitHub CodeQL Terms) as the hosted default setup of GitHub". The owner chose the deviation (Decisions Made of 2026-11-15 07:07:55) and gave the one-time permission to write it. Note: the review of the text of the deviation by the owner is Task 100.160, which is still open (see Blockers).
 
-- [ ] ACC-008: Each tool has an entry in the license table of this plan with the result of the check. The result is Permitted, or a deviation of the owner for the result Review. No row has the result open.
+- [x] ACC-008: Each tool has an entry in the license table of this plan with the result of the check. The result is Permitted, or a deviation of the owner for the result Review. No row has the result open. Evidence: the license table has five rows. OSV-Scanner (Apache-2.0), gitleaks (MIT) and zizmor (MIT) are Permitted (the license file read at the pinned release). The OSV data and CodeQL are Review, each with a deviation in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 that the owner accepted on 2026-11-15 (the OSV data: option (a); CodeQL: the hosted default setup). No row is open. Note: Task 100.160 (the review of the whole table by the owner) is still open, and it is not ticked (see Blockers).
 
-- [ ] ACC-009: The baseline values of OSV-Scanner, gitleaks, zizmor and CodeQL are in this plan, and no threshold is set.
+- [x] ACC-009: The baseline values of OSV-Scanner, gitleaks, zizmor and CodeQL are in this plan, and no threshold is set. Evidence: the subsection Baseline of the Design Notes has CodeQL 0 alerts (actions 0, java-kotlin 0, javascript-typescript 0, python 0), OSV-Scanner 5 (0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown), gitleaks 0, and zizmor 12 (11 shown: 11 Medium; 1 suppressed), with the date, the versions and the state of the databases. The recipes in the `justfile` and the jobs in `ci.yml` have no threshold, and no baseline file of the tools is in the repository.
 
-- [ ] ACC-010: `branch-protection.md` has the new checks and the steps of the owner. The CI run of the pull request of this feature is green with the new jobs.
+- [ ] ACC-010: `branch-protection.md` has the new checks and the steps of the owner. The CI run of the pull request of this feature is green with the new jobs. Status (Phase 150): the first part is done, and the criterion is NOT ticked. `branch-protection.md` of feat-5-foundation-monorepo-ci has the table "Jobs that feat-8-traceability-security-gates added", the rows for gate 2 and gate 9, the statement of the exception for CodeQL, and the section "Steps for the owner for the gates of feat-8" (the steps 1 to 5). The second part is pending: the pull request does not exist yet, so the CI run is not shown. It is recorded with Task 140.140 after the pull request exists.
 
 ### Scope
 
@@ -105,6 +105,8 @@ The security tools are OSV-Scanner (known vulnerabilities in the dependencies, f
 #### Blocks
 
 - The feature for the walking skeleton: it adds the first approved REQ and the first VCR, and Gate 2 must exist before.
+
+- The feature for the walking skeleton, the AGPL clause (a blocker for it, Task 150.120): the clause of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 about the use of the software through a network is open. This feature does not decide it. A new DEC with the feature for the walking skeleton must decide it before the first running service is offered to users. The plan of the owner (2026-11-15, see Decisions Made) is: a link to the source in the user interface, and the version and the commit in the status of the service. The DEC is not changed by this feature.
 
 ### Design Notes
 
@@ -230,6 +232,55 @@ The state of the databases and rules (Task 130.120):
 
 The values to keep (the counts for the later comparison): CodeQL 0 alerts (actions 0, java-kotlin 0, javascript-typescript 0, python 0); OSV-Scanner 5 (0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown); gitleaks 0; zizmor 12 (11 shown: 0 informational, 0 low, 11 medium, 0 high; 1 suppressed).
 
+#### Comments for the issues
+
+Task 150.110: the texts of the comments are here. The agent did not post them (no `gh` write command). The orchestrator posts them after the pull request exists, and replaces `<PR>` with the number of the pull request. No issue is closed: the owner decides when issue #8 is closed (after the merge and after the review).
+
+##### Comment for issue #8
+
+```text
+The work for this issue is in the pull request <PR> (branch feat-8, feature feat-8-traceability-security-gates). The status of the feature is `review`.
+
+Gates (each is a `just` recipe, and each CI job starts only that recipe):
+- Gate 2, `just traceability` (CI job `traceability`): it uses the reader `find_references` of the pinned specmgr. It stops (error) for a reference with no target, an `x-specmgr-req` that is not a REQ, an identifier in `specmgr-req` of the model or `vcr:<uuid>` in a test name that has no document, and an approved REQ (status accepted or implemented) with no VCR. It gives a warning (no stop) for an approved REQ with no element in the model, and for an approved REQ whose VCR is not in a test name. The self-test `just test-traceability-gate` has 45 cases.
+- Gate 9, reports with no threshold: `just vuln-scan` (OSV-Scanner 2.7.1 on the SBOM files, online), `just secret-scan` (gitleaks 8.30.1, files and the commits of the pull request), `just workflow-scan` (zizmor 1.32.0, offline). A finding gives exit code 0. A failure of the tool gives exit code 1. The self-test `just test-security-gates` has 137 cases.
+- CodeQL is the hosted default setup of GitHub (state `configured`, no recipe and no workflow file). The first scan of `dev` is complete.
+- The pins are in `tools/versions.env` (sha256 for the binaries, a lock file with hashes for zizmor), and `just check-pins` checks them. The licenses are checked: OSV-Scanner Apache-2.0, gitleaks MIT, zizmor MIT (Permitted). The OSV data and CodeQL are Review, and each has a deviation in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9.
+
+Baseline (2026-11-15; no threshold is set, and no file in the repository compares a run with these values):
+- CodeQL 2.27.4 on `dev` at ecd5ee2: 0 alerts (actions 0, java-kotlin 0, javascript-typescript 0, python 0).
+- OSV-Scanner: 5 vulnerabilities in 2 of 432 packages (all in the frontend SBOM, 0 Critical, 0 High, 5 Medium, 0 Low): minimatch 10.2.6 (GHSA-g3hv-75wg-m249) and qs 6.15.1 (GHSA-4mjr-xmp4-gh2g, GHSA-6pq8-jhm2-2vcw, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx). The data is queried online and is not pinned, so a later run can give another count.
+- gitleaks: 0 findings (files and history).
+- zizmor: 12 findings in `ci.yml` (11 shown, all `artipacked`, Medium; 1 suppressed).
+
+Open items:
+1. The owner must add the new check names to the rulesets of `dev` and `main`, and decide which of the four jobs are required (the steps 1 to 5 of "Steps for the owner for the gates of feat-8" in `.specmgr/feat/feat-5-foundation-monorepo-ci/branch-protection.md`). Do this after the workflow with the four jobs is in `dev`. The steps also turn on the Dependabot alerts and the secret scanning for the patterns that are not of a provider.
+2. The owner must review the whole license table and the two deviation texts (CodeQL, OSV data). The agent did not read the terms of GitHub for the hosted service or the terms of Google for the service, and a person with competence in the law has not examined the texts (Task 100.160).
+3. DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 does not have the conventions `specmgr-req` and `vcr:<uuid>` and the definition of an approved REQ. The owner decides if they go into More Information of the DEC.
+4. The CI run of this pull request with the new jobs is the last criterion (ACC-010).
+5. The AGPL clause about the use through a network (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9) is not part of this work. It is a blocker for the feature for the walking skeleton, which must decide it with a new DEC (a link to the source in the user interface, and the version and the commit in the status).
+
+The issue stays open until the owner agrees to close it.
+```
+
+##### Comment for issue #23 (the pins of the dependencies of `cyclonedx-maven-plugin`)
+
+```text
+Related: issue #8 (feature feat-8-traceability-security-gates, pull request <PR>). The new report `just vuln-scan` (OSV-Scanner) reads the SBOM files that `just sbom` makes, so it examines the packages of the backend and of the frontend that are in these files. The build-time dependencies of `cyclonedx-maven-plugin` that this issue wants to pin are not in these files, so the report does not cover them (the plugin makes the SBOM and is not a part of it). The feature does not change the pin of the plugin, and it adds no check for its dependencies. This issue stays open.
+```
+
+##### Comment for issue #31 (the cost of pull requests for documents)
+
+```text
+Related: issue #8 (feature feat-8-traceability-security-gates, pull request <PR>). The feature adds four jobs to the CI (`traceability`, `vuln-scan`, `secret-scan`, `workflow-scan`), and `vuln-scan` makes the SBOM files and uses the network (timeout 30 minutes). If a pull request that has only documents needs fewer gates, this issue decides it. The feature does not change which gates run for a pull request. This issue stays open.
+```
+
+##### Comment for issue #45 (the Python environment of the self-test)
+
+```text
+Related: issue #8 (feature feat-8-traceability-security-gates, pull request <PR>). The feature adds two self-tests to `just test-gates` (`test-traceability-gate`, 45 cases, and `test-security-gates`, 137 cases). The scripts `traceability.sh` and `workflow-scan.sh` make their own hash-locked Python environment with `make_python_env` (from `specmgr.lock` and `zizmor.lock`) at each start, so the new self-tests have the same cost pattern that this issue describes for `check-pins.sh`. The feature does not change `make_python_env` and does not reuse an environment. This issue stays open.
+```
+
 ### Related Decisions
 
 - DEC 361678a6-f941-473b-a058-1ba2bacf7d3d: Use a Test Pyramid and Blocking Gates for Verification
@@ -310,17 +361,19 @@ The values to keep (the counts for the later comparison): CodeQL 0 alerts (actio
 
 #### Phase 150: Review and Close
 
-- [ ] Task 150.100: Walk the acceptance criteria. Tick each criterion with the evidence, and set the status of the feature to `review`
+- [x] Task 150.100: Walk the acceptance criteria. Tick each criterion with the evidence, and set the status of the feature to `review`. Done on 2026-11-15: ACC-001 to ACC-009 are ticked with the evidence. ACC-010 is not ticked (the CI run of the pull request is Task 140.140), and Task 100.160 is not ticked (the owner reviews the whole table). The status is `review`
 
-- [ ] Task 150.110: Write the comment in GitHub issue #8 (the gates, the baseline, the open items) and the comments that link issues #23, #31 and #45 as related. Do not close an issue before the owner agrees
+- [ ] Task 150.110: Write the comment in GitHub issue #8 (the gates, the baseline, the open items) and the comments that link issues #23, #31 and #45 as related. Do not close an issue before the owner agrees. The texts are written (see the subsection "Comments for the issues" of the Design Notes); the orchestrator posts them after the pull request exists. Texts written; the orchestrator posts them after the pull request exists. Not ticked until they are posted. No issue is closed
 
-- [ ] Task 150.120: Write the entry of the AGPL clause (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9) as a blocker for the feature for the walking skeleton
+- [x] Task 150.120: Write the entry of the AGPL clause (DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9) as a blocker for the feature for the walking skeleton. Done on 2026-11-15: the entry is in Dependencies, Blocks, and in the Blockers (the DEC is not changed)
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-15**: The plan is written. The owner decided the open points in the session of 2026-11-15 (see Decisions Made). The branch `feat-8` is rebased onto `origin/dev`, which has feat-7-verification-architecture-tools with the status `done`, and GitHub issue #7 is closed. Two tasks are done: the deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (Task 100.140), and the default setup of CodeQL is turned on (Task 130.100). The first scan is not complete yet (Task 130.110). The tools of the other phases are not selected, and no recipe, no script and no workflow is changed. The next step is the rest of Phase 100.
+**As of 2026-11-15 (Phase 150)**: The status of the feature is `review`. All phases are done, except Task 100.160 (the review of the whole license table by the owner), Task 140.140 (the CI run of the pull request) and Task 150.110 (the comments for the issues are written and not posted). ACC-001 to ACC-009 are ticked with the evidence (the gates `just validate`, `just traceability`, `just check-pins`, `just check-workflows` and `just --fmt --unstable --check` pass). ACC-010 is open until the CI run of the pull request is green. The orchestrator pushes the branch, opens the pull request and posts the comments. The next step is the review of the owner (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8, Step 2). The older updates below are the record of the phases.
+
+**Earlier (2026-11-15, before Phase 100)**: The plan is written. The owner decided the open points in the session of 2026-11-15 (see Decisions Made). The branch `feat-8` is rebased onto `origin/dev`, which has feat-7-verification-architecture-tools with the status `done`, and GitHub issue #7 is closed. Two tasks are done: the deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (Task 100.140), and the default setup of CodeQL is turned on (Task 130.100). The first scan is not complete yet (Task 130.110). The tools of the other phases are not selected, and no recipe, no script and no workflow is changed. The next step is the rest of Phase 100.
 
 **Update 2026-11-15 (Phase 100)**: Tasks 100.100, 100.110, 100.120 and 100.150 are done. OSV-Scanner (Apache-2.0), gitleaks (MIT) and zizmor (MIT) are Permitted, and the pins are in `tools/versions.env` and checked by `just check-pins` (OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 with `tools/python/zizmor.lock`). Task 100.130 (the terms of the OSV data) was not clear, and the owner decided on option (a) (see the update below). Task 100.160 is for the owner. No recipe, no install script and no workflow is changed.
 
@@ -338,15 +391,32 @@ The values to keep (the counts for the later comparison): CodeQL 0 alerts (actio
 
 - The conventions `specmgr-req` (the property of an element of the model) and `vcr:<uuid>` (the text in the name of a test) are not in DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342. The DEC says only "a `properties` entry" for the model and "the name or an annotation" for a test. The conventions are now in `tools/gates/README.md`, `model/README.md`, `backend/README.md`, `frontend/README.md` and in this plan. The agent did not change the DEC. The owner decides if the conventions go into More Information of the DEC (this needs a one-time permission), and if the annotation stays an option (the check reads the name only). The same for the definition of an "approved REQ" (the status `accepted` or `implemented`): the DEC says "an approved REQ" and the REQ has no status `approved`.
 
-- The owner must review the whole license table and the deviation texts of CodeQL and of the OSV data (Task 100.160). Both deviations are written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. For CodeQL, the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security). For the OSV data, the agent did not read the terms of Google for the service or the license texts of the single sources, and it cannot exclude a record with the license CC-BY-SA 4.0 or CC-BY-NC-ND 4.0 from an ecosystem that the project does not have. A person who has competence in the law has not examined either section.
+- The owner must review the whole license table and the deviation texts of CodeQL and of the OSV data (Task 100.160, open; the criteria ACC-007 and ACC-008 are ticked with the decisions of the owner of 2026-11-15, and this review is not ticked). Both deviations are written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. For CodeQL, the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security). For the OSV data, the agent did not read the terms of Google for the service or the license texts of the single sources, and it cannot exclude a record with the license CC-BY-SA 4.0 or CC-BY-NC-ND 4.0 from an ecosystem that the project does not have. A person who has competence in the law has not examined either section.
 
-- The AGPL clause about use through a network is open in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. It does not stop this feature, and it needs a new DEC with the feature for the walking skeleton.
+- **Blocker for the feature for the walking skeleton (not for this feature): the AGPL clause about use through a network is open in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9.** This feature does not decide it and does not change the DEC. A new DEC that comes with the feature for the walking skeleton must decide it before the first running service is offered to users. The plan of the owner (2026-11-15) is: a link to the source in the user interface, and the version and the commit in the status of the service. Task 150.120 recorded this (see Dependencies, Blocks).
+
+- ACC-010 and Task 140.140 are open: the pull request of this feature does not exist yet, and the CI run with the new jobs is recorded after the orchestrator pushes the branch and opens the pull request. The status `review` is set before that (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8, Step 1); the criterion is ticked only when the run is green.
+
+- Task 150.110 is open: the texts of the comments for the issues #8, #23, #31 and #45 are written (the subsection "Comments for the issues" of the Design Notes), and they are posted after the pull request exists. No issue is closed before the owner agrees.
+
+- The owner has to do the steps of Task 140.130 in `branch-protection.md` (the required checks of the rulesets of `dev` and `main`, the Dependabot alerts and the secret scanning for the patterns that are not of a provider). The agent did not change a setting of the repository.
 
 - GitHub issue #31 (the cost of pull requests for documents) is not decided. It can change which gates run for a pull request that has only documents.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 13:25:00.000Z - Phase 150: review of the acceptance criteria, status review, comments written, AGPL blocker recorded
+
+The agent did Tasks 150.100 and 150.120, and it wrote the texts of Task 150.110. The time of this entry is the local time with the letter Z, as for the earlier entries.
+
+1. Acceptance criteria (Task 150.100): the agent ran again `just --list`, `just traceability` (PASS, 0 warnings, 0 errors, 58 document files), `just check-pins` (PASS, 102 `uses:` steps, 4 lock files), `just check-workflows` (PASS, 27 `run:` steps), `just check-sudo` (PASS), `just validate` (PASS), `just --fmt --unstable --check` (PASS), `just test-traceability-gate` (45 ok, 0 failed) and `just test-security-gates` (137 ok, 0 failed). It read the setting of CodeQL with `gh api` GET only (`configured`, four analyses on `dev` at `ecd5ee2`, 0 alerts). ACC-001 to ACC-009 are ticked, and each criterion has its evidence in the Acceptance Criteria. ACC-010 is not ticked: `branch-protection.md` has the new checks and the steps for the owner (done), but the pull request does not exist yet, so the CI run is not shown (Task 140.140). Task 100.160 is not ticked: the owner has not reviewed the whole table (ACC-007 and ACC-008 are ticked on the decisions of the owner of 2026-11-15, and the Blockers say that the review of the texts is open).
+2. Status: the status of the feature is set to `review` with `set_status` (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8, Step 1). The agent does not set `done`: the owner does that after the acceptance.
+3. Comments (Task 150.110): the texts for the issues #8, #23, #31 and #45 are in the subsection "Comments for the issues" of the Design Notes. The agent posted nothing and closed no issue. The task stays open until the orchestrator posts the comments after the pull request exists.
+4. AGPL clause (Task 150.120): the clause of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 about the use through a network is recorded as a blocker for the feature for the walking skeleton (Dependencies, Blocks, and Blockers). A new DEC with that feature decides it. The plan of the owner is a link to the source in the user interface, and the version and the commit in the status. The DEC is not changed.
+5. Handover note (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8, Step 7): open items for the next session are Task 140.140 (record the CI run), Task 150.110 (post the comments), Task 100.160 (the review of the table by the owner), the steps of Task 140.130 for the owner, the decision of the owner about the conventions in DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, and `set_status` `done` after the owner accepts the work (Step 3).
+6. The agent changed no code, no DEC and no setting of the repository, and it ran no `gh` write command. The changes are not committed.
 
 #### 2026-11-15 13:15:00.000Z - Phase 140: the four CI jobs, the instructions for the branch protection and the steps for the owner
 
