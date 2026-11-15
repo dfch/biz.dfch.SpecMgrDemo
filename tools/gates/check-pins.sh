@@ -23,7 +23,7 @@
 #     tools/sbom of this repository, as in sbom.sh, and not of GATE_WORK_ROOT: the tool belongs to the gates).
 #
 #   - the lock files of the Python tools (finding G2, feat-22-python-tools-lockfile): tools/python/ must have
-#     the lock files specmgr.lock, pyyaml.lock and license-expression.lock, each with exact pins and sha256
+#     the lock files specmgr.lock, pyyaml.lock, license-expression.lock and zizmor.lock, each with exact pins and sha256
 #     hashes only, and the version of the tool in each file must be the version of the versions file (the
 #     first argument). The folder is PYTHON_LOCK_DIR (a variable for the tests, as in make_python_env in
 #     _lib.sh; the default is tools/python of this repository).
@@ -38,6 +38,16 @@
 #     `checksums.txt` of the release of oasdiff) must have the line for oasdiff_<OASDIFF_VERSION>_linux_amd64.tar.gz with
 #     the value of OASDIFF_SHA256. The folder is BREAKING_TOOL_DIR (a variable for the tests; the default is
 #     tools/breaking of this repository).
+#
+#   - the downloads of OSV-Scanner and gitleaks (feat-8-traceability-security-gates, Task 100.150, REQ-004, ACC-006): the
+#     versions and sha256 values of the versions file (OSV_SCANNER_*, GITLEAKS_*) must be in the right form, and
+#     tools/security/osv-scanner-checksums.txt (the file `osv-scanner_SHA256SUMS` of the release) and
+#     tools/security/gitleaks-checksums.txt (the file `gitleaks_<version>_checksums.txt` of the release) must have the
+#     line for osv-scanner_linux_amd64 and gitleaks_<GITLEAKS_VERSION>_linux_x64.tar.gz with the sha256 of the versions file.
+#     The folder is SECURITY_TOOL_DIR (a variable for the tests; the default is tools/security of this repository).
+#
+#   - the lock file of zizmor (feat-8, Task 100.150): tools/python/zizmor.lock is one more lock file of the Python tools
+#     (above), and its version must be ZIZMOR_VERSION.
 #
 #   - the jar of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105, ACC-011): the version must be the
 #     version of the plugin in each pom.xml that has it, and tools/generate/openapi-generator-maven-plugin.sha256 must
@@ -78,4 +88,4 @@ VERSIONS_FILE="$1"
 make_python_env pyyaml
 "${GATE_PYTHON}" "${GATES_DIR}/check_pins.py" "$1" "$2" "${allowed}" "${WORK_ROOT}" "${SBOM_TOOL_DIR:-${REPO_ROOT}/tools/sbom}" \
     "${PYTHON_LOCK_DIR:-${REPO_ROOT}/tools/python}" "${LINT_TOOL_DIR:-${REPO_ROOT}/tools/spectral}" \
-    "${BREAKING_TOOL_DIR:-${REPO_ROOT}/tools/breaking}" "${GENERATOR_TOOL_DIR:-${REPO_ROOT}/tools/generate}"
+    "${BREAKING_TOOL_DIR:-${REPO_ROOT}/tools/breaking}" "${GENERATOR_TOOL_DIR:-${REPO_ROOT}/tools/generate}" "${SECURITY_TOOL_DIR:-${REPO_ROOT}/tools/security}"

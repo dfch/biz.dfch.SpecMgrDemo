@@ -100,6 +100,29 @@ fails closed. The script stops for each of these:
 A change of only one of the two places (versions.env, oasdiff-checksums.txt) stops the check. The real check of the
 download is in install_oasdiff (the sha256 of the file against OASDIFF_SHA256, before the file is unpacked).
 
+The pins of the security tools OSV-Scanner and gitleaks (feat-8-traceability-security-gates, Task 100.150; REQ-004, ACC-006).
+Both tools are binaries that a gate will download (the recipes are in Phase 120 of feat-8), so they have no lock file, as oasdiff.
+tools/versions.env has OSV_SCANNER_VERSION and OSV_SCANNER_SHA256 (the sha256 of the file osv-scanner_linux_amd64, which is
+the binary and not an archive), and GITLEAKS_VERSION and GITLEAKS_SHA256 (the sha256 of the file
+gitleaks_<GITLEAKS_VERSION>_linux_x64.tar.gz). <security-tool-dir> is tools/security/. It has the vendor file of each
+release without a change (SECURITY_TOOLS below): osv-scanner-checksums.txt (the file `osv-scanner_SHA256SUMS`) and
+gitleaks-checksums.txt (the file `gitleaks_<version>_checksums.txt`), with lines `<sha256>  <file name>`. The checks are
+the same as for oasdiff (the function check_release_checksum), with the messages `Security tool:`. The check is always on,
+and it fails closed. The script stops for each of these (for each of the two tools):
+
+  * the version key or the sha256 key is missing, the version is not an exact version, or the sha256 is not 64 lower case
+    hexadecimal characters;
+  * <security-tool-dir> or the file of the tool is missing, or a line of the file is not `<sha256 value>  <file name>`;
+  * the file has no line for the release file, has more than one such line, or the sha256 of the line is not the value of
+    tools/versions.env.
+
+A change of only one of the two places (versions.env, the vendor file) stops the check. The real check of the download is
+in the install script of Phase 120 (the sha256 of the file against versions.env, before the file is opened). The
+OSV-Scanner file has no version in its name, so the vendor file does not show the version: the sha256 is the tie.
+
+zizmor (feat-8, Task 100.150) is a Python package, so it has the lock file tools/python/zizmor.lock and the check of the
+Python lock files (PYTHON_LOCKS below, ZIZMOR_VERSION).
+
 The pin of the generator plugin openapi-generator-maven-plugin (feat-6-contracts-openapi-pipeline, Task 120.105; REQ-009,
 ACC-011, ACC-012). The plugin is a Maven plugin, so its version is in a pom.xml, and tools/versions.env has the same version
 (OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION) and the sha256 of its jar (OPENAPI_GENERATOR_MAVEN_PLUGIN_SHA256). The sha256 is
@@ -208,7 +231,7 @@ and does not make the file again, so the result does not depend on the version o
     package with no hash, a range or an unpinned package, a URL (`name @ https://...`), a path, `git+...`, `-e`, and an
     option such as `--index-url`, `--extra-index-url`, `--find-links` and `--no-binary` (a line that continues with
     a backslash is one entry);
-  * the version of the tool (`SPECMGR_VERSION`, `PYYAML_VERSION`, `LICENSE_EXPRESSION_VERSION`) is missing in
+  * the version of the tool (`SPECMGR_VERSION`, `PYYAML_VERSION`, `LICENSE_EXPRESSION_VERSION`, `ZIZMOR_VERSION`) is missing in
     tools/versions.env or is not an exact version, or the lock file has no entry of the tool or an entry with
     another version (the name is compared after the normalization of PEP 503).
 
@@ -319,6 +342,7 @@ PYTHON_LOCKS = (
     ("specmgr.lock", "biz-dfch-specmgr", "SPECMGR_VERSION"),
     ("pyyaml.lock", "pyyaml", "PYYAML_VERSION"),
     ("license-expression.lock", "license-expression", "LICENSE_EXPRESSION_VERSION"),
+    ("zizmor.lock", "zizmor", "ZIZMOR_VERSION"),
 )
 PYTHON_LOCK_FILES = {lock[0] for lock in PYTHON_LOCKS} | {"README.md", "make-locks.sh"}
 # `name==version`, with an optional marker after ` ; `. The marker has no `@`, `/` or `:`, so a URL is not a marker.
@@ -435,6 +459,50 @@ OASDIFF_ASSET = "oasdiff_{version}_linux_amd64.tar.gz"
 OASDIFF_CHECKSUMS_FILE = "oasdiff-checksums.txt"
 SHA256_VALUE = re.compile(r"[0-9a-f]{64}")
 CHECKSUM_LINE = re.compile(r"([0-9a-f]{64})  (\S+)")
+
+
+class ReleaseChecksumTool(NamedTuple):
+    """A tool that is one release file of a vendor (a binary or an archive) with a sha256 in tools/versions.env.
+
+    label: the start of each message. name: the name of the tool in a text. version_key, sha256_key: the keys of
+    tools/versions.env. asset: the name of the release file for Linux x86_64 (`{version}` is the version).
+    checksums_file: the vendor file with the checksums of the release, in the folder of the tool (the second place).
+    """
+
+    label: str
+    name: str
+    version_key: str
+    sha256_key: str
+    asset: str
+    checksums_file: str
+
+
+OASDIFF = ReleaseChecksumTool(
+    "Breaking-changes tool",
+    "oasdiff",
+    OASDIFF_VERSION_KEY,
+    OASDIFF_SHA256_KEY,
+    OASDIFF_ASSET,
+    OASDIFF_CHECKSUMS_FILE,
+)
+# The pins of the security tools (feat-8-traceability-security-gates, Task 100.150): the same check as for oasdiff.
+# The file of OSV-Scanner is the binary (no archive), and its name has no version.
+OSV_SCANNER = ReleaseChecksumTool(
+    "Security tool",
+    "OSV-Scanner",
+    "OSV_SCANNER_VERSION",
+    "OSV_SCANNER_SHA256",
+    "osv-scanner_linux_amd64",
+    "osv-scanner-checksums.txt",
+)
+GITLEAKS = ReleaseChecksumTool(
+    "Security tool",
+    "gitleaks",
+    "GITLEAKS_VERSION",
+    "GITLEAKS_SHA256",
+    "gitleaks_{version}_linux_x64.tar.gz",
+    "gitleaks-checksums.txt",
+)
 
 # The tie of the transitive package caniuse-lite (feat-7-verification-architecture-tools, Phase 120): the name of the
 # package in the lock file of frontend/, and the key of tools/versions.env. The rule X1 of sbom.sh excludes the pinned
@@ -879,33 +947,33 @@ def check_jar_sha_file(label: str, path: Path, key: str, versions: dict[str, str
     return []
 
 
-def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
-    """Check the pin of oasdiff (see the header). Return a message for the log and the problems."""
-    label = "Breaking-changes tool"
+def check_release_checksum(tool: ReleaseChecksumTool, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of a release file with a vendor file of checksums (see the header). Return a message and the problems."""
+    label = tool.label
     problems: list[str] = []
-    version, sha256 = versions.get(OASDIFF_VERSION_KEY, ""), versions.get(OASDIFF_SHA256_KEY, "")
-    for key in (OASDIFF_VERSION_KEY, OASDIFF_SHA256_KEY):
+    version, sha256 = versions.get(tool.version_key, ""), versions.get(tool.sha256_key, "")
+    for key in (tool.version_key, tool.sha256_key):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
     if version and not EXACT_VERSION.fullmatch(version):
-        problems.append(f"{OASDIFF_VERSION_KEY} in tools/versions.env is {version!r}, but it must be an exact version")
+        problems.append(f"{tool.version_key} in tools/versions.env is {version!r}, but it must be an exact version")
     if sha256 and not SHA256_VALUE.fullmatch(sha256):
         problems.append(
-            f"{OASDIFF_SHA256_KEY} in tools/versions.env is {sha256!r}, "
+            f"{tool.sha256_key} in tools/versions.env is {sha256!r}, "
             "but it must be a sha256 value (64 lower case hexadecimal characters)"
         )
     if problems:
         return "", problems
-    path = tool_dir / OASDIFF_CHECKSUMS_FILE
+    path = tool_dir / tool.checksums_file
     if not tool_dir.is_dir():
-        return "", [f"{label}: the folder {tool_dir} (the checksums of the release of oasdiff) does not exist"]
+        return "", [f"{label}: the folder {tool_dir} (the checksums of the release of {tool.name}) does not exist"]
     if not path.is_file():
-        return "", [f"{label}: {path} does not exist (it is the file `checksums.txt` of the release of oasdiff)"]
+        return "", [f"{label}: {path} does not exist (it is the checksum file of the release of {tool.name})"]
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError) as error:
         return "", [f"{label}: cannot read {path}: {error}"]
-    asset = OASDIFF_ASSET.format(version=version)
+    asset = tool.asset.format(version=version)
     found: list[str] = []
     for number, line in enumerate(lines, start=1):
         if not line.strip():
@@ -916,18 +984,33 @@ def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[s
         elif match.group(2) == asset:
             found.append(match.group(1))
     if not found:
-        problems.append(
-            f"{label}: {path} has no line for {asset}. {OASDIFF_VERSION_KEY} in tools/versions.env is {version}"
-        )
+        problems.append(f"{label}: {path} has no line for {asset}. {tool.version_key} in tools/versions.env is {version}")
     elif len(found) > 1:
         problems.append(f"{label}: {path} has {len(found)} lines for {asset}, but it must have one")
     elif found[0] != sha256:
         problems.append(
             f"{label}: {path} has the sha256 {found[0]} for {asset}, "
-            f"but {OASDIFF_SHA256_KEY} in tools/versions.env is {sha256}"
+            f"but {tool.sha256_key} in tools/versions.env is {sha256}"
         )
     note = f"{label}: {path}: {asset} has the sha256 of tools/versions.env"
     return ("" if problems else note), problems
+
+
+def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pin of oasdiff (see the header). Return a message for the log and the problems."""
+    return check_release_checksum(OASDIFF, tool_dir, versions)
+
+
+def check_security_tools(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+    """Check the pins of OSV-Scanner and gitleaks (see the header). Return a message for the log and the problems."""
+    notes: list[str] = []
+    problems: list[str] = []
+    for tool in (OSV_SCANNER, GITLEAKS):
+        note, found = check_release_checksum(tool, tool_dir, versions)
+        problems += found
+        if note:
+            notes.append(note)
+    return "; ".join(notes), problems
 
 
 def _resolve_pom_value(text: str, properties: dict[str, str]) -> str | None:
@@ -1463,10 +1546,10 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 10:
+    if len(argv) != 11:
         print(
             "Usage: check_pins.py <versions.env> <workflows-dir> <allowed-actions> <project-root> <sbom-tool-dir> "
-            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir>",
+            "<python-lock-dir> <lint-tool-dir> <breaking-tool-dir> <generator-tool-dir> <security-tool-dir>",
             file=sys.stderr,
         )
         return 2
@@ -1492,6 +1575,9 @@ def main(argv: list[str]) -> int:
         note, breaking_problems = check_oasdiff(Path(argv[8]), versions)
         print(f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}")
         problems += breaking_problems
+        note, security_problems = check_security_tools(Path(argv[10]), versions)
+        print(f"Security tool pin: {note or str(len(security_problems)) + ' problem(s)'}")
+        problems += security_problems
         note, generator_problems = check_generator_plugin(Path(argv[4]), Path(argv[9]), versions)
         print(f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}")
         problems += generator_problems
@@ -1517,7 +1603,8 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"RESULT: PASS. {total} `uses:` step(s) with a full SHA, a comment and the versions of tools/versions.env. "
-        "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the version and the jar checksum of the "
+        "The lock files of cdxgen and of Spectral, the checksum of oasdiff, the checksums of OSV-Scanner and gitleaks, "
+        "the version and the jar checksum of the "
         "generator plugin, the jar checksum of the SBOM plugin, the versions of the test tools of the Maven module, "
         "the module frontend/ (and the tie of caniuse-lite of its lock file) and the lock files of the Python tools are "
         "the ones of tools/versions.env."

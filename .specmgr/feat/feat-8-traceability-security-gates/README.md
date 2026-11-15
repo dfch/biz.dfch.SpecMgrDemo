@@ -4,7 +4,7 @@ created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
 status: planning
 type: feat
-updated: '2026-11-15T08:23:49.471+01:00'
+updated: '2026-11-15T08:51:36.952+01:00'
 version: 1.0.0
 ---
 
@@ -158,11 +158,33 @@ The agent fills the table from the license file of each tool and not from memory
 
 | Tool | Use | License | Result |
 |---|---|---|---|
-| OSV-Scanner | known vulnerabilities | not checked | open |
-| OSV data (the database that OSV-Scanner queries) | known vulnerabilities | not checked | open |
-| gitleaks | secrets | not checked | open |
-| zizmor | workflow files | not checked | open |
+| OSV-Scanner 2.7.1 | known vulnerabilities | Apache-2.0 (main license, rule A). Source: `LICENSE` at the tag v2.7.1 of github.com/google/osv-scanner, the full text of the Apache License, Version 2.0, sha256 of the file `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`. Read on 2026-11-15. The release file `osv-scanner_linux_amd64` is the binary only | Permitted |
+| OSV data (the database that OSV-Scanner queries) | known vulnerabilities | Not clear: the data is an aggregate of many sources with their own licenses (CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0), and the agent found no terms of use of OSV.dev for the data or the API. See the Result of the Phase 100 below | open (the owner decides, Task 100.130) |
+| gitleaks 8.30.1 | secrets | MIT (main license, rule A). Source: `LICENSE` at the tag v8.30.1 of github.com/gitleaks/gitleaks, the full text of the MIT License, copyright 2019 Zachary Rice, sha256 of the file `e3884b252b3bfc045e55be43a34d1e80da070bc6f804ac95bf4660e97d62ebc6`. The file `LICENSE` in the release archive `gitleaks_8.30.1_linux_x64.tar.gz` is the same. Read on 2026-11-15 | Permitted |
+| zizmor 1.32.0 | workflow files | MIT (main license, rule A). Source: `LICENSE` in the source archive of the tag v1.32.0 of github.com/zizmorcore/zizmor (`zizmor-src.tar.gz`, sha256 `8f4ebf26fef5920c0d133925a162dd4e772c088bdbb7a4971bbd589ebf572c47`), the full text of the MIT License, copyright 2024 William Woodruff, sha256 of the file `a6fd1bd18da7cec8284639d5b0d351b90934317be1b9f9ea94a077621c6f35af`. The same file is in the wheel (`zizmor-1.32.0.dist-info/licenses/LICENSE`, METADATA `License: MIT`). The lock file `tools/python/zizmor.lock` has one package (zizmor) and no dependency. Read on 2026-11-15 | Permitted |
 | CodeQL | code analysis | GitHub CodeQL Terms (not open source) | Review |
+
+#### Result of the Phase 100 (License Checks)
+
+The agent read the license files at the pinned releases on 2026-11-15, and not from memory (the GitHub API shows the same licenses, but it is not a check of the file). The three tools do not go to users, so rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 applies (only the main license). Apache-2.0 and MIT are in the class Permitted. The pins (Task 100.150) are these:
+
+| Tool | Version | Release file for Linux x86_64 | sha256 | Where the sha256 was compared |
+|---|---|---|---|---|
+| OSV-Scanner | 2.7.1 (published 2026-11-09) | `osv-scanner_linux_amd64` (the binary, no archive) | `fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8` | `osv-scanner_SHA256SUMS` of the release, the digest of GitHub, and `sha256sum` of the download. `osv-scanner --version` gives 2.7.1 |
+| gitleaks | 8.30.1 (published 2026-03-21) | `gitleaks_8.30.1_linux_x64.tar.gz` | `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` | `gitleaks_8.30.1_checksums.txt` of the release, the digest of GitHub, and `sha256sum` of the download. `gitleaks version` gives 8.30.1 |
+| zizmor | 1.32.0 (published 2026-11-02) | the PyPI package `zizmor` (wheels), the lock file `tools/python/zizmor.lock` has 12 hashes | the 12 sha256 values of the files of the release | the values of the PyPI entry of 1.32.0 (the same 12 values). The wheel for Linux x86_64 installs from the lock file with `--require-hashes --only-binary :all:`, and `zizmor --version` gives 1.32.0 |
+
+These are the latest releases that are not a pre-release on 2026-11-15 (`gh api repos/<owner>/<repo>/releases/latest`). The repository of zizmor is github.com/zizmorcore/zizmor (the old name woodruffw/zizmor gives the same release). The four crates in the source archive of zizmor (`github-actions-models`, `subfeature`, `yamlpatch`, `yamlpath`) have an MIT `LICENSE` too. zizmor has no `Requires-Dist` in the PyPI entry, so the lock file has no other package to check (the license gate of feat-22-python-tools-lockfile has nothing more to read).
+
+The OSV data (Task 100.130) is not clear, so the agent stops here and the owner decides. The agent read `docs/data.md` of github.com/google/osv.dev (master, and the page google.github.io/osv.dev/data/), the FAQ of OSV.dev, the `README.md` of OSV-Scanner at the tag v2.7.1 (the section Data Sources and Privacy) and the `LICENSE` of the repository osv.dev (Apache-2.0, for the code). The facts:
+
+- The data of OSV.dev is a set of databases with their own license. The page names: CC-BY 4.0 (GitHub Advisory Database, PyPI Advisory Database, Go Vulnerability Database, OSS-Fuzz, PSF and others), CC0 1.0, MIT, Apache 2.0, BSD, CC-BY-SA 4.0 (Ubuntu, Alpine SecDB) and CC-BY-NC-ND 4.0 or the Chainguard License for Commercial Scanners (Chainguard / Wolfi). Converted data (Debian, Alpine, NVD) has the license of its source. The page has no license or terms for the OSV.dev aggregate or for the answers of the API.
+- The FAQ says that the API has no rate limit at this time, and it gives service level objectives (a target, not a promise). The agent found no terms of use for the API, no link to terms on osv.dev, and no statement about use in CI or in a product.
+- The input of OSV-Scanner is the SBOM of the project, which has Maven and npm packages. For these the main source is the GitHub Advisory Database (CC-BY 4.0, which asks for attribution). The licenses CC-BY-NC-ND (Wolfi) and CC-BY-SA (Ubuntu, Alpine) are for ecosystems that this project does not have, but the agent cannot show that OSV-Scanner never returns such a record.
+- OSV-Scanner sends package names, versions, ecosystems and file hashes to api.osv.dev (the README of OSV-Scanner). Source code is not sent. The SBOM of this project is for a public repository. The tool can also ask deps.dev (for the dependency tree, and for `--licenses`), and the registries Maven Central and npm.
+- DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has classes for the licenses of software. It has no class for CC-BY-4.0 (the precedent is the deviation for caniuse-lite in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9) and no rule for data that a tool queries. The agent does not decide if the DEC applies to data.
+
+The options for the owner: (a) accept the use of the data as a deviation in the register DEC, with the condition that the report keeps the attribution of the sources (CC-BY 4.0) and that the project stores counts only; (b) a statement that the DEC does not apply to the data that a tool queries, with a short note in the DEC (a permission for one time); (c) the offline mode with a downloaded database (the same licenses, and no query of the project data to the network); (d) leave OSV-Scanner out. The row stays `open` until the owner decides, and ACC-008 is not done.
 
 ### Related Decisions
 
@@ -178,17 +200,17 @@ The agent fills the table from the license file of each tool and not from memory
 
 #### Phase 100: License Checks and Pins
 
-- [ ] Task 100.100: Read the license file of OSV-Scanner at the pinned release, and fill the row of the license table. Use the result words of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. Rule A of the DEC applies (the main license of a tool that does not go to users)
+- [x] Task 100.100: Read the license file of OSV-Scanner at the pinned release, and fill the row of the license table. Use the result words of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. Rule A of the DEC applies (the main license of a tool that does not go to users). Done on 2026-11-15: Apache-2.0, Permitted
 
-- [ ] Task 100.110: Read the license file of gitleaks at the pinned release, and fill the row
+- [x] Task 100.110: Read the license file of gitleaks at the pinned release, and fill the row. Done on 2026-11-15: MIT, Permitted
 
-- [ ] Task 100.120: Read the license file of zizmor in the source archive of the pinned release, and fill the row. Do the same for the packages that the lock file brings in, with the license gate of feat-22-python-tools-lockfile
+- [x] Task 100.120: Read the license file of zizmor in the source archive of the pinned release, and fill the row. Do the same for the packages that the lock file brings in, with the license gate of feat-22-python-tools-lockfile. Done on 2026-11-15: MIT, Permitted. The lock file has one package (zizmor) and no dependency
 
-- [ ] Task 100.130: Read the terms of use of the OSV data that OSV-Scanner queries, and fill the row. If the terms are not clear, the work stops and the owner decides
+- [ ] Task 100.130: Read the terms of use of the OSV data that OSV-Scanner queries, and fill the row. If the terms are not clear, the work stops and the owner decides. Read on 2026-11-15, and the terms are not clear (see the Result of the Phase 100). The row stays `open`, and the owner decides
 
 - [x] Task 100.140: Record the terms of CodeQL in the license table (the file and the date of the read), and write the text of the deviation for the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. Do not change the DEC before the owner gives a one-time permission. Done on 2026-11-15: the owner gave the one-time permission, and the dated section is in the DEC (see Updates)
 
-- [ ] Task 100.150: Select the version of each tool, and write the pins in `tools/versions.env` (the version, and the sha256 for the binary of gitleaks and of OSV-Scanner). Make the lock file with hashes for zizmor, as in feat-22-python-tools-lockfile. Extend the gate check-pins for the new pins
+- [x] Task 100.150: Select the version of each tool, and write the pins in `tools/versions.env` (the version, and the sha256 for the binary of gitleaks and of OSV-Scanner). Make the lock file with hashes for zizmor, as in feat-22-python-tools-lockfile. Extend the gate check-pins for the new pins. Done on 2026-11-15: OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 (see the Result of the Phase 100 and the entry of Updates)
 
 - [ ] Task 100.160: The owner reviews the license table and the deviation text, and gives the permission for the entry in the register DEC (ACC-007, ACC-008)
 
@@ -256,7 +278,11 @@ The agent fills the table from the license file of each tool and not from memory
 
 **As of 2026-11-15**: The plan is written. The owner decided the open points in the session of 2026-11-15 (see Decisions Made). The branch `feat-8` is rebased onto `origin/dev`, which has feat-7-verification-architecture-tools with the status `done`, and GitHub issue #7 is closed. Two tasks are done: the deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (Task 100.140), and the default setup of CodeQL is turned on (Task 130.100). The first scan is not complete yet (Task 130.110). The tools of the other phases are not selected, and no recipe, no script and no workflow is changed. The next step is the rest of Phase 100.
 
+**Update 2026-11-15 (Phase 100)**: Tasks 100.100, 100.110, 100.120 and 100.150 are done. OSV-Scanner (Apache-2.0), gitleaks (MIT) and zizmor (MIT) are Permitted, and the pins are in `tools/versions.env` and checked by `just check-pins` (OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 with `tools/python/zizmor.lock`). Task 100.130 (the terms of the OSV data) is not done: the terms are not clear, and the owner decides (see the Result of the Phase 100). Task 100.160 is for the owner. No recipe, no install script and no workflow is changed. The next phase (110) needs no decision about the OSV data. Phase 120 (`vuln-scan`) needs it.
+
 ### Blockers
+
+- The owner must decide about the license of the OSV data (Task 100.130, row `OSV data` of the license table, open): the data is an aggregate with the licenses CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0, and no terms of use of OSV.dev were found. The options (a) to (d) are in the Result of the Phase 100. ACC-008 needs this decision, and the recipe `vuln-scan` of Phase 120 needs it before the project uses OSV-Scanner.
 
 - The owner must review the license table and the deviation text of CodeQL (Task 100.160). The deviation is written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, but the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security), and a person who has competence in the law has not examined the section.
 
@@ -269,6 +295,16 @@ The agent fills the table from the license file of each tool and not from memory
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 08:51:30.000Z - Phase 100: licenses of the three tools read, pins and lock file written, OSV data stops for the owner
+
+The agent did Tasks 100.100, 100.110, 100.120 and 100.150. It did not do Task 100.130 (the terms are not clear, see below), Task 100.140 (done before) and Task 100.160 (for the owner). About the time of this entry: the real UTC time of the machine was 07:51, and the local time (UTC+01:00) was 08:51. The earlier entry of this section has the local time of its author with the letter Z (08:30:00.000Z), and the validation of the plan needs the entries newest first. So this entry has the local time with the letter Z, as the entry below. The agent did not change the entry below.
+
+1. Licenses (Tasks 100.100 to 100.120): the agent got the license file of each tool at the pinned release and recorded the file, the release, the sha256 of the file and the date of the read in the license table (the Result of the Phase 100 has the details). OSV-Scanner 2.7.1: Apache-2.0. gitleaks 8.30.1: MIT. zizmor 1.32.0: MIT (the source archive, the wheel, and the four crates in the archive). All three are Permitted by rule A. The lock file of zizmor has one package and no dependency, so there is no other license to read. The row of CodeQL is not changed.
+2. Versions and checksums (Task 100.150): the latest releases that are not a pre-release are OSV-Scanner 2.7.1 (`osv-scanner_linux_amd64`, `fb7dab19...2c6ee8`), gitleaks 8.30.1 (`gitleaks_8.30.1_linux_x64.tar.gz`, `551f6fc8...3f2470eb`) and zizmor 1.32.0 (the lock file has the 12 hashes of the PyPI entry). The agent compared each sha256 with the vendor file of the release, with the digest of GitHub and with `sha256sum` of the download. The three tools run (`osv-scanner --version`, `gitleaks version`, `zizmor --version` after the install from the lock file with `--require-hashes --only-binary :all:`).
+3. Files changed: `tools/versions.env` (the keys `OSV_SCANNER_*`, `GITLEAKS_*`, `ZIZMOR_VERSION`, and the comments), `tools/python/zizmor.lock` (new, made by `tools/python/make-locks.sh`, which has a new line for zizmor; the three old lock files did not change), `tools/security/` (new: `osv-scanner-checksums.txt` and `gitleaks-checksums.txt` are the vendor files of the releases without a change, and `README.md`), `tools/gates/check_pins.py` and `check-pins.sh` (the function `check_release_checksum` is the check of oasdiff with the data of the tool, and it checks the two new tools; `PYTHON_LOCKS` has zizmor; the new argument is `<security-tool-dir>`), `tools/gates/selftest.sh` (the new cases for the pins of the two tools and for the lock file of zizmor), and `tools/README.md`, `tools/gates/README.md`, `tools/python/README.md`.
+4. The OSV data (Task 100.130) stops for the owner: the data is an aggregate with the licenses CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0, and the agent found no terms of use of OSV.dev for the data or the API. The row stays `open`. The options (a) to (d) are in the Result of the Phase 100. The agent did not choose and did not change the register DEC.
+5. The agent changed no setting of the repository, no workflow, no recipe and no DEC.
 
 #### 2026-11-15 08:30:00.000Z - The deviation for CodeQL is in the register DEC, CodeQL default setup is turned on, issue #7 is closed
 
@@ -287,6 +323,10 @@ The agent wrote the plan after the planning session of 2026-11-15. The agent rea
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 08:51:30.000Z - The pins of the security tools: a folder tools/security/ with the vendor files, and the latest releases
+
+The agent pinned the three tools to the latest releases that are not a pre-release: OSV-Scanner 2.7.1, gitleaks 8.30.1 and zizmor 1.32.0. For the two binaries the agent used the pattern of oasdiff: the version and the sha256 are in `tools/versions.env`, and the vendor file of the release (without a change) is the second place, in the new folder `tools/security/`. `just check-pins` compares both places, and the check is the function `check_release_checksum` that oasdiff uses too (the messages of oasdiff did not change). zizmor has a lock file `tools/python/zizmor.lock` as the other Python tools. The plan did not name the folder, so this is a decision of the agent; the owner can ask for another name. The decision about the license of the OSV data is open (see the Blockers).
 
 #### 2026-11-15 07:07:55.000Z - One feature for Gate 2 and Gate 9, and no threshold for a security tool
 

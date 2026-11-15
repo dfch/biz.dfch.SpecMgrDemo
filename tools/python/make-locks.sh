@@ -7,7 +7,7 @@
 #   tools/python/make-locks.sh --upgrade    take the newest versions of the dependencies
 #
 # For each tool, the script writes a temporary input file with the version of tools/versions.env
-# (SPECMGR_VERSION, PYYAML_VERSION, LICENSE_EXPRESSION_VERSION), and starts
+# (SPECMGR_VERSION, PYYAML_VERSION, LICENSE_EXPRESSION_VERSION, ZIZMOR_VERSION), and starts
 #
 #   uv pip compile --generate-hashes --universal --only-binary :all: --python-version <PYTHON_VERSION>
 #
@@ -73,4 +73,5 @@ mkdir -p "${lock_dir}"
 make_lock specmgr.lock "biz-dfch-specmgr[mcp]==@VERSION@" SPECMGR_VERSION
 make_lock pyyaml.lock "PyYAML==@VERSION@" PYYAML_VERSION
 make_lock license-expression.lock "license-expression==@VERSION@" LICENSE_EXPRESSION_VERSION
+make_lock zizmor.lock "zizmor==@VERSION@" ZIZMOR_VERSION
 log "done: ${lock_dir}"

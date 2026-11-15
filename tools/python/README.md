@@ -6,7 +6,9 @@ with `uv pip install --require-hashes --only-binary :all:` (`make_python_env` in
 stops if a file has another hash, if a package has no hash, or if a package is missing in the lock file.
 
 The tools do not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9), so the licenses of the
-packages in the lock files are not checked.
+packages in the lock files are not checked by a gate. For a new tool, the plan of the feature reads the license of the
+tool and of each package of its lock file once (for zizmor, see the license table of
+`feat-8-traceability-security-gates`).
 
 Plan: FEAT feat-22-python-tools-lockfile (GitHub issue #22). The plan has the facts and the decisions. It
 closes the part of finding G2 (the review of feat-5-foundation-monorepo-ci) that is about the Python tools.
@@ -18,7 +20,8 @@ closes the part of finding G2 (the review of feat-5-foundation-monorepo-ci) that
 | `specmgr.lock` | specmgr with the extra `mcp` (`SPECMGR_VERSION`), 44 packages | `validate-docs.sh` (`just validate`) |
 | `pyyaml.lock` | PyYAML (`PYYAML_VERSION`), 1 package | `check-workflows.sh`, `check-pins.sh` |
 | `license-expression.lock` | `license-expression` (`LICENSE_EXPRESSION_VERSION`) and `boolean.py`, 2 packages | `license-check.sh` (`just license-check`) |
-| `make-locks.sh` | The script that writes the three lock files | You, to change a version |
+| `zizmor.lock` | zizmor (`ZIZMOR_VERSION`), 1 package (the wheel has the binary and no dependency). The recipe `workflow-scan` of `feat-8-traceability-security-gates` will use it | (Phase 120 of `feat-8-traceability-security-gates`) |
+| `make-locks.sh` | The script that writes the four lock files | You, to change a version |
 
 The lock files are for Python 3.13 (`PYTHON_VERSION` of `tools/versions.env`) and for all platforms
 (`--universal`: the entries have markers, so an entry for Windows is in the file but is not installed on Linux).
@@ -33,7 +36,7 @@ The version of a tool is in two places. `tools/versions.env` is the source. The 
 
 | Place | What it has |
 |---|---|
-| `tools/versions.env` | `SPECMGR_VERSION`, `PYYAML_VERSION`, `LICENSE_EXPRESSION_VERSION` and `PYTHON_VERSION` |
+| `tools/versions.env` | `SPECMGR_VERSION`, `PYYAML_VERSION`, `LICENSE_EXPRESSION_VERSION`, `ZIZMOR_VERSION` and `PYTHON_VERSION` |
 | `tools/python/<tool>.lock` | the entry `<tool>==<version>` and the hashes of all packages |
 
 `just check-pins` (it runs in CI for each pull request) stops if the version of a tool in its lock file is not the
