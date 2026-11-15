@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-03T07:54:08.480+01:00'
 id: feat-7-verification-architecture-tools
-status: review
+status: done
 type: feat
-updated: '2026-11-15T06:41:48.547+01:00'
+updated: '2026-11-15T07:01:11.618+01:00'
 version: 1.0.0
 ---
 
@@ -508,21 +508,25 @@ The evidence (the runs of 2026-11-12, the exit code of each recipe is 0):
 
 #### Phase 150: Review
 
-- [ ] Task 150.100: The owner examines the license table, the result for ArchUniTS and the open items
+- [x] Task 150.100: The owner examines the license table, the result for ArchUniTS and the open items
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-15**: the work of the feature is complete (the phases 100 to 140 are done and committed; the status of the feature is review). The second post-implementation review (the agent feat-reviewer, 2026-11-14) found no error and no gap: its findings D1 (the record of the total of the self-test) and I1 (the display of the surviving mutant of the two recipes of the mutation, the reader that exits early on a live pipe) are fixed, its finding I2 (the observation of the output of jqwik, the flag hideAntiAiClause of the engine) is decided with the default (the pinned jqwik stays), the record of the round is in the Updates, and the CI run of 2026-11-15 (the run 43676184131 of the push of `5d6da82`) is green for the eleven jobs of the feature (the job test-e2e with the forced reporter line included, the open item of the green run is closed, the evidence is in the Result of the Phase 140 and in the Updates). The current total of the self-test is 987 ok, 0 failed (`just test-gates`, the run of 2026-11-14). The six acceptance criteria are ticked with the pointers above. The open items of the Result of the Phase 140 are closed (the required checks are set by the owner of 2026-11-15, and the decisions of the owner of 2026-11-15 keep the console reports and the pinned jqwik; the record is in the Updates). What the owner examines in the review (the task 150.100): the license table (21 rows, the evidence in the Result of the Phase 100) and the result of the ArchUniTS examination and the verdict for RSK 025202ba (the Result of the Phase 130); the merge of the pull request is after the examination.
+**As of 2026-11-15**: The feature is done. All phases 100 to 150 are done, all tasks and all acceptance criteria are ticked, and the status is `done`. The owner closed the review on 2026-11-15: the license table (21 rows: seventeen Permitted, four Review, all four covered by the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, status accepted) and the result of the ArchUniTS examination (the verdict: the mitigation of RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 is not triggered) are accepted, and the open items of the review are closed (the required checks are set in the rulesets of `dev` and `main`, and the decisions of the artifacts and of jqwik are the default; the record is in the Updates). What stays open for the project (not for this feature): the feature for the walking skeleton (not yet created; this feature unblocks it: the baseline is in the plan, and the eleven jobs of the feature are the required checks of `dev` and `main`).
 
 ### Blockers
 
-None.
+None. The feature is done.
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 05:59:43.000Z - The owner closes the review: the license table and the result for ArchUniTS are accepted, the status is `done`
+
+The owner closed the review of the feature on 2026-11-15 (the task 150.100): the license table is accepted (21 rows: seventeen Permitted, four Review, all four named the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, status accepted; the deviation of caniuse-lite is in the same register DEC), and the result of the ArchUniTS examination is accepted (the verdict: the mitigation of RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 is not triggered; the record is in the Result of the Phase 130). The open items of the review are closed (the record is in the entries of 2026-11-15 above: the green CI run, and the required checks set with the decisions of the artifacts and of jqwik). The task 150.100 is ticked, and the status is set to `done` in this pull request (the SOP "Close a Feature With One Pull Request"; the merge of the pull request to `dev` is the act of the owner).
 
 #### 2026-11-15 05:25:17.000Z - The owner closes the open items of the review: the required checks are set, and the decisions of the artifacts and of jqwik are the default
 
@@ -631,6 +635,15 @@ The plan is written from the planning session of 2026-11-03.
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 05:59:43.000Z - The owner closes the review: the license table and the ArchUniTS verdict are accepted, the status is `done`
+
+The owner closed the review of the feature on 2026-11-15 (the task 150.100):
+
+- The license table is accepted: 21 rows (seventeen Permitted, four Review, no row is Not permitted and no row is open); the four rows that are Review (JUnit, jqwik, axe-core and JaCoCo) name the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (status accepted, the decision of the owner of 2026-11-09), and the deviation of the transitive package caniuse-lite is in the same register DEC (the section of 2026-11-11, the decision of the owner of 2026-11-11).
+- The result of the ArchUniTS examination is accepted: the verdict of the Result of the Phase 130 (the mitigation of RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 is not triggered: the layers and the imports are possible with ArchUniTS 2.5.4, and the module structure is checked by the comparison of the workspace).
+- The open items of the review are closed: the green CI run (the run 43676184131 of 2026-11-15), the required checks (set by the owner of 2026-11-15 in the rulesets of `dev` and `main`), and the decisions of the artifacts and of jqwik (the default: the console reports stay, and the pinned jqwik stays).
+- The task 150.100 is ticked, and the status is set to `done` in this pull request, as the SOP "Close a Feature With One Pull Request" says. The merge of the pull request to `dev` is the act of the owner.
 
 #### 2026-11-12 14:45:00.000Z - The coverage is not in the CI of this feature: the recipes are local, and the walking skeleton sets the CI and the threshold of the coverage
 
