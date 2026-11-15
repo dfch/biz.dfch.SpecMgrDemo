@@ -4,7 +4,7 @@ created: '2026-11-15T08:09:18.000+01:00'
 id: feat-8-traceability-security-gates
 status: planning
 type: feat
-updated: '2026-11-15T08:51:36.952+01:00'
+updated: '2026-11-15T09:44:07.312+01:00'
 version: 1.0.0
 ---
 
@@ -159,7 +159,7 @@ The agent fills the table from the license file of each tool and not from memory
 | Tool | Use | License | Result |
 |---|---|---|---|
 | OSV-Scanner 2.7.1 | known vulnerabilities | Apache-2.0 (main license, rule A). Source: `LICENSE` at the tag v2.7.1 of github.com/google/osv-scanner, the full text of the Apache License, Version 2.0, sha256 of the file `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`. Read on 2026-11-15. The release file `osv-scanner_linux_amd64` is the binary only | Permitted |
-| OSV data (the database that OSV-Scanner queries) | known vulnerabilities | Not clear: the data is an aggregate of many sources with their own licenses (CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0), and the agent found no terms of use of OSV.dev for the data or the API. See the Result of the Phase 100 below | open (the owner decides, Task 100.130) |
+| OSV data (the database that OSV-Scanner queries) | known vulnerabilities | Not clear: the data is an aggregate of many sources with their own licenses (CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0), and the agent found no terms of use of OSV.dev for the data or the API. See the Result of the Phase 100 below | Review. Deviation accepted by the owner on 2026-11-15 (option (a)), recorded in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the section of 2026-11-15, OSV data) |
 | gitleaks 8.30.1 | secrets | MIT (main license, rule A). Source: `LICENSE` at the tag v8.30.1 of github.com/gitleaks/gitleaks, the full text of the MIT License, copyright 2019 Zachary Rice, sha256 of the file `e3884b252b3bfc045e55be43a34d1e80da070bc6f804ac95bf4660e97d62ebc6`. The file `LICENSE` in the release archive `gitleaks_8.30.1_linux_x64.tar.gz` is the same. Read on 2026-11-15 | Permitted |
 | zizmor 1.32.0 | workflow files | MIT (main license, rule A). Source: `LICENSE` in the source archive of the tag v1.32.0 of github.com/zizmorcore/zizmor (`zizmor-src.tar.gz`, sha256 `8f4ebf26fef5920c0d133925a162dd4e772c088bdbb7a4971bbd589ebf572c47`), the full text of the MIT License, copyright 2024 William Woodruff, sha256 of the file `a6fd1bd18da7cec8284639d5b0d351b90934317be1b9f9ea94a077621c6f35af`. The same file is in the wheel (`zizmor-1.32.0.dist-info/licenses/LICENSE`, METADATA `License: MIT`). The lock file `tools/python/zizmor.lock` has one package (zizmor) and no dependency. Read on 2026-11-15 | Permitted |
 | CodeQL | code analysis | GitHub CodeQL Terms (not open source) | Review |
@@ -176,7 +176,7 @@ The agent read the license files at the pinned releases on 2026-11-15, and not f
 
 These are the latest releases that are not a pre-release on 2026-11-15 (`gh api repos/<owner>/<repo>/releases/latest`). The repository of zizmor is github.com/zizmorcore/zizmor (the old name woodruffw/zizmor gives the same release). The four crates in the source archive of zizmor (`github-actions-models`, `subfeature`, `yamlpatch`, `yamlpath`) have an MIT `LICENSE` too. zizmor has no `Requires-Dist` in the PyPI entry, so the lock file has no other package to check (the license gate of feat-22-python-tools-lockfile has nothing more to read).
 
-The OSV data (Task 100.130) is not clear, so the agent stops here and the owner decides. The agent read `docs/data.md` of github.com/google/osv.dev (master, and the page google.github.io/osv.dev/data/), the FAQ of OSV.dev, the `README.md` of OSV-Scanner at the tag v2.7.1 (the section Data Sources and Privacy) and the `LICENSE` of the repository osv.dev (Apache-2.0, for the code). The facts:
+The OSV data (Task 100.130) was not clear, so the agent stopped and the owner decided on 2026-11-15 (see the end of this section). The agent read `docs/data.md` of github.com/google/osv.dev (master, and the page google.github.io/osv.dev/data/), the FAQ of OSV.dev, the `README.md` of OSV-Scanner at the tag v2.7.1 (the section Data Sources and Privacy) and the `LICENSE` of the repository osv.dev (Apache-2.0, for the code). The facts:
 
 - The data of OSV.dev is a set of databases with their own license. The page names: CC-BY 4.0 (GitHub Advisory Database, PyPI Advisory Database, Go Vulnerability Database, OSS-Fuzz, PSF and others), CC0 1.0, MIT, Apache 2.0, BSD, CC-BY-SA 4.0 (Ubuntu, Alpine SecDB) and CC-BY-NC-ND 4.0 or the Chainguard License for Commercial Scanners (Chainguard / Wolfi). Converted data (Debian, Alpine, NVD) has the license of its source. The page has no license or terms for the OSV.dev aggregate or for the answers of the API.
 - The FAQ says that the API has no rate limit at this time, and it gives service level objectives (a target, not a promise). The agent found no terms of use for the API, no link to terms on osv.dev, and no statement about use in CI or in a product.
@@ -184,7 +184,9 @@ The OSV data (Task 100.130) is not clear, so the agent stops here and the owner 
 - OSV-Scanner sends package names, versions, ecosystems and file hashes to api.osv.dev (the README of OSV-Scanner). Source code is not sent. The SBOM of this project is for a public repository. The tool can also ask deps.dev (for the dependency tree, and for `--licenses`), and the registries Maven Central and npm.
 - DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has classes for the licenses of software. It has no class for CC-BY-4.0 (the precedent is the deviation for caniuse-lite in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9) and no rule for data that a tool queries. The agent does not decide if the DEC applies to data.
 
-The options for the owner: (a) accept the use of the data as a deviation in the register DEC, with the condition that the report keeps the attribution of the sources (CC-BY 4.0) and that the project stores counts only; (b) a statement that the DEC does not apply to the data that a tool queries, with a short note in the DEC (a permission for one time); (c) the offline mode with a downloaded database (the same licenses, and no query of the project data to the network); (d) leave OSV-Scanner out. The row stays `open` until the owner decides, and ACC-008 is not done.
+The options for the owner: (a) accept the use of the data as a deviation in the register DEC, with the condition that the report keeps the attribution of the sources (CC-BY 4.0) and that the project stores counts only; (b) a statement that the DEC does not apply to the data that a tool queries, with a short note in the DEC (a permission for one time); (c) the offline mode with a downloaded database (the same licenses, and no query of the project data to the network); (d) leave OSV-Scanner out.
+
+The decision of the owner (2026-11-15): option (a). The owner accepted a deviation for the OSV data, with the conditions that the use is a report only, that the project keeps the attribution, that the repository has only counts and finding identifiers, and that the project does not store or redistribute the records. The agent wrote the dated section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" and an entry of Updates in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, with the one-time permission of the owner (no other change of the DEC, the status is not changed). The section has the sources and licenses as found (with CC-BY-SA 4.0, and CC-BY-NC-ND 4.0 / Chainguard for Wolfi), what OSV-Scanner sends to api.osv.dev, the conditions, the exposure that the project cannot exclude, and what happens if the condition ends (the recipe `vuln-scan` and its CI job must be switched off until the owner decides again). The agent did not read the terms of Google for the service or the license texts of the single sources, and a person who has competence in the law has not examined the section (this is in the section and in the Blockers). The result of the row is Review, as for CodeQL, and the license table has no row with the result open.
 
 ### Related Decisions
 
@@ -206,13 +208,13 @@ The options for the owner: (a) accept the use of the data as a deviation in the 
 
 - [x] Task 100.120: Read the license file of zizmor in the source archive of the pinned release, and fill the row. Do the same for the packages that the lock file brings in, with the license gate of feat-22-python-tools-lockfile. Done on 2026-11-15: MIT, Permitted. The lock file has one package (zizmor) and no dependency
 
-- [ ] Task 100.130: Read the terms of use of the OSV data that OSV-Scanner queries, and fill the row. If the terms are not clear, the work stops and the owner decides. Read on 2026-11-15, and the terms are not clear (see the Result of the Phase 100). The row stays `open`, and the owner decides
+- [x] Task 100.130: Read the terms of use of the OSV data that OSV-Scanner queries, and fill the row. If the terms are not clear, the work stops and the owner decides. Done on 2026-11-15: the terms are not clear (see the Result of the Phase 100), and the owner decided on option (a), a deviation in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. The row has the result Review
 
 - [x] Task 100.140: Record the terms of CodeQL in the license table (the file and the date of the read), and write the text of the deviation for the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. Do not change the DEC before the owner gives a one-time permission. Done on 2026-11-15: the owner gave the one-time permission, and the dated section is in the DEC (see Updates)
 
 - [x] Task 100.150: Select the version of each tool, and write the pins in `tools/versions.env` (the version, and the sha256 for the binary of gitleaks and of OSV-Scanner). Make the lock file with hashes for zizmor, as in feat-22-python-tools-lockfile. Extend the gate check-pins for the new pins. Done on 2026-11-15: OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 (see the Result of the Phase 100 and the entry of Updates)
 
-- [ ] Task 100.160: The owner reviews the license table and the deviation text, and gives the permission for the entry in the register DEC (ACC-007, ACC-008)
+- [ ] Task 100.160: The owner reviews the license table and the deviation text, and gives the permission for the entry in the register DEC (ACC-007, ACC-008). Open on 2026-11-15: the owner gave the permission for the sections of CodeQL and of the OSV data (one-time permissions for the register DEC), but the owner has not yet reviewed the whole table
 
 #### Phase 110: Gate 2, the Traceability Check
 
@@ -278,13 +280,13 @@ The options for the owner: (a) accept the use of the data as a deviation in the 
 
 **As of 2026-11-15**: The plan is written. The owner decided the open points in the session of 2026-11-15 (see Decisions Made). The branch `feat-8` is rebased onto `origin/dev`, which has feat-7-verification-architecture-tools with the status `done`, and GitHub issue #7 is closed. Two tasks are done: the deviation for CodeQL is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (Task 100.140), and the default setup of CodeQL is turned on (Task 130.100). The first scan is not complete yet (Task 130.110). The tools of the other phases are not selected, and no recipe, no script and no workflow is changed. The next step is the rest of Phase 100.
 
-**Update 2026-11-15 (Phase 100)**: Tasks 100.100, 100.110, 100.120 and 100.150 are done. OSV-Scanner (Apache-2.0), gitleaks (MIT) and zizmor (MIT) are Permitted, and the pins are in `tools/versions.env` and checked by `just check-pins` (OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 with `tools/python/zizmor.lock`). Task 100.130 (the terms of the OSV data) is not done: the terms are not clear, and the owner decides (see the Result of the Phase 100). Task 100.160 is for the owner. No recipe, no install script and no workflow is changed. The next phase (110) needs no decision about the OSV data. Phase 120 (`vuln-scan`) needs it.
+**Update 2026-11-15 (Phase 100)**: Tasks 100.100, 100.110, 100.120 and 100.150 are done. OSV-Scanner (Apache-2.0), gitleaks (MIT) and zizmor (MIT) are Permitted, and the pins are in `tools/versions.env` and checked by `just check-pins` (OSV-Scanner 2.7.1, gitleaks 8.30.1, zizmor 1.32.0 with `tools/python/zizmor.lock`). Task 100.130 (the terms of the OSV data) was not clear, and the owner decided on option (a) (see the update below). Task 100.160 is for the owner. No recipe, no install script and no workflow is changed.
+
+**Update 2026-11-15 (Task 100.130)**: The owner decided on option (a): a deviation for the OSV data. The dated section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" and an entry of Updates are in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the one-time permission of the owner; no other change, the status is not changed). The row of the license table has the result Review, and Task 100.130 is done. No row of the license table has the result open. Task 100.160 stays open: the owner has not yet reviewed the whole table. The conditions of the deviation apply to Phase 120 (`vuln-scan`): a report only, the repository has counts and finding identifiers only, the attribution is kept (the README of the security gates), no copy of the records, and no use of the option `--licenses` of OSV-Scanner.
 
 ### Blockers
 
-- The owner must decide about the license of the OSV data (Task 100.130, row `OSV data` of the license table, open): the data is an aggregate with the licenses CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0, and no terms of use of OSV.dev were found. The options (a) to (d) are in the Result of the Phase 100. ACC-008 needs this decision, and the recipe `vuln-scan` of Phase 120 needs it before the project uses OSV-Scanner.
-
-- The owner must review the license table and the deviation text of CodeQL (Task 100.160). The deviation is written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, but the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security), and a person who has competence in the law has not examined the section.
+- The owner must review the whole license table and the deviation texts of CodeQL and of the OSV data (Task 100.160). Both deviations are written in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. For CodeQL, the agent did not read the terms of GitHub for the hosted service (the GitHub Terms of Service and the terms for GitHub Advanced Security). For the OSV data, the agent did not read the terms of Google for the service or the license texts of the single sources, and it cannot exclude a record with the license CC-BY-SA 4.0 or CC-BY-NC-ND 4.0 from an ecosystem that the project does not have. A person who has competence in the law has not examined either section.
 
 - The AGPL clause about use through a network is open in DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9. It does not stop this feature, and it needs a new DEC with the feature for the walking skeleton.
 
@@ -295,6 +297,14 @@ The options for the owner: (a) accept the use of the data as a deviation in the 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 09:44:00.000Z - Task 100.130: the owner accepts a deviation for the OSV data, and the section is in the register DEC
+
+The owner decided on 2026-11-15 on option (a) for the OSV data: a deviation in the register DEC, with the attribution kept, only counts and finding identifiers stored, and no storage or redistribution of the records. The owner's choice is the one-time permission to add one dated section and one entry of Updates to the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9, and no other change. The agent did this (the time of this entry is the local time with the letter Z, as for the earlier entries):
+
+1. Register DEC: the section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" in More Information (after the section of CodeQL), and an entry in Updates. The text has the sources and licenses as the agent found them (CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0, and CC-BY-NC-ND 4.0 / Chainguard License for Commercial Scanners for Wolfi), the statement that no terms of use of OSV.dev were found, what OSV-Scanner sends to api.osv.dev (package names, versions, ecosystems and file hashes, no source code), the conditions (a report only, no copy of the records, counts and finding identifiers in the repository, the attribution kept, no use of `--licenses`), the exposure that cannot be excluded (a record with CC-BY-SA 4.0 or CC-BY-NC-ND 4.0 from an ecosystem that the project does not have), and what happens if the condition ends (the recipe `vuln-scan` and its CI job are switched off until the owner decides again; the offline mode ends the transmission only and not the license question). The status of the DEC and the other sections are not changed. The agent used the tool `edit` of specmgr, so `updated` of the DEC is set by the tool.
+2. This plan: the row of the OSV data of the license table has the result Review (the deviation accepted by the owner on 2026-11-15, option (a)). Task 100.130 is done. The Current Status and the Blockers are updated (the OSV blocker is removed).
+3. Task 100.160 stays open. The owner has not yet reviewed the whole license table. The Blockers say that the texts of CodeQL and of the OSV data have not been examined by a person who has competence in the law.
 
 #### 2026-11-15 08:51:30.000Z - Phase 100: licenses of the three tools read, pins and lock file written, OSV data stops for the owner
 
@@ -323,6 +333,10 @@ The agent wrote the plan after the planning session of 2026-11-15. The agent rea
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 09:44:00.000Z - OSV data: a deviation in the register DEC (option (a))
+
+The owner chose option (a) for the OSV data. The data of OSV.dev has the licenses of its sources and no terms of use of OSV.dev were found, so the data is not a clear case. The owner accepted a deviation with these conditions: a report only, only counts and finding identifiers in the repository, the attribution kept, and no storage or redistribution of the records. The owner's choice is the one-time permission for the dated section in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9. Of the other options, the statement that the DEC does not apply to data (b), the offline mode (c; it does not end the license question, because the database has the same source licenses) and no OSV-Scanner (d) were not chosen. The exposure that cannot be excluded (a record with CC-BY-SA 4.0 or CC-BY-NC-ND 4.0) is in the section of the DEC. The owner has not yet reviewed the whole license table (Task 100.160 is open).
 
 #### 2026-11-15 08:51:30.000Z - The pins of the security tools: a folder tools/security/ with the vendor files, and the latest releases
 

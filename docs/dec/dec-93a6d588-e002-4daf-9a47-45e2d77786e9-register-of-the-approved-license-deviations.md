@@ -4,7 +4,7 @@ created: '2026-11-09T20:05:19.449+01:00'
 id: 93a6d588-e002-4daf-9a47-45e2d77786e9
 status: accepted
 type: dec
-updated: '2026-11-15T08:22:27.000+01:00'
+updated: '2026-11-15T09:43:23.746+01:00'
 version: 1.0.0
 ---
 
@@ -104,9 +104,32 @@ Conditions of this deviation:
 
 The owner approved the deviation on 2026-11-15 (in the chat: "I give the one-time permission for DEC 93a6d588" and "CodeQL: go ahead", after the choice of the hosted default setup).
 
+### 2026-11-15 - OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries
+
+The data is the OSV.dev database (vulnerability records), which the tool OSV-Scanner 2.7.1 queries on the network (api.osv.dev) for the packages of the SBOM files of the project (`build/sbom/*.cdx.json`: Maven and npm packages). The tool itself is Apache-2.0 and Permitted (the license table of the plan of feat-8-traceability-security-gates). The data is not a library, and DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 has no class for it. The agent read on 2026-11-15: `docs/data.md` of the repository github.com/google/osv.dev (master) and the page google.github.io/osv.dev/data/, the FAQ of OSV.dev, the `LICENSE` of the repository osv.dev (Apache-2.0, for the code only), and the `README.md` of OSV-Scanner at the tag v2.7.1 (the section Data Sources and Privacy). The plan of feat-8-traceability-security-gates (Task 100.130, the Result of the Phase 100) has the evidence.
+
+The sources and their licenses, as the page names them: CC-BY 4.0 (GitHub Advisory Database, PyPI Advisory Database, Go Vulnerability Database, OSS-Fuzz, Python Software Foundation Database, and others), CC0 1.0 (for example RustSec, Global Security Database), MIT, Apache 2.0 and BSD (for example OpenSSF Malicious Packages, Curl, AlmaLinux, Rocky Linux), CC-BY-SA 4.0 (Ubuntu and Alpine SecDB), and CC-BY-NC-ND 4.0 or the Chainguard License for Commercial Scanners (Chainguard / Wolfi). Converted data (Debian, Alpine, NVD) has the license of its source. The page gives no license or terms for the OSV.dev aggregate and for the answers of the API. The agent found no terms of use of OSV.dev for the data or the API (the FAQ says that the API has no rate limit at this time, and it gives service level objectives that are targets). The agent did not read the terms of Google for the service (for example the Google APIs Terms of Service), and did not read the license texts of the single sources. This section covers the licenses as the OSV.dev page names them.
+
+The class of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9 is Review (the DEC has no class for CC-BY-4.0 and the other data licenses; the precedent is the section of caniuse-lite, CC-BY-4.0, above). The use is the report of known vulnerabilities in the dependencies (REQ-005 of feat-8-traceability-security-gates): a recipe and a CI job, a report with no threshold. The tool and the data do not go to users (rule A of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9).
+
+What OSV-Scanner sends to api.osv.dev (the README of OSV-Scanner): package names, versions and ecosystems, and file hashes for vendored C/C++ code. No source code is sent. The SBOM files are made from public code of a public repository. The tool can also ask the API of deps.dev (the dependency tree and `--licenses`) and the registries Maven Central and npm, depending on the options of the recipe. The recipe of Phase 120 must keep these queries to the minimum that the report needs, and must not use the option `--licenses`.
+
+Conditions of this deviation:
+
+- The use is a report only. The project stores no copy of the records, and it does not redistribute them: no advisory text, no database dump and no downloaded database in the repository (a cache in a CI run is not a copy in the repository). The repository has only the counts of the findings (the baseline and the number for each severity) and the identifiers of the findings (the OSV, GHSA or CVE identifier). The report of a run is shown in the log of the job and is not committed.
+- The attribution is kept: the README of the security gates names OSV.dev as the source of the data, names the license of the GitHub Advisory Database (CC-BY 4.0) as the main source of the records for Maven and npm, and links to the page of the data sources of OSV.dev.
+- The exposure that the project cannot exclude: the project has Maven and npm packages, for which the records are mainly from the GitHub Advisory Database (CC-BY 4.0), but OSV-Scanner can return a record that has a license that is stricter, for example CC-BY-SA 4.0 (Ubuntu, Alpine) or CC-BY-NC-ND 4.0 (Chainguard / Wolfi), from an ecosystem that the project does not have (for example by a package name that two ecosystems share, or by the C/C++ detection with file hashes). The agent cannot show that this does not occur. The condition that no record is copied or redistributed limits the exposure to the use of the record in a report that shows counts and identifiers. Whether the rest is covered by the terms of the source is not examined, and a person who has competence in the law must examine the section, in the same way as for the other rows of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9.
+- If the condition ends (a record is stored or redistributed, the attribution cannot be kept, a person who has competence in the law finds that a source license does not permit the use, or OSV.dev publishes terms that do not permit it), this deviation does not apply, and the recipe `vuln-scan` and its CI job must be switched off until the owner decides again. The offline mode of OSV-Scanner with a downloaded database does not end the license question (the database has the same source licenses), it ends only the transmission of the package names to the network. The owner decides whether offline mode, a limit to the ecosystems of the project, or the removal of OSV-Scanner follows.
+
+The owner approved the deviation on 2026-11-15 (in the chat: option (a), the deviation for the OSV data with the attribution kept, only counts and finding identifiers stored, and no storage or redistribution of the records, the answer to the question of Task 100.130 of feat-8-traceability-security-gates). The owner gave the one-time permission for this section and for the entry of Updates, and for no other change of this DEC.
+
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-15 09:43:30.000Z - The deviation for the OSV data (mixed source licenses) is recorded
+
+The owner gave a permission for one time to make this change, and no other change (statement of the owner on 2026-11-15, in the chat: option (a) for Task 100.130 of feat-8-traceability-security-gates, the deviation for the OSV data; the one-time permission for this DEC is part of this choice). The agent added the dated section "OSV data (the OSV.dev database, mixed source licenses) that OSV-Scanner queries" to More Information. The reason is the plan of feat-8-traceability-security-gates (Task 100.130): OSV-Scanner queries the OSV.dev database, whose records have the licenses of their sources (CC-BY 4.0, CC0, MIT, Apache-2.0, BSD, CC-BY-SA 4.0 and CC-BY-NC-ND 4.0), and the agent found no terms of use of OSV.dev. The section has the conditions (a report only, no copy of the records, counts and finding identifiers only, the attribution kept) and the exposure that the project cannot exclude. The time of this entry is the local time of the machine with the letter Z, as in the entry below. The text of the Decision Outcome and the other sections are not changed. The status is not changed.
 
 ### 2026-11-15 08:30:00.000Z - The deviation for CodeQL (GitHub CodeQL Terms) is recorded
 
