@@ -116,8 +116,11 @@ TEST_ROOTS: tuple[tuple[Path, frozenset[str]], ...] = (
     (Path("frontend") / "src" / "test", FRONTEND_SUFFIXES),
     (Path("frontend") / "e2e", FRONTEND_SUFFIXES),
 )
-# The guard of TEST_ROOTS: the modules that the guard walks, and the names of a test file in them (the names that
-# JUnit with Maven Surefire and Failsafe, Vitest and Playwright use by default).
+# The guard of TEST_ROOTS: the modules that the guard walks, and the names of a test file in them. The pattern is a
+# deliberate simplification: it covers a subset of the default test file names of JUnit with Maven Surefire and
+# Failsafe (*Test.java, *Tests.java, *IT.java, also .kt), of Vitest (*.test.<suffix>) and of Playwright
+# (*.spec.<suffix>). The defaults also have names that the pattern does not catch (Test*.java and *TestCase.java of
+# Surefire, IT*.java and *ITCase.java of Failsafe).
 TEST_GUARD_MODULES = (Path("backend"), Path("frontend"))
 # `IT` needs a lower case letter or a digit before it, so a class name in capital letters (for example EDIT) is not a test.
 TEST_FILE_NAME = re.compile(r"(?:(?:Tests?|(?<=[a-z0-9])IT)\.(?:java|kt)|\.(?:test|spec)\.(?:[cm]?[jt]sx?))$")
@@ -697,9 +700,9 @@ def run(root: Path, reader_module: str) -> int:
     reqs = sum(1 for doc_type, _ in index.documents if doc_type == "req")
     vcrs = sum(1 for doc_type, _ in index.documents if doc_type == "vcr")
     print(
-        f"traceability: {files} document files with {references} unique references; {reqs} REQ ({approved} approved) "
-        f"and {vcrs} VCR documents; {openapi_ids} identifiers in the OpenAPI file, {len(model_ids)} in the model, "
-        f"{len(test_ids)} in the tests"
+        f"traceability: {files} document files with {references} references (unique per file); "
+        f"{reqs} REQ ({approved} approved) and {vcrs} VCR documents; {openapi_ids} identifiers in the OpenAPI file, "
+        f"{len(model_ids)} in the model, {len(test_ids)} in the tests"
     )
     return report(findings)
 
