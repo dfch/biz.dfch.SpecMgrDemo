@@ -46,6 +46,12 @@
 #   The recipe asserts the exit code and the message of each failure, and the run of part 1 is
 #   green.
 #
+# Part 3, the key `properties` of an element (feat-8-traceability-security-gates: the property `specmgr-req` of the
+# traceability check). The frontend side (compare.mjs, a strict reader) accepts the key `properties` of a software
+# system, a container and a component if the value is a map of texts, and it stops (exit code 2) for each other value.
+# The cases change a copy of the workspace file only (a file in the temporary folder), and start compare.mjs on the
+# module with it.
+#
 # The script needs JDK 21 (the Maven Wrapper of the module), Node and pnpm (install_frontend for
 # the run of part 1 and for the copies of the frontend) and the network for the first run (Maven
 # Central, the npm registry). It does not change the repository (the copies are in a temporary
@@ -274,6 +280,64 @@ else
     printf '%s\n' "${run_output}" | grep -E "FAIL|is not in the model" | head -n 5 | sed -e 's/^/     | /'
     failed=$((failed + 1))
 fi
+
+echo
+echo "== The key properties of an element (the frontend side: a map of texts is accepted, each other value stops the comparison)"
+# set_properties <workspace file> <level: system | container | component> <JSON value> : set the key `properties` of one
+# element of the copy of the workspace (the software system, the container frontend, the component zod of it)
+set_properties() {
+    local file="$1" level="$2" value="$3"
+    uv run --no-project --quiet python - "${file}" "${level}" "${value}" <<'PYEOF'
+import json
+import sys
+
+path, level, value_text = sys.argv[1], sys.argv[2], sys.argv[3]
+value = json.loads(value_text)
+workspace = json.load(open(path, encoding="utf-8"))
+system = workspace["model"]["softwareSystems"][0]
+container = next(c for c in system["containers"] if c["name"] == "frontend")
+element = {
+    "system": system,
+    "container": container,
+    "component": next(c for c in container["components"] if c["name"] == "zod"),
+}[level]
+element["properties"] = value
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(workspace, handle, indent=2)
+PYEOF
+}
+# properties_case <ok | stop> <level> <JSON value> <description> : compare.mjs with the copy that has the value
+properties_case() {
+    local want="$1" level="$2" value="$3" description="$4" file
+    file="${work}/properties-${level}-${RANDOM}.json"
+    cp "${frontend_dir}/../model/workspace.json" "${file}"
+    set_properties "${file}" "${level}" "${value}"
+    set +e
+    run_output="$(node "${frontend_dir}/architecture/compare.mjs" "${frontend_dir}" "${file}" 2>&1)"
+    run_code=$?
+    set -e
+    if [[ "${want}" == "ok" && ${run_code} -eq 0 && "${run_output}" == *"PASS the workspace"* ]]; then
+        echo "ok   ${description}: the comparison is green"
+        passed=$((passed + 1))
+    elif [[ "${want}" == "stop" && ${run_code} -eq 2 && "${run_output}" == *"has the key properties, and its value is not a map of texts"* ]]; then
+        echo "ok   ${description}: the comparison stops (exit code 2) with the message that the value is not a map of texts"
+        passed=$((passed + 1))
+    else
+        echo "FAIL ${description}: expected ${want}, got exit code ${run_code}"
+        printf '%s\n' "${run_output}" | tail -n 5 | sed -e 's/^/     | /'
+        failed=$((failed + 1))
+    fi
+}
+properties_case ok system '{"specmgr-req": "11111111-1111-4111-8111-111111111111", "other": "a text"}' "the software system has a map of texts"
+properties_case ok container '{"specmgr-req": "11111111-1111-4111-8111-111111111111, 22222222-2222-4222-8222-222222222222"}' "the container has a map of texts (a list with a comma)"
+properties_case ok component '{"specmgr-req": "11111111-1111-4111-8111-111111111111"}' "the component has a map of texts"
+properties_case ok component '{}' "the component has an empty map"
+properties_case stop system '"a text"' "the software system has a text as the value of properties"
+properties_case stop container '["specmgr-req"]' "the container has a list as the value of properties"
+properties_case stop component 'null' "the component has null as the value of properties"
+properties_case stop component '{"specmgr-req": 5}' "the component has a number as the value of a property"
+properties_case stop component '{"specmgr-req": ["11111111-1111-4111-8111-111111111111"]}' "the component has a list as the value of a property"
+properties_case stop component '{"specmgr-req": {"a": "b"}}' "the component has a map as the value of a property"
 
 echo
 echo "architecture-model: ${passed} ok, ${failed} failed"

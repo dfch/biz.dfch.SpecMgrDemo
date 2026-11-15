@@ -169,7 +169,12 @@ version. For OSV-Scanner, the sha256 is the tie between the version and the file
 check. The check does not download a file. The real check of the download is in the install functions `install_osv_scanner` and
 `install_gitleaks` (`tools/gates/_security.sh`): they compare the sha256 of the file against `tools/versions.env` before
 the file is opened or started, and they delete the download for another value. The self-test shows this with a small file
-(a `file://` URL, no network).
+(a `file://` URL, no network). A binary in the cache `build/tools/<tool>-<version>/` is verified again at each start, and no
+marker file is trusted: OSV-Scanner computes the sha256 of the cached binary (it is the pin), and gitleaks keeps the archive
+(`archive.tar.gz`, its sha256 is the pin) and compares the binary with the file `gitleaks` inside the archive. A cache that
+does not match (a changed binary, a changed or missing archive, an older pin) is not started: the install downloads again with
+the sha256 check and replaces it (as `install_oasdiff` does for a cache that does not match), and it stops if the download
+does not work. The self-test has a case for each.
 
 The pins are for Linux x86_64 only (a runner of GitHub, and the machine of the author), as the pin of oasdiff.
 A new platform needs a new checksum and a change of `check_pins.py`.

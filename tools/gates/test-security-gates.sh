@@ -29,6 +29,11 @@
 #   Part 5  the form of the scripts and of the recipes (the options that the plan and the deviation DEC need, the
 #           recipes in the justfile, the allowlist of gitleaks, CODEOWNERS).
 #
+# The install of the cache is verified again (no marker file): a cache with a changed binary (OSV-Scanner), or with a
+# changed or missing archive (gitleaks), is not started and is replaced by a new download, or the install stops. A real
+# tool that cannot be installed (no network) is a counted FAIL with the message of the install, and the cases that need
+# the tool are not run (real_install), so the script ends with the summary line and exit code 1.
+#
 # The script needs git, uv, curl and the network for the first run (the install of gitleaks and of OSV-Scanner from
 # GitHub, and the install of zizmor from the lock file). It does not change the repository. The real tools go to
 # build/tools/ (it is in .gitignore).
@@ -50,9 +55,7 @@ real_config="${REPO_ROOT}/tools/security/gitleaks.toml"
 work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 osv_version="$(version_of OSV_SCANNER_VERSION)"
-osv_sha="$(version_of OSV_SCANNER_SHA256)"
 gitleaks_version="$(version_of GITLEAKS_VERSION)"
-gitleaks_sha="$(version_of GITLEAKS_SHA256)"
 
 passed=0
 failed=0
@@ -116,6 +119,32 @@ check() {
 }
 
 section() { echo; echo "== $*"; }
+
+# real_install <label> <install function> <variable of the path of the binary> <variable of the folder> <folder>
+#
+# Installs a REAL tool (the download of the release with the sha256 check, or the cache of build/tools/) in a subshell,
+# so a download that does not work (no network, a wrong checksum) is a counted FAIL of this test with the message of the
+# install, and not an exit of the whole script with no summary (G2 of the review). It sets REAL_BIN to the path of the
+# binary and returns 0 on success. On failure it returns 1: the caller skips the cases that need the real tool (they
+# would all fail for the same cause), and the end of the script ends with exit code 1 and the summary line.
+real_install() {
+    local label="$1" install_function="$2" bin_variable="$3" home_variable="$4" home="$5" output code
+    REAL_BIN=""
+    set +e
+    output="$(env "${home_variable}=${home}" bash -c 'source "$1/_security.sh"; "$2"; echo "BIN=${!3}"' test-security-gates.sh "${GATES_DIR}" "${install_function}" "${bin_variable}" 2>&1)"
+    code=$?
+    set -e
+    if [[ ${code} -eq 0 ]]; then
+        REAL_BIN="$(grep '^BIN=' <<<"${output}" | tail -n 1 | cut -d= -f2-)"
+        echo "ok   the real ${label} is installed (the download with the sha256 check, or the verified cache)"
+        passed=$((passed + 1))
+        return 0
+    fi
+    echo "FAIL the real ${label} cannot be installed (exit code ${code}). The cases that need the real ${label} are not run. The reason is in the output of the install:"
+    printf '%s\n' "${output}" | tail -n 8 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+    return 1
+}
 
 # ======================================================================================================================
 section "Part 1: security_classify and run_security_tool (ACC-005, the function that separates a finding from a failure)"
@@ -203,8 +232,8 @@ run_case "run_security_tool: a code that is not in the list of finding codes (zi
 # ======================================================================================================================
 section "Part 2: vuln-scan.sh (OSV-Scanner)"
 
-# A stub of OSV-Scanner. The install knows a folder with the binary, the file `.sha256` with the pin and the right
-# version as "already installed", so the stub is started and nothing is downloaded. The stub writes its arguments to
+# A stub of OSV-Scanner. The install knows a folder with a binary that has the pin (see versions_osv below) and the
+# right version as "already installed", so the stub is started and nothing is downloaded. The stub writes its arguments to
 # the file STUB_ARGS_FILE, and its output and exit code are STUB_OUTPUT and STUB_EXIT.
 stub_script() {
     local version_line="$1" version_command="$2" extra_line="${3:-no}" extra=""
@@ -229,9 +258,21 @@ mk_osv_stub_home() {
     mkdir -p "${home}/osv-scanner-${osv_version}"
     stub_script "osv-scanner version: ${osv_version}" "--version" yes >"${home}/osv-scanner-${osv_version}/osv-scanner"
     chmod +x "${home}/osv-scanner-${osv_version}/osv-scanner"
-    printf '%s\n' "${osv_sha}" >"${home}/osv-scanner-${osv_version}/.sha256"
 }
 
+# make_versions <name> <key> <value> : a copy of versions.env with one value changed
+make_versions() {
+    local file="${work}/versions-$1.env"
+    sed -e "s/^$2=.*/$2=$3/" "${VERSIONS_FILE}" >"${file}"
+    echo "${file}"
+}
+# The stub is also the "download" of the install cases. A cache is used only if the sha256 of its binary is the pin
+# (install_osv_scanner computes it again, with no marker file), so the stub cases use a copy of versions.env that has
+# the sha256 of the stub as the pin. The real tools use the real pin.
+stub_file="${work}/osv-download"
+stub_script "osv-scanner version: ${osv_version}" "--version" yes >"${stub_file}"
+stub_sha="$(sha256sum "${stub_file}" | cut -d' ' -f1)"
+versions_osv="$(make_versions osvgood OSV_SCANNER_SHA256 "${stub_sha}")"
 osv_home="${work}/osv-stub-home"
 mk_osv_stub_home "${osv_home}"
 sbom="${work}/sbom"
@@ -242,7 +283,7 @@ echo "not an sbom file" >"${sbom}/notes.txt"
 echo '{}' >"${sbom}/other.json"
 args_file="${work}/osv-args.txt"
 
-run_vuln() { env OSV_SCANNER_HOME="${osv_home}" STUB_ARGS_FILE="${args_file}" "$@" "${GATES_DIR}/vuln-scan.sh" "${sbom}"; }
+run_vuln() { env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" "$@" "${GATES_DIR}/vuln-scan.sh" "${sbom}"; }
 
 expect 0 "OSV-Scanner: no finding (exit code 0)" "vuln-scan: the stub has no finding, exit code 0" \
     run_vuln STUB_EXIT=0 STUB_OUTPUT="No issues found"
@@ -262,7 +303,7 @@ expect_not 1 "REPORT:" "vuln-scan: a failure prints no REPORT line (the table of
     run_vuln STUB_EXIT=127 STUB_OUTPUT="Total 0 packages affected by 0 known vulnerabilities (0 Critical, 0 High, 0 Medium, 0 Low, 0 Unknown) from 0 ecosystems."
 
 # The arguments of the scan: -L for each *.cdx.json file, no other file, no --licenses
-env OSV_SCANNER_HOME="${osv_home}" STUB_ARGS_FILE="${args_file}" STUB_EXIT=0 "${GATES_DIR}/vuln-scan.sh" "${sbom}" >/dev/null 2>&1 || true
+env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" STUB_EXIT=0 "${GATES_DIR}/vuln-scan.sh" "${sbom}" >/dev/null 2>&1 || true
 if [[ "$(grep -c '^-L$' "${args_file}")" == "2" ]] && grep -qx "${sbom}/backend.cdx.json" "${args_file}" \
     && grep -qx "${sbom}/frontend.cdx.json" "${args_file}" && ! grep -q 'notes.txt\|other.json' "${args_file}" \
     && ! grep -q -- '--licenses' "${args_file}" && [[ "$(sed -n 1,2p "${args_file}" | tr '\n' ' ')" == "scan source " ]]; then
@@ -278,22 +319,13 @@ empty_sbom="${work}/sbom-empty"
 mkdir -p "${empty_sbom}"
 echo "x" >"${empty_sbom}/readme.txt"
 expect_fail "has no *.cdx.json file" "vuln-scan: a folder with no *.cdx.json file stops the recipe (a scan of nothing must not pass)" \
-    env OSV_SCANNER_HOME="${osv_home}" "${GATES_DIR}/vuln-scan.sh" "${empty_sbom}"
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${empty_sbom}"
 expect_fail "The folder of the SBOM files does not exist" "vuln-scan: a folder that does not exist stops the recipe" \
-    env OSV_SCANNER_HOME="${osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/no-such-folder"
-expect_fail "Usage: vuln-scan.sh" "vuln-scan: no argument stops the recipe" env OSV_SCANNER_HOME="${osv_home}" "${GATES_DIR}/vuln-scan.sh"
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${work}/no-such-folder"
+expect_fail "Usage: vuln-scan.sh" "vuln-scan: no argument stops the recipe" env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh"
 
 # The install with the sha256 check. A small file is the "download" (a file:// URL, no network). The versions file of
 # the case has the sha256 of that file, so the pin is checked in each case.
-make_versions() { # make_versions <name> <key> <value> : a copy of versions.env with one value changed
-    local file="${work}/versions-$1.env"
-    sed -e "s/^$2=.*/$2=$3/" "${VERSIONS_FILE}" >"${file}"
-    echo "${file}"
-}
-stub_file="${work}/osv-download"
-stub_script "osv-scanner version: ${osv_version}" "--version" yes >"${stub_file}"
-stub_sha="$(sha256sum "${stub_file}" | cut -d' ' -f1)"
-versions_osv="$(make_versions osvgood OSV_SCANNER_SHA256 "${stub_sha}")"
 install_home="${work}/osv-install-home"
 started_file="${work}/osv-started.txt"
 install_osv() { # install_osv <home> <url> <versions file>
@@ -302,11 +334,12 @@ install_osv() { # install_osv <home> <url> <versions file>
 }
 expect 0 "sha256 is correct for the OSV-Scanner download" "install_osv_scanner: a file with the pinned sha256 is installed" \
     install_osv "${install_home}" "file://${stub_file}" "${versions_osv}"
-if [[ -x "${install_home}/osv-scanner-${osv_version}/osv-scanner" && "$(cat "${install_home}/osv-scanner-${osv_version}/.sha256")" == "${stub_sha}" ]]; then
-    echo "ok   install_osv_scanner: the binary is executable and the folder has the file .sha256 with the pin"
+if [[ -x "${install_home}/osv-scanner-${osv_version}/osv-scanner" && "$(sha256sum "${install_home}/osv-scanner-${osv_version}/osv-scanner" | cut -d' ' -f1)" == "${stub_sha}" \
+    && ! -e "${install_home}/osv-scanner-${osv_version}/.sha256" ]]; then
+    echo "ok   install_osv_scanner: the binary is executable and has the pinned sha256 (the install writes no marker file that a later run could trust)"
     passed=$((passed + 1))
 else
-    echo "FAIL install_osv_scanner: the binary or the file .sha256 is not in ${install_home}"
+    echo "FAIL install_osv_scanner: the binary is not in ${install_home}, or it has not the pin, or a marker file exists"
     failed=$((failed + 1))
 fi
 expect 0 "is already installed" "install_osv_scanner: a second call does not download again (the cache)" \
@@ -334,12 +367,54 @@ expect_fail "OSV_SCANNER_SHA256 is not a sha256 value" "install_osv_scanner: a p
     install_osv "${work}/osv-badpin-home" "file://${stub_file}" "$(make_versions osvbadpin OSV_SCANNER_SHA256 xyz)"
 expect_fail "OSV_SCANNER_VERSION is not an exact version" "install_osv_scanner: a version that is not exact stops the install" \
     install_osv "${work}/osv-badver-home" "file://${stub_file}" "$(make_versions osvbadver OSV_SCANNER_VERSION 2.7)"
-# A cache with another sha256 in the file `.sha256` is not trusted: a new download (here: it fails, there is no file)
+# A cache is verified again (I1 of the review): the sha256 of the cached binary is computed at each start, and a marker
+# file is not trusted. A cache whose binary has not the pin is not started. The same as install_oasdiff for a cache that
+# does not match, the install downloads again and replaces it (the first case), and it stops if the download does not
+# work (the second case).
 mkdir -p "${work}/osv-stale-home"
 cp -a "${osv_home}/osv-scanner-${osv_version}" "${work}/osv-stale-home/"
-echo "0000000000000000000000000000000000000000000000000000000000000000" >"${work}/osv-stale-home/osv-scanner-${osv_version}/.sha256"
-expect_fail "Download failed" "install_osv_scanner: a cache whose .sha256 is not the pin is not used" \
+expect_fail "Download failed" "install_osv_scanner: a cache whose binary has not the pin is not used (the pin of the case is the real pin, the cache has the stub)" \
     install_osv "${work}/osv-stale-home" "file:///no/such/file" "${VERSIONS_FILE}"
+tamper_ran="${work}/osv-tamper-ran.txt"
+tamper_osv() { # tamper_osv <home> : a good install, then the binary is replaced by a file that records its start. The file .sha256 is the old marker (the pin).
+    local home="$1" dir
+    dir="${home}/osv-scanner-${osv_version}"
+    rm -rf "${home}" "${tamper_ran}"
+    install_osv "${home}" "file://${stub_file}" "${versions_osv}" >/dev/null 2>&1
+    printf '#!/usr/bin/env bash\ntouch %q\necho "osv-scanner version: %s"\n' "${tamper_ran}" "${osv_version}" >"${dir}/osv-scanner"
+    printf '%s\n' "${stub_sha}" >"${dir}/.sha256"
+    chmod +x "${dir}/osv-scanner"
+}
+tamper_osv "${work}/osv-tamper-home"
+expect 0 "has not the pinned sha256" "install_osv_scanner: a changed cached binary (the marker file still has the pin) is replaced by a new download" \
+    install_osv "${work}/osv-tamper-home" "file://${stub_file}" "${versions_osv}"
+if [[ ! -e "${tamper_ran}" && "$(sha256sum "${work}/osv-tamper-home/osv-scanner-${osv_version}/osv-scanner" | cut -d' ' -f1)" == "${stub_sha}" ]]; then
+    echo "ok   install_osv_scanner: the changed binary never started, and the binary in the cache has the pin after the install"
+    passed=$((passed + 1))
+else
+    echo "FAIL install_osv_scanner: the changed binary started, or the cache has not the pin after the install"
+    failed=$((failed + 1))
+fi
+tamper_osv "${work}/osv-tamper-home2"
+expect_fail "Download failed" "install_osv_scanner: a changed cached binary and a download that does not work stop the install" \
+    install_osv "${work}/osv-tamper-home2" "file:///no/such/file" "${versions_osv}"
+if [[ ! -e "${tamper_ran}" ]]; then
+    echo "ok   install_osv_scanner: the changed binary never started when the install stopped"
+    passed=$((passed + 1))
+else
+    echo "FAIL install_osv_scanner: the changed binary started"
+    failed=$((failed + 1))
+fi
+tamper_osv "${work}/osv-tamper-home3"
+expect_fail "sha256 of the OSV-Scanner download is" "install_osv_scanner: a changed cached binary and a download with another sha256 stop the install" \
+    install_osv "${work}/osv-tamper-home3" "file://${stub_file}" "$(make_versions osvother2 OSV_SCANNER_SHA256 "$(printf '%064d' 1)")"
+if [[ ! -e "${tamper_ran}" ]]; then
+    echo "ok   install_osv_scanner: the changed binary never started (a download with another sha256)"
+    passed=$((passed + 1))
+else
+    echo "FAIL install_osv_scanner: the changed binary started"
+    failed=$((failed + 1))
+fi
 
 # The REAL OSV-Scanner (the download of the release, the sha256 of the pin) without the network: a proxy that
 # refuses the connection. This is the real failure of the tool (no network). The files of the SBOM have one package.
@@ -347,9 +422,11 @@ expect_fail "Download failed" "install_osv_scanner: a cache whose .sha256 is not
 # variable is set in this shell). The proxy is set only for the start of the scan (the `env` of the case below), and
 # not for the install: on a clean machine (a CI runner) build/tools/ has no binary, and a proxy that refuses the
 # connection would also stop the download of the binary, which is not the case that this test shows.
-real_osv_home="${REPO_ROOT}/build/tools"
-OSV_SCANNER_HOME="${real_osv_home}" install_osv_scanner
-check "the real OSV-Scanner has the pinned version ${osv_version}" test "$("${OSV_SCANNER_BIN}" --version | head -n 1)" == "osv-scanner version: ${osv_version}"
+real_osv_home="${OSV_SCANNER_HOME:-${REPO_ROOT}/build/tools}"
+# The cases up to the matching `fi` need the real OSV-Scanner (not indented, so the here-documents stay as they are).
+if real_install "OSV-Scanner" install_osv_scanner OSV_SCANNER_BIN OSV_SCANNER_HOME "${real_osv_home}"; then
+real_osv_bin="${REAL_BIN}"
+check "the real OSV-Scanner has the pinned version ${osv_version}" test "$("${real_osv_bin}" --version | head -n 1)" == "osv-scanner version: ${osv_version}"
 cat >"${work}/sbom-real.cdx.json" <<'JSON'
 {"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[{"type":"library","name":"qs","version":"6.15.1","purl":"pkg:npm/qs@6.15.1","bom-ref":"pkg:npm/qs@6.15.1"}]}
 JSON
@@ -366,17 +443,29 @@ mkdir -p "${work}/sbom-broken"
 echo '{this is not json' >"${work}/sbom-broken/frontend.cdx.json"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 127" "vuln-scan: the REAL OSV-Scanner with an SBOM file that cannot be read ends with exit code 127, and the recipe stops (ACC-005)" \
     env OSV_SCANNER_HOME="${real_osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-broken"
+fi
 
 # ======================================================================================================================
 section "Part 3: secret-scan.sh (gitleaks)"
 
 # A stub of gitleaks: `gitleaks version` gives the version, and each other start gives STUB_OUTPUT and STUB_EXIT.
+# The stub is in an archive (also the "download" of the install cases). The pin of the stub cases is the sha256 of
+# that archive (versions_gl, a copy of versions.env), and a cache of the stub has the archive and the binary of the
+# archive, because install_gitleaks verifies the cache against the pin again (no marker file).
+gl_pkg="${work}/gl-pkg"
+mkdir -p "${gl_pkg}"
+stub_script "${gitleaks_version}" "version" >"${gl_pkg}/gitleaks"
+chmod +x "${gl_pkg}/gitleaks"
+echo "stub license" >"${gl_pkg}/LICENSE"
+gl_archive="${work}/gitleaks-stub.tar.gz"
+tar -C "${gl_pkg}" -czf "${gl_archive}" gitleaks LICENSE
+gl_archive_sha="$(sha256sum "${gl_archive}" | cut -d' ' -f1)"
+versions_gl="$(make_versions glgood GITLEAKS_SHA256 "${gl_archive_sha}")"
 mk_gitleaks_stub_home() {
     local home="$1"
     mkdir -p "${home}/gitleaks-${gitleaks_version}"
-    stub_script "${gitleaks_version}" "version" >"${home}/gitleaks-${gitleaks_version}/gitleaks"
-    chmod +x "${home}/gitleaks-${gitleaks_version}/gitleaks"
-    printf '%s\n' "${gitleaks_sha}" >"${home}/gitleaks-${gitleaks_version}/.sha256"
+    cp "${gl_pkg}/gitleaks" "${gl_pkg}/LICENSE" "${home}/gitleaks-${gitleaks_version}/"
+    cp "${gl_archive}" "${home}/gitleaks-${gitleaks_version}/archive.tar.gz"
 }
 
 # The fake secret is made while the test runs (the repository has no value that looks like a secret). The value has the
@@ -420,23 +509,23 @@ commit_all "${stub_repo}" "work"
 gl_args="${work}/gitleaks-args.txt"
 
 expect 0 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan: the stub has no finding (exit code 0)" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=0 STUB_OUTPUT="INF no leaks found"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="INF no leaks found"
 expect 0 "REPORT: files: 3 finding(s); history origin/dev..HEAD: 3 finding(s)" "secret-scan: the stub has findings (exit code 2), the recipe ends with exit code 0 and prints the counts (ACC-005)" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 3"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 3"
 expect 0 "FINDINGS (exit code 2)" "secret-scan: a finding says that the gate does not stop (no threshold)" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1"
 expect_fail "FAILURE OF THE TOOL: gitleaks (files) ended with exit code 1" "secret-scan: exit code 1 of the tool (a fatal error) stops the recipe (ACC-005)" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=1 STUB_OUTPUT="FTL unable to load gitleaks config"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=1 STUB_OUTPUT="FTL unable to load gitleaks config"
 expect_fail "FAILURE OF THE TOOL: gitleaks (files) ended with exit code 126" "secret-scan: exit code 126 of the tool (a wrong flag) stops the recipe" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=126
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=126
 expect_fail "no sign of a finding" "secret-scan: exit code 2 with no text 'leaks found' (a crash) stops the recipe" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=2 STUB_OUTPUT="panic: runtime error: index out of range"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="panic: runtime error: index out of range"
 expect_fail "has an error line" "secret-scan: an ERR line with exit code 0 (git cannot read the range) stops the recipe" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=0 STUB_OUTPUT="11:49AM ERR [git] fatal: ambiguous argument"
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="11:49AM ERR [git] fatal: ambiguous argument"
 expect_not 1 "REPORT:" "secret-scan: a failure prints no REPORT line" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=1
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=1
 # The arguments: the options that the plan and the script need (the last start is the scan of the history)
-run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=0 STUB_ARGS_FILE="${gl_args}" >/dev/null 2>&1 || true
+run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_ARGS_FILE="${gl_args}" >/dev/null 2>&1 || true
 gl_all_ok=1
 for option in git "$(git -C "${stub_repo}" rev-parse --absolute-git-dir)" --exit-code 2 --redact --ignore-gitleaks-allow --gitleaks-ignore-path --log-opts=origin/dev..HEAD --no-color; do
     grep -qxF -- "${option}" "${gl_args}" || gl_all_ok=0
@@ -450,10 +539,10 @@ else
     failed=$((failed + 1))
 fi
 expect_fail "The base 'origin/nothing' does not exist" "secret-scan: a base that does not exist stops the recipe" \
-    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" "${GATES_DIR}/secret-scan.sh" origin/nothing tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/nothing tools/security/gitleaks.toml
 expect_fail "The gitleaks config does not exist" "secret-scan: a config that does not exist stops the recipe" \
-    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/none.toml
-expect_fail "Usage: secret-scan.sh" "secret-scan: no argument stops the recipe" env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" "${GATES_DIR}/secret-scan.sh"
+    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/none.toml
+expect_fail "Usage: secret-scan.sh" "secret-scan: no argument stops the recipe" env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh"
 
 # --- a shallow clone (the history of the pull request is not known)
 shallow_src="${work}/repo-shallow-src"
@@ -466,22 +555,13 @@ shallow="${work}/repo-shallow"
 git clone --quiet --depth 1 --branch feature "file://${shallow_src}" "${shallow}" 2>/dev/null
 (cd "${shallow}" && git fetch --quiet --depth 1 origin dev:refs/remotes/origin/dev 2>/dev/null)
 expect_fail "This is a shallow clone, and it has no merge base" "secret-scan: a shallow clone with no merge base of the base and HEAD stops the recipe (fetch-depth: 0)" \
-    env GATE_WORK_ROOT="${shallow}" GITLEAKS_HOME="${gl_home}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${shallow}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
 full="${work}/repo-full"
 git clone --quiet "file://${shallow_src}" "${full}" 2>/dev/null
 expect 0 "Base: origin/dev, merge base:" "secret-scan: a clone with the full history finds the merge base (stub)" \
-    env GATE_WORK_ROOT="${full}" GITLEAKS_HOME="${gl_home}" STUB_EXIT=0 "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${full}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
 
 # --- the install of gitleaks with the sha256 check (a file:// URL, no network)
-gl_pkg="${work}/gl-pkg"
-mkdir -p "${gl_pkg}"
-stub_script "${gitleaks_version}" "version" >"${gl_pkg}/gitleaks"
-chmod +x "${gl_pkg}/gitleaks"
-echo "stub license" >"${gl_pkg}/LICENSE"
-gl_archive="${work}/gitleaks-stub.tar.gz"
-tar -C "${gl_pkg}" -czf "${gl_archive}" gitleaks LICENSE
-gl_archive_sha="$(sha256sum "${gl_archive}" | cut -d' ' -f1)"
-versions_gl="$(make_versions glgood GITLEAKS_SHA256 "${gl_archive_sha}")"
 gl_started="${work}/gl-started.txt"
 install_gl() { # install_gl <home> <url> <versions file>
     env GITLEAKS_HOME="$1" GITLEAKS_URL="$2" VERSIONS_FILE="$3" STUB_STARTED_FILE="${gl_started}" \
@@ -490,8 +570,9 @@ install_gl() { # install_gl <home> <url> <versions file>
 expect 0 "sha256 is correct for the gitleaks download" "install_gitleaks: an archive with the pinned sha256 is installed" \
     install_gl "${work}/gl-install-home" "file://${gl_archive}" "${versions_gl}"
 if [[ -x "${work}/gl-install-home/gitleaks-${gitleaks_version}/gitleaks" && -f "${work}/gl-install-home/gitleaks-${gitleaks_version}/LICENSE" \
-    && "$(cat "${work}/gl-install-home/gitleaks-${gitleaks_version}/.sha256")" == "${gl_archive_sha}" ]]; then
-    echo "ok   install_gitleaks: the folder has gitleaks, LICENSE and the file .sha256 with the pin"
+    && "$(sha256sum "${work}/gl-install-home/gitleaks-${gitleaks_version}/archive.tar.gz" | cut -d' ' -f1)" == "${gl_archive_sha}" \
+    && ! -e "${work}/gl-install-home/gitleaks-${gitleaks_version}/.sha256" ]]; then
+    echo "ok   install_gitleaks: the folder has gitleaks, LICENSE and the archive with the pinned sha256 (no marker file that a later run could trust)"
     passed=$((passed + 1))
 else
     echo "FAIL install_gitleaks: the folder ${work}/gl-install-home does not have the expected files"
@@ -515,11 +596,56 @@ echo "not an archive" >"${work}/gl-notar"
 expect_fail "has not the files gitleaks and LICENSE" "install_gitleaks: a file that is not the archive (with the right sha256) stops the install" \
     install_gl "${work}/gl-notar-home" "file://${work}/gl-notar" "$(make_versions glnotar GITLEAKS_SHA256 "$(sha256sum "${work}/gl-notar" | cut -d' ' -f1)")"
 
+# A cache is verified again against the pin (I1 of the review): the archive has the pin, and the binary is the file of
+# the archive. A marker file is not trusted. Each cache that does not match is not started, and it is replaced by a new
+# download, as install_oasdiff does (the cases 1 to 3), and a download that does not work stops the install (the case 4).
+gl_tamper_ran="${work}/gl-tamper-ran.txt"
+tamper_gl() { # tamper_gl <home> <what: binary | archive | no-archive>
+    local home="$1" what="$2" dir
+    dir="${home}/gitleaks-${gitleaks_version}"
+    rm -rf "${home}" "${gl_tamper_ran}"
+    install_gl "${home}" "file://${gl_archive}" "${versions_gl}" >/dev/null 2>&1
+    case "${what}" in
+        binary)
+            printf '#!/usr/bin/env bash\ntouch %q\necho "%s"\n' "${gl_tamper_ran}" "${gitleaks_version}" >"${dir}/gitleaks"
+            chmod +x "${dir}/gitleaks"
+            ;;
+        archive) printf 'x' >>"${dir}/archive.tar.gz" ;;
+        no-archive) rm -f "${dir}/archive.tar.gz" ;;
+    esac
+    printf '%s\n' "${gl_archive_sha}" >"${dir}/.sha256"
+}
+for what in binary archive no-archive; do
+    tamper_gl "${work}/gl-tamper-${what}" "${what}"
+    expect 0 "does not match the pinned sha256" "install_gitleaks: a cache with a changed ${what/no-archive/missing archive} is replaced by a new download (the marker file still has the pin)" \
+        install_gl "${work}/gl-tamper-${what}" "file://${gl_archive}" "${versions_gl}"
+    if [[ ! -e "${gl_tamper_ran}" ]] && _gitleaks_cache_matches_pin "${work}/gl-tamper-${what}/gitleaks-${gitleaks_version}" "${gl_archive_sha}"; then
+        echo "ok   install_gitleaks: the changed ${what/no-archive/missing archive} never started, and the cache matches the pin after the install"
+        passed=$((passed + 1))
+    else
+        echo "FAIL install_gitleaks: the changed ${what} started, or the cache does not match the pin after the install"
+        failed=$((failed + 1))
+    fi
+done
+tamper_gl "${work}/gl-tamper-stop" binary
+expect_fail "Download failed" "install_gitleaks: a changed cached binary and a download that does not work stop the install" \
+    install_gl "${work}/gl-tamper-stop" "file:///no/such/file" "${versions_gl}"
+if [[ ! -e "${gl_tamper_ran}" ]]; then
+    echo "ok   install_gitleaks: the changed binary never started when the install stopped"
+    passed=$((passed + 1))
+else
+    echo "FAIL install_gitleaks: the changed binary started"
+    failed=$((failed + 1))
+fi
+check "_gitleaks_cache_matches_pin: a good cache matches, and the same cache with another pin does not" \
+    bash -c 'source "$1/_security.sh"; _gitleaks_cache_matches_pin "$2" "$3" && ! _gitleaks_cache_matches_pin "$2" "$(printf "%064d" 1)"' _ "${GATES_DIR}" "${gl_home}/gitleaks-${gitleaks_version}" "${gl_archive_sha}"
+
 # --- the REAL gitleaks in temporary repositories. The real binary is the install of the gate (build/tools/). It is
 # installed here, with the network and the sha256 check, before the cases start the script (no case depends on a binary
 # that an earlier run left in build/tools/, and no case sets a proxy or blocks the network).
-install_gitleaks
-real_gl="${GITLEAKS_BIN}"
+# The cases up to the matching `fi` need the real gitleaks (not indented, so the here-documents stay as they are).
+if real_install "gitleaks" install_gitleaks GITLEAKS_BIN GITLEAKS_HOME "${GITLEAKS_HOME:-${REPO_ROOT}/build/tools}"; then
+real_gl="${REAL_BIN}"
 check "the real gitleaks has the pinned version ${gitleaks_version}" test "$("${real_gl}" version)" == "${gitleaks_version}"
 
 r="${work}/repo-clean"
@@ -618,6 +744,7 @@ id = "broken-rule"
 regex = '''(unclosed'''
 TOML
 expect_fail "FAILURE OF THE TOOL" "secret-scan (real gitleaks): a config with a rule that has a wrong regular expression stops the recipe" run_secret "${r}"
+fi
 
 # ======================================================================================================================
 section "Part 4: workflow-scan.sh (zizmor)"

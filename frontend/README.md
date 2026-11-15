@@ -54,7 +54,7 @@ A test that verifies a requirement has the identifier of its VCR document in its
 describe('the status schema vcr:00000000-0000-4000-8000-000000000000', () => { ... })
 ```
 
-The recipe `just traceability` reads the files `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts` and `.cts` in `src/test/` and in `e2e/` (not `node_modules`). A `vcr:<uuid>` after a quote character counts, and a line that starts with a comment mark is not read. The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test title. The check does not read the report of the test run. No test has a `vcr:` today, because the only REQ has the status `draft` and no VCR. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
+The recipe `just traceability` reads the files `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts` and `.cts` in `src/test/` and in `e2e/` (not `node_modules`). A `vcr:<uuid>` inside a string literal counts (also an upper case identifier), and a `vcr:<uuid>` in a comment of any form (a line comment, a trailing comment after code, a block comment over many lines) is not read. A test file outside the folders that the check reads is an error (`TEST_ROOTS`, see `tools/gates/README.md`). The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test title. The check does not read the report of the test run. No test has a `vcr:` today, because the only REQ has the status `draft` and no VCR. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
 
 ## Change a version of a package of the module
 

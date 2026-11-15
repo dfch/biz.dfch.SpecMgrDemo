@@ -24,6 +24,13 @@
 #            not there, has another parameter, gives another form, or raises an error. The real function of the pinned
 #            specmgr is the case that is successful. The test also shows that the script has no second copy of the
 #            syntax of the references.
+#   after the review of feat-8:
+#            the heuristic of `vcr:<uuid>` (a string counts; a trailing comment, a block comment over lines with and
+#            without a star, a Javadoc and a quote in a comment do not count), an upper case identifier, a VCR that
+#            verifies several REQs, a VCR whose target is a UC (it is the VCR of no REQ), the language folders
+#            docs/<type>/<language>/ (a variant is no document of its own), a list in x-specmgr-req (a text with
+#            commas and a YAML list), the guard of TEST_ROOTS (a test file outside the folders that the check
+#            reads), and a loop of links to directories (exit code 2, fail closed).
 #   and the real repository passes (traceability.sh, the entry of the recipe).
 #
 # The script needs uv and the network for the first run (the install of specmgr from the lock file). It does not change the
@@ -183,6 +190,106 @@ case_check warn-no-test-name 0 "WARNING docs/req/req-88888888-8888-4888-8888-888
 absent "warn-no-test-name: no warning for the model (the REQ is in the model)" "[approved-req-has-no-model-element]"
 make_case warn-both warn-no-model-element warn-no-test-name
 case_check warn-both 0 "[approved-req-has-no-model-element]" "[approved-req-vcr-not-in-test]" "WARNINGS (2)" "ERRORS (0)" "RESULT: PASS (2 warning(s))"
+
+echo
+echo "== The heuristic of vcr:<uuid>: a string counts, a comment of any form does not (Java, Vitest, Playwright)"
+make_case warn-vcr-only-in-comments warn-vcr-only-in-comments
+case_check warn-vcr-only-in-comments 0 "[approved-req-vcr-not-in-test]" \
+    "the VCR 33333333-3333-4333-8333-333333333333 of the REQ 11111111-1111-4111-8111-111111111111 is not in the name of a test" \
+    "WARNINGS (1)" "ERRORS (0)" "0 in the tests"
+make_case ok-comments-with-unknown-vcr ok-comments-with-unknown-vcr
+case_check ok-comments-with-unknown-vcr 0 "RESULT: PASS (0 warning(s))" "1 in the tests"
+absent "ok-comments-with-unknown-vcr: a trailing comment, a block comment over lines (with and without a star), a javadoc and a quote in a comment are not read (Java, Vitest, Playwright)" \
+    "CommentsTest.java" "TrailingTest.java" "comments.test.ts" "comments.spec.ts"
+make_case err-test-after-comment err-test-after-comment
+case_check err-test-after-comment 1 \
+    "ERROR backend/src/test/java/example/AfterCommentTest.java:10: [test-vcr-has-no-document] vcr:${bad}" \
+    "ERROR frontend/src/test/after-comment.test.ts:3: [test-vcr-has-no-document] vcr:${bad}" \
+    "ERROR frontend/e2e/text-block.spec.ts:2: [test-vcr-has-no-document] vcr:${bad}" \
+    "ERROR backend/src/test/java/example/TextBlockTest.java:11: [test-vcr-has-no-document] vcr:${bad}" \
+    "RESULT: FAIL (4 error(s), 0 warning(s))"
+
+echo
+echo "== The heuristic of vcr:<uuid>: an upper case identifier"
+make_case ok-uppercase-test-name warn-no-test-name ok-uppercase-test-name
+case_check ok-uppercase-test-name 0 "RESULT: PASS (0 warning(s))" "WARNINGS (0)" "2 in the tests"
+make_case err-uppercase-unknown-vcr err-uppercase-unknown-vcr
+case_check err-uppercase-unknown-vcr 1 \
+    "ERROR backend/src/test/java/example/UpperCaseUnknownTest.java:6: [test-vcr-has-no-document] vcr:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb is not the id of a VCR document"
+
+echo
+echo "== A VCR with several REQs, and a VCR whose target is not a REQ"
+make_case ok-vcr-verifies-several-reqs ok-vcr-verifies-several-reqs
+case_check ok-vcr-verifies-several-reqs 0 "RESULT: PASS (0 warning(s))" "3 REQ (2 approved) and 1 VCR documents" "2 in the model" "WARNINGS (0)" "ERRORS (0)"
+make_case err-vcr-verifies-a-use-case err-vcr-verifies-a-use-case
+case_check err-vcr-verifies-a-use-case 1 \
+    "[approved-req-has-no-vcr] the REQ dededede-dede-4ede-8ede-dededededede has the status accepted, but no VCR has it in the section Verifies" \
+    "RESULT: FAIL (1 error(s), 0 warning(s))" "2 VCR documents"
+absent "err-vcr-verifies-a-use-case: the UC is a target (no error for the reference), and the VCR of a UC is the VCR of no REQ" "[reference-has-no-target]"
+
+echo
+echo "== The language folders docs/<type>/<language>/ (a variant is no document of its own)"
+make_case ok-language-variant ok-language-variant
+case_check ok-language-variant 0 "RESULT: PASS (0 warning(s))" "2 REQ (1 approved)" "WARNINGS (0)" "ERRORS (0)"
+make_case err-language-variant-reference err-language-variant-reference
+case_check err-language-variant-reference 1 "docs/dec/de/dec-44444444-4444-4444-8444-444444444444-an-example-decision.md" \
+    "[reference-has-no-target] the reference REQ ${bad} has no target"
+make_case err-language-only-document err-language-only-document
+case_check err-language-only-document 1 "ERROR docs/notes.md:1: [reference-has-no-target] the reference REQ 5a5a5a5a-5a5a-45a5-85a5-5a5a5a5a5a5a has no target"
+
+echo
+echo "== A list of identifiers in x-specmgr-req (a text with commas, and a YAML list)"
+make_case ok-openapi-id-list ok-openapi-id-list
+case_check ok-openapi-id-list 0 "RESULT: PASS (0 warning(s))" "4 identifiers in the OpenAPI file"
+make_case err-openapi-id-list-bad-item err-openapi-id-list-bad-item
+case_check err-openapi-id-list-bad-item 1 \
+    "the operation GET /status, x-specmgr-req: ${bad} is not the id of a REQ document (no document has this id)" "RESULT: FAIL (1 error(s)"
+absent "err-openapi-id-list-bad-item: the good identifier of the list is not named" "x-specmgr-req: 11111111-1111-4111-8111-111111111111 is not"
+make_case err-openapi-id-not-text err-openapi-id-not-text
+case_check err-openapi-id-not-text 1 "[openapi-req-not-found]" "the value 42 is not a text"
+
+echo
+echo "== TEST_ROOTS: a test file outside the folders that the check reads (the guard)"
+make_case err-test-file-outside-roots err-test-file-outside-roots
+case_check err-test-file-outside-roots 1 \
+    "ERROR frontend/src/other/new-feature.test.ts: [test-file-outside-test-roots]" \
+    "ERROR frontend/tests/extra.spec.ts: [test-file-outside-test-roots]" \
+    "ERROR backend/src/it/java/example/ExtraIT.java: [test-file-outside-test-roots]" \
+    "ERROR frontend/src/coverage/walked.test.ts: [test-file-outside-test-roots]" \
+    "Add its folder to TEST_ROOTS in tools/gates/traceability.py" "RESULT: FAIL (4 error(s), 0 warning(s))"
+make_case ok-test-roots-nested ok-test-roots-nested
+case_check ok-test-roots-nested 0 "RESULT: PASS (0 warning(s))"
+absent "ok-test-roots-nested: a test file in a sub folder of a root, a class name in capital letters (EDIT) and a helper file are no finding" "test-file-outside-test-roots"
+make_case ok-test-roots-ignored-folders
+mkdir -p "${work}/ok-test-roots-ignored-folders/frontend/node_modules/pkg" "${work}/ok-test-roots-ignored-folders/backend/target/test-classes" \
+    "${work}/ok-test-roots-ignored-folders/frontend/build"
+echo "it('x', () => {})" >"${work}/ok-test-roots-ignored-folders/frontend/node_modules/pkg/dep.test.ts"
+echo "class DepTest {}" >"${work}/ok-test-roots-ignored-folders/backend/target/test-classes/DepTest.java"
+echo "it('x', () => {})" >"${work}/ok-test-roots-ignored-folders/frontend/build/out.spec.ts"
+# the output folders of the recipes directly in a module (the sandbox of Stryker has a copy of the tests)
+mkdir -p "${work}/ok-test-roots-ignored-folders/frontend/.stryker-tmp/sandbox-1/src/test" "${work}/ok-test-roots-ignored-folders/frontend/coverage"
+echo "it('x', () => {})" >"${work}/ok-test-roots-ignored-folders/frontend/.stryker-tmp/sandbox-1/src/test/copy.test.ts"
+echo "it('x', () => {})" >"${work}/ok-test-roots-ignored-folders/frontend/coverage/out.test.ts"
+case_check ok-test-roots-ignored-folders 0 "RESULT: PASS (0 warning(s))"
+echo
+echo "== A loop of directory links (the walk fails closed: exit code 2) and a link that is no loop"
+make_case err-link-loop-docs
+ln -s .. "${work}/err-link-loop-docs/docs/req/loop"
+case_check err-link-loop-docs 2 "ERROR: the folder" "is a loop of links"
+absent "err-link-loop-docs: no result of the check after the stop" "RESULT:"
+make_case err-link-loop-tests
+ln -s ../test "${work}/err-link-loop-tests/frontend/src/test/loop"
+case_check err-link-loop-tests 2 "ERROR: the folder" "is a loop of links"
+make_case err-link-broken
+ln -s nowhere.md "${work}/err-link-broken/docs/broken.md"
+case_check err-link-broken 2 "ERROR: cannot read"
+make_case ok-link-no-loop
+mkdir -p "${work}/outside-docs"
+printf 'A note outside the repository that has a reference to REQ %s.\n' "${bad}" >"${work}/outside-docs/note.md"
+ln -s ../.specmgr/feat "${work}/ok-link-no-loop/docs/linked-feat"
+case_check ok-link-no-loop 0 "RESULT: PASS (0 warning(s))"
+ln -s "${work}/outside-docs" "${work}/ok-link-no-loop/docs/linked-out"
+case_check ok-link-no-loop 1 "ERROR docs/linked-out/note.md:1: [reference-has-no-target] the reference REQ ${bad} has no target"
 
 echo
 echo "== The input that cannot be read (exit code 2)"

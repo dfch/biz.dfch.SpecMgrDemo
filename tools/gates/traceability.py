@@ -28,6 +28,9 @@ What the script checks (the table of checks of the plan):
   ERROR    test-vcr-has-no-document          each `vcr:<uuid>` in a test of the backend and of the frontend is the
                                              identifier of a VCR document
   ERROR    approved-req-has-no-vcr           an approved REQ has a VCR
+  ERROR    test-file-outside-test-roots      a test file of `backend/` or `frontend/` (`*Test.java`, `*Tests.java`,
+                                             `*IT.java`, `*.test.ts`, `*.spec.ts` and the same for the other suffixes)
+                                             is in a folder of TEST_ROOTS. A new test folder must not be ignored in silence
   WARNING  approved-req-has-no-model-element an approved REQ is in the property `specmgr-req` of an element
   WARNING  approved-req-vcr-not-in-test      the VCR of an approved REQ is in the name of a test
 
@@ -37,8 +40,18 @@ Definitions (Task 110.100):
     statuses (`draft`, `proposed`, `superseded`, `deprecated`, `rejected`) are not approved.
   - A VCR belongs to a REQ if the section `## Verifies` of the VCR has the reference `REQ <uuid>` of the REQ. The status
     of the VCR is not examined.
-  - A test has a VCR if a line of a test source has the text `vcr:<uuid>` after a quote character, and the line does not
-    start with a comment mark. The script reads the text of the source, and not the name that the test run reports.
+  - A test has a VCR if the text `vcr:<uuid>` is inside a string literal ("...", '...', a backtick string, or a text
+    block with three double quotes) of a test source. The script splits the source into code, comments and strings (a
+    line comment `//`, a block comment `/* ... */` that can span lines, also for lines that do not start with `*`), and
+    it reads only the strings. A `vcr:<uuid>` in a comment of any form does not count. The script reads the text of the
+    source, and not the name that the test run reports.
+  - The folders of the test sources are TEST_ROOTS. The guard `test-file-outside-test-roots` walks the folders
+    `backend/` and `frontend/` and stops (error) for a test file (by its name) outside TEST_ROOTS, so a new test folder
+    is not ignored in silence. A folder of SKIPPED_FOLDERS (`node_modules`, `build`, `target`, `.git`) is not entered;
+    in a module the output folders of the recipes (`.stryker-tmp`, `mutation-report`, `coverage`, `test-results`,
+    `playwright-report`) are not entered either.
+  - A loop of directory links below a folder that the script walks (a link to a parent folder) stops the script
+    (exit code 2): it fails closed and does not follow the loop. A link to a folder that is no loop is followed.
 
 The script prints each finding with the file and the rule. The errors and the warnings are two separate parts of the
 output. Exit codes: 0 no error (a warning is no stop), 1 at least one error, 2 an input that the script cannot read, or
@@ -93,21 +106,28 @@ DOC_TYPES = (
 FEAT_TYPE = "feat"
 FEAT_DIR = Path(".specmgr") / "feat"
 
+# The suffixes of the test files of the frontend (all the suffixes of the files that the check reads there).
+FRONTEND_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"})
+
 # The folders and the suffixes of the test sources: the tests of the backend (JUnit) and of the frontend (Vitest,
 # Playwright).
 TEST_ROOTS: tuple[tuple[Path, frozenset[str]], ...] = (
     (Path("backend") / "src" / "test", frozenset({".java", ".kt"})),
-    (
-        Path("frontend") / "src" / "test",
-        frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"}),
-    ),
-    (
-        Path("frontend") / "e2e",
-        frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"}),
-    ),
+    (Path("frontend") / "src" / "test", FRONTEND_SUFFIXES),
+    (Path("frontend") / "e2e", FRONTEND_SUFFIXES),
 )
-COMMENT_MARKS = ("//", "/*", "*", "#")
+# The guard of TEST_ROOTS: the modules that the guard walks, and the names of a test file in them (the names that
+# JUnit with Maven Surefire and Failsafe, Vitest and Playwright use by default).
+TEST_GUARD_MODULES = (Path("backend"), Path("frontend"))
+# `IT` needs a lower case letter or a digit before it, so a class name in capital letters (for example EDIT) is not a test.
+TEST_FILE_NAME = re.compile(r"(?:(?:Tests?|(?<=[a-z0-9])IT)\.(?:java|kt)|\.(?:test|spec)\.(?:[cm]?[jt]sx?))$")
 SKIPPED_FOLDERS = frozenset({"node_modules", ".git", "build", "target"})
+# The guard of TEST_ROOTS also skips these folders directly in a module: the output of the recipes (they are in
+# .gitignore). The sandbox of Stryker has a copy of the tests, and the guard must not stop for it after a local run.
+# A folder with one of these names deeper in a module (for example frontend/src/test/coverage) is walked.
+GUARD_SKIPPED_MODULE_FOLDERS = frozenset(
+    {".stryker-tmp", "mutation-report", "coverage", "test-results", "playwright-report"}
+)
 
 PROBE_TEXT = (
     "REQ 1ca335d7-969a-443e-9392-165fdeea99a0: a requirement\n"
@@ -220,12 +240,24 @@ def split_frontmatter(text: str) -> tuple[str | None, str, int]:
     return match.group(1) or "", text[len(consumed) :], consumed.count("\n")
 
 
-def walk_files(folder: Path, suffixes: frozenset[str]) -> Iterator[Path]:
-    """Yield the files with one of the suffixes below the folder (sorted), without the folders of SKIPPED_FOLDERS."""
+def walk_files(folder: Path, suffixes: frozenset[str], _ancestors: tuple[Path, ...] = ()) -> Iterator[Path]:
+    """Yield the files with one of the suffixes below the folder (sorted), without the folders of SKIPPED_FOLDERS.
+
+    A link to a folder is followed, but a loop of links (a folder that is the folder itself or one of its parents, after
+    the links are resolved) stops the script with an input error (exit code 2): the walk fails closed and does not
+    follow a loop.
+    """
+    real = folder.resolve()
+    if real in _ancestors:
+        raise InputError(
+            f"the folder {folder} is a loop of links: after the links are resolved it is {real}, which the walk "
+            "has entered already (a folder that is its own parent). Remove the link"
+        )
+    chain = (*_ancestors, real)
     for path in sorted(folder.iterdir()):
         if path.is_dir():
             if path.name not in SKIPPED_FOLDERS:
-                yield from walk_files(path, suffixes)
+                yield from walk_files(path, suffixes, chain)
         elif path.suffix in suffixes:
             yield path
 
@@ -436,11 +468,66 @@ def read_model(root: Path, index: Index, findings: list[Finding]) -> set[str]:
     return found
 
 
-def is_test_name_text(line: str, start: int) -> bool:
-    """Return True if the text at `start` is after a quote character, and the line is not a comment line."""
-    if line.lstrip().startswith(COMMENT_MARKS):
-        return False
-    return any(quote in line[:start] for quote in ('"', "'", "`"))
+def string_spans(text: str, nested_comments: bool) -> list[tuple[int, int]]:
+    """Return the (start, end) offsets of the content of each string literal of a source text.
+
+    The scan goes from the start of the text and knows four states: code, a line comment (`//`, to the end of the line),
+    a block comment (`/*` to `*/`, over any number of lines, also for lines that do not start with `*`; Kotlin nests
+    them), and a string. A string is "...", '...' (the end of the line ends it, a backslash escapes the next
+    character), a backtick string (it can span lines) or a text block with three double quotes (Java, Kotlin; it can
+    span lines). A quote character in a comment does not start a string, and a comment mark in a string does not start a
+    comment. The scan is not a parser: a regular expression literal of JavaScript with a quote character can start a
+    string that ends at the end of the line, and this affects one line only.
+    """
+    spans: list[tuple[int, int]] = []
+    length = len(text)
+    position = 0
+    while position < length:
+        two = text[position : position + 2]
+        if two == "//":
+            end = text.find("\n", position)
+            position = length if end < 0 else end
+        elif two == "/*":
+            depth = 1
+            position += 2
+            while position < length and depth > 0:
+                if nested_comments and text.startswith("/*", position):
+                    depth += 1
+                    position += 2
+                elif text.startswith("*/", position):
+                    depth -= 1
+                    position += 2
+                else:
+                    position += 1
+        elif text.startswith('"""', position):
+            end = text.find('"""', position + 3)
+            end = length if end < 0 else end
+            spans.append((position + 3, end))
+            position = end + 3
+        elif text[position] in "\"'`":
+            quote = text[position]
+            end = position + 1
+            while end < length:
+                char = text[end]
+                if char == "\\":
+                    end += 2
+                    continue
+                if char == quote or (char == "\n" and quote != "`"):
+                    break
+                end += 1
+            end = min(end, length)
+            spans.append((position + 1, end))
+            position = end + 1
+        else:
+            position += 1
+    return spans
+
+
+def vcr_in_strings(text: str, nested_comments: bool) -> Iterator[tuple[int, str]]:
+    """Yield (the 1-based line, the lower case identifier) of each `vcr:<uuid>` that is inside a string literal."""
+    for start, end in string_spans(text, nested_comments):
+        for match in VCR_TEST_PATTERN.finditer(text, start, end):
+            yield text.count("\n", 0, match.start()) + 1, match.group(1).lower()
 
 
 def read_tests(root: Path, index: Index, findings: list[Finding]) -> set[str]:
@@ -449,29 +536,61 @@ def read_tests(root: Path, index: Index, findings: list[Finding]) -> set[str]:
     for relative, suffixes in TEST_ROOTS:
         folder = require_folder(root, relative)
         for path in walk_files(folder, suffixes):
-            for number, line in enumerate(read_text(path).splitlines(), start=1):
-                for match in VCR_TEST_PATTERN.finditer(line):
-                    if not is_test_name_text(line, match.start()):
-                        continue
-                    vcr_id = match.group(1).lower()
-                    found.add(vcr_id)
-                    if not index.has("vcr", vcr_id):
-                        others = [
-                            doc_type for doc_type in DOC_TYPES if doc_type != "vcr" and index.has(doc_type, vcr_id)
-                        ]
-                        cause = (
-                            f"it is the id of a {others[0].upper()} document" if others else "no document has this id"
+            for number, vcr_id in vcr_in_strings(read_text(path), path.suffix == ".kt"):
+                found.add(vcr_id)
+                if not index.has("vcr", vcr_id):
+                    others = [doc_type for doc_type in DOC_TYPES if doc_type != "vcr" and index.has(doc_type, vcr_id)]
+                    cause = f"it is the id of a {others[0].upper()} document" if others else "no document has this id"
+                    findings.append(
+                        Finding(
+                            "ERROR",
+                            "test-vcr-has-no-document",
+                            path.relative_to(root).as_posix(),
+                            number,
+                            f"vcr:{vcr_id} is not the id of a VCR document ({cause})",
                         )
-                        findings.append(
-                            Finding(
-                                "ERROR",
-                                "test-vcr-has-no-document",
-                                path.relative_to(root).as_posix(),
-                                number,
-                                f"vcr:{vcr_id} is not the id of a VCR document ({cause})",
-                            )
-                        )
+                    )
     return found
+
+
+def check_test_roots(root: Path, findings: list[Finding]) -> int:
+    """Stop (error) for a test file in `backend/` or `frontend/` outside TEST_ROOTS. Return the number of such files.
+
+    The folders of TEST_ROOTS are fixed in this script. A new test folder (another source set of Maven, another
+    include of Vitest or Playwright) would be ignored in silence, and a `vcr:<uuid>` in it would be neither read nor
+    checked. This guard finds a test file by its name (JUnit: `*Test.java`, `*Tests.java`, `*IT.java`, and the same
+    for `.kt`; Vitest and Playwright: `*.test.<suffix>` and `*.spec.<suffix>`) outside the folders that the script
+    reads, and the fix is one line in TEST_ROOTS.
+    """
+    roots = [relative for relative, _ in TEST_ROOTS]
+    count = 0
+    for module in TEST_GUARD_MODULES:
+        folder = require_folder(root, module)
+        suffixes = frozenset({".java", ".kt"}) | FRONTEND_SUFFIXES
+        paths: list[Path] = []
+        for child in sorted(folder.iterdir()):
+            if child.is_dir():
+                if child.name not in SKIPPED_FOLDERS and child.name not in GUARD_SKIPPED_MODULE_FOLDERS:
+                    paths.extend(walk_files(child, suffixes))
+            elif child.suffix in suffixes:
+                paths.append(child)
+        for path in paths:
+            relative = path.relative_to(root)
+            if not TEST_FILE_NAME.search(path.name) or any(relative.is_relative_to(test_root) for test_root in roots):
+                continue
+            count += 1
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "test-file-outside-test-roots",
+                    relative.as_posix(),
+                    None,
+                    "this test file is in no folder that the check reads for `vcr:<uuid>` "
+                    f"({', '.join(test_root.as_posix() for test_root in roots)}). Add its folder to TEST_ROOTS in "
+                    "tools/gates/traceability.py, or move the file",
+                )
+            )
+    return count
 
 
 def vcr_links(reader: FindReferences, index: Index) -> dict[str, list[str]]:
@@ -572,6 +691,7 @@ def run(root: Path, reader_module: str) -> int:
     openapi_ids = check_openapi(root, index, findings)
     model_ids = read_model(root, index, findings)
     test_ids = read_tests(root, index, findings)
+    check_test_roots(root, findings)
     links = vcr_links(reader, index)
     approved = check_approved_reqs(root, index, links, model_ids, test_ids, findings)
     reqs = sum(1 for doc_type, _ in index.documents if doc_type == "req")

@@ -160,7 +160,7 @@ architecture-backend:
 architecture-frontend:
     @{{ just_executable() }} _gate architecture-frontend.sh 130.110 frontend
 
-# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model) (feat-7-verification-architecture-tools, Task 130.120).
+# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
     @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
 
@@ -172,7 +172,7 @@ coverage-backend:
 coverage-frontend:
     @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
 
-# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, and for an approved REQ with no VCR. It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
+# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
 traceability:
     @{{ just_executable() }} _gate traceability.sh 110.130 .
 

@@ -154,10 +154,13 @@ _check_platform() {
 # install_oasdiff without the unpack:
 #
 #   1. The script stops if the machine is not Linux x86_64.
-#   2. If <home>/osv-scanner-<version>/osv-scanner exists, its first line of `--version` is
-#      `osv-scanner version: <OSV_SCANNER_VERSION>`, and the file `.sha256` of the folder has OSV_SCANNER_SHA256,
-#      the script does not download again. A change of the version or of the sha256 in tools/versions.env makes a
-#      new download.
+#   2. If <home>/osv-scanner-<version>/osv-scanner exists, THE SHA256 OF THE CACHED BINARY IS COMPUTED AGAIN and is
+#      OSV_SCANNER_SHA256, and its first line of `--version` is `osv-scanner version: <OSV_SCANNER_VERSION>`, the
+#      script does not download again. The script does not trust a marker file: a binary that is changed in the
+#      cache (or a cache of an older pin) has another sha256, and it is not started. It is replaced by a new download
+#      (step 3), as install_oasdiff does for a cache that does not match, and a download that does not work stops the
+#      script (the changed binary stays unused, and it is deleted by the next successful install). A change of the
+#      version or of the sha256 in tools/versions.env makes a new download too.
 #   3. If not, it downloads the file with curl, compares its sha256 with OSV_SCANNER_SHA256 BEFORE it makes the file
 #      executable, and stops (the download is deleted) if the value is not the same.
 #   4. It stops if `osv-scanner --version` has another version.
@@ -178,10 +181,15 @@ install_osv_scanner() {
     target="${home}/osv-scanner-${version}"
     OSV_SCANNER_BIN="${target}/osv-scanner"
 
-    if [[ -x "${OSV_SCANNER_BIN}" && -f "${target}/.sha256" && "$(cat "${target}/.sha256")" == "${sha}" ]] \
-        && [[ "$("${OSV_SCANNER_BIN}" --version 2>/dev/null | head -n 1)" == "osv-scanner version: ${version}" ]]; then
-        log "OSV-Scanner ${version} is already installed in ${target}"
-        return 0
+    if [[ -e "${OSV_SCANNER_BIN}" ]]; then
+        if [[ -x "${OSV_SCANNER_BIN}" && "$(sha256sum "${OSV_SCANNER_BIN}" | cut -d' ' -f1)" == "${sha}" ]]; then
+            if [[ "$("${OSV_SCANNER_BIN}" --version 2>/dev/null | head -n 1)" == "osv-scanner version: ${version}" ]]; then
+                log "OSV-Scanner ${version} is already installed in ${target} (the sha256 of the binary is the pin)"
+                return 0
+            fi
+        else
+            echo "[$(basename "${0}")] WARNING: the cached ${OSV_SCANNER_BIN} has not the pinned sha256 (OSV_SCANNER_SHA256 in ${VERSIONS_FILE}). It is not started. It is replaced by a new download with the sha256 check." >&2
+        fi
     fi
 
     url="${OSV_SCANNER_URL:-https://github.com/google/osv-scanner/releases/download/v${version}/osv-scanner_linux_amd64}"
@@ -189,15 +197,29 @@ install_osv_scanner() {
     work="$(mktemp -d "${home}/.osv-scanner.XXXXXX")"
     _fetch_verified "OSV-Scanner" "OSV_SCANNER_SHA256" "${url}" "${sha}" "${work}/osv-scanner" || { rm -rf "${work}"; exit 1; }
     chmod 0755 "${work}/osv-scanner"
-    printf '%s\n' "${sha}" >"${work}/.sha256"
     rm -rf "${target}"
     mkdir -p "${target}"
-    mv "${work}/osv-scanner" "${work}/.sha256" "${target}/"
+    mv "${work}/osv-scanner" "${target}/"
     rm -rf "${work}"
     first_line="$("${OSV_SCANNER_BIN}" --version 2>/dev/null | head -n 1)" || die "${OSV_SCANNER_BIN} does not start."
     [[ "${first_line}" == "osv-scanner version: ${version}" ]] \
         || { rm -rf "${target}"; die "${OSV_SCANNER_BIN} says '${first_line}', but OSV_SCANNER_VERSION in ${VERSIONS_FILE} is '${version}'."; }
     log "OSV-Scanner ${version} is in ${target}"
+}
+
+# _gitleaks_cache_matches_pin <folder> <pinned sha256 of the archive>
+#
+# Returns 0 if the folder of an installed gitleaks matches the pin: the file archive.tar.gz has the pinned sha256, and
+# the sha256 of the file `gitleaks` of the folder is the sha256 of the file `gitleaks` inside that archive. It starts
+# no file of the folder. It returns 1 for each other state (a file is missing, the archive is changed, the binary is
+# changed).
+_gitleaks_cache_matches_pin() {
+    local folder="$1" want="$2" in_archive on_disk
+    [[ -x "${folder}/gitleaks" && -f "${folder}/archive.tar.gz" ]] || return 1
+    [[ "$(sha256sum "${folder}/archive.tar.gz" | cut -d' ' -f1)" == "${want}" ]] || return 1
+    in_archive="$(tar -xzOf "${folder}/archive.tar.gz" gitleaks 2>/dev/null | sha256sum | cut -d' ' -f1)" || return 1
+    on_disk="$(sha256sum "${folder}/gitleaks" | cut -d' ' -f1)"
+    [[ "${in_archive}" == "${on_disk}" ]]
 }
 
 # install_gitleaks
@@ -206,10 +228,17 @@ install_osv_scanner() {
 # release file is gitleaks_<version>_linux_x64.tar.gz, and the install is the same as install_oasdiff:
 #
 #   1. The script stops if the machine is not Linux x86_64.
-#   2. If <home>/gitleaks-<version>/gitleaks exists, `gitleaks version` is GITLEAKS_VERSION, and the file `.sha256`
-#      of the folder has GITLEAKS_SHA256, the script does not download again.
+#   2. If <home>/gitleaks-<version>/gitleaks exists, THE CACHE IS VERIFIED AGAIN AGAINST THE PIN, with no marker file.
+#      The pin is the sha256 of the archive, so the install keeps the archive in the folder
+#      (<home>/gitleaks-<version>/archive.tar.gz). The cache is used only if (a) the sha256 of the archive is
+#      GITLEAKS_SHA256, (b) the sha256 of the binary is the sha256 of the file `gitleaks` inside the archive (so the
+#      binary is the one that the pin names), and (c) `gitleaks version` is GITLEAKS_VERSION. If one of the three is
+#      not true (a changed binary, a changed archive, a cache without the archive), the binary is not started, and it
+#      is replaced by a new download (step 3), as install_oasdiff does for a cache that does not match. A download
+#      that does not work stops the script.
 #   3. If not, it downloads the archive with curl, compares its sha256 with GITLEAKS_SHA256 BEFORE it unpacks the
-#      file, and stops (the download is deleted) if the value is not the same. It unpacks only `gitleaks` and `LICENSE`.
+#      file, and stops (the download is deleted) if the value is not the same. It unpacks only `gitleaks` and `LICENSE`,
+#      and keeps the archive for step 2.
 #   4. It stops if `gitleaks version` has another version.
 #
 # Variables for the tests: GITLEAKS_HOME and GITLEAKS_URL (as OSV_SCANNER_HOME and OSV_SCANNER_URL).
@@ -226,10 +255,15 @@ install_gitleaks() {
     target="${home}/gitleaks-${version}"
     GITLEAKS_BIN="${target}/gitleaks"
 
-    if [[ -x "${GITLEAKS_BIN}" && -f "${target}/.sha256" && "$(cat "${target}/.sha256")" == "${sha}" ]] \
-        && [[ "$("${GITLEAKS_BIN}" version 2>/dev/null)" == "${version}" ]]; then
-        log "gitleaks ${version} is already installed in ${target}"
-        return 0
+    if [[ -e "${GITLEAKS_BIN}" ]]; then
+        if _gitleaks_cache_matches_pin "${target}" "${sha}"; then
+            if [[ "$("${GITLEAKS_BIN}" version 2>/dev/null)" == "${version}" ]]; then
+                log "gitleaks ${version} is already installed in ${target} (the archive and the binary match the pin)"
+                return 0
+            fi
+        else
+            echo "[$(basename "${0}")] WARNING: the cache ${target} does not match the pinned sha256 (GITLEAKS_SHA256 in ${VERSIONS_FILE}): the archive is missing or changed, or the binary is not the file of the archive. The binary is not started. It is replaced by a new download with the sha256 check." >&2
+        fi
     fi
 
     url="${GITLEAKS_URL:-https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz}"
@@ -239,7 +273,7 @@ install_gitleaks() {
     mkdir -p "${work}/unpacked"
     tar -xzf "${work}/archive.tar.gz" -C "${work}/unpacked" gitleaks LICENSE \
         || { rm -rf "${work}"; die "The gitleaks download has not the files gitleaks and LICENSE."; }
-    printf '%s\n' "${sha}" >"${work}/unpacked/.sha256"
+    mv "${work}/archive.tar.gz" "${work}/unpacked/archive.tar.gz"
     rm -rf "${target}"
     mv "${work}/unpacked" "${target}"
     rm -rf "${work}"
