@@ -467,8 +467,8 @@ expect 2 "has no job" "required-setup.txt has no job" run_real_wf "${work}/wf-re
 printf 'ci.yml validate\nci.yml validate\n' >"${work}/required-twice.txt"
 expect 2 "is twice in the file" "required-setup.txt has a job twice" run_real_wf "${work}/wf-real" "${work}/required-twice.txt"
 expect 2 "cannot read" "required-setup.txt does not exist" run_real_wf "${work}/wf-real" "${work}/no-such-required.txt"
-# the data file of the repository is the one that the workflow needs: each of the 23 jobs is in it
-expect 0 "23 run step(s)" "required-setup.txt of the repository has the 23 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, and 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model)" run_real_wf "${work}/wf-real"
+# the data file of the repository is the one that the workflow needs: each of the 27 jobs is in it
+expect 0 "27 run step(s)" "required-setup.txt of the repository has the 27 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model, and 4 of feat-8: traceability, vuln-scan, secret-scan, workflow-scan)" run_real_wf "${work}/wf-real"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh (Task 130.142)"
@@ -1146,6 +1146,109 @@ dir="$(mk_breaking_tool separate)" && sed -i -e "s#^${oasdiff_sha}#${other_oasdi
 expect 1 "Lint tool pin: Lint tool: ${real_lint}: ${spectral_package} ${spectral_version}" "a bad file of oasdiff: the check of Spectral still passes (and says so)" run_breaking_pins "${dir}"
 expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt" "a bad lock file of Spectral: the check of oasdiff still passes (and says so)" \
     env LINT_TOOL_DIR="${work}/no-such-lint-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+
+# ---------------------------------------------------------------------------------------------
+section "check-pins.sh: the pins of OSV-Scanner and gitleaks, tools/security/ (feat-8-traceability-security-gates, Task 100.150, REQ-004, ACC-006)"
+# OSV_SCANNER_* and GITLEAKS_* of versions.env, and the vendor file of the release (the second place of each pin).
+# The messages start with `Security tool:`. The check is the same as for oasdiff (check_release_checksum).
+real_security="${REPO_ROOT}/tools/security"
+other_security_version="9.9.9"
+other_security_sha="$(printf 'd%.0s' {1..64})"
+# run_security_pins <tool dir> [<versions.env>]: check-pins.sh with another folder for the vendor files of the security tools
+run_security_pins() { env SECURITY_TOOL_DIR="$1" "${GATES_DIR}/check-pins.sh" "${2:-${real_versions}}" "${work}/wf-real" "${real_allowed}"; }
+# mk_security_tool <name>: a copy of tools/security/ in a new folder (the folder is printed)
+mk_security_tool() {
+    local dir="${work}/securitytool-$1"
+    rm -rf "${dir}" && mkdir -p "${dir}"
+    cp "${real_security}/osv-scanner-checksums.txt" "${real_security}/gitleaks-checksums.txt" "${dir}/"
+    echo "${dir}"
+}
+# security_versions_case <name> <text> <description> <sed expression>: change a copy of versions.env with sed (exit code 1)
+security_versions_case() {
+    local name="$1" text="$2" description="$3" expression="$4"
+    sed -e "${expression}" "${real_versions}" >"${work}/securityver-${name}.env"
+    if cmp -s "${real_versions}" "${work}/securityver-${name}.env"; then
+        echo "FAIL ${description}: the sed expression did not change versions.env"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_security_pins "${real_security}" "${work}/securityver-${name}.env"
+}
+# security_file_case <name> <file> <text> <description> <sed expression>: change a copy of a vendor file with sed (exit code 1)
+security_file_case() {
+    local name="$1" file="$2" text="$3" description="$4" expression="$5" dir
+    dir="$(mk_security_tool "${name}")"
+    sed -i -e "${expression}" "${dir}/${file}"
+    if cmp -s "${real_security}/${file}" "${dir}/${file}"; then
+        echo "FAIL ${description}: the sed expression did not change ${file}"
+        failed=$((failed + 1))
+        return
+    fi
+    expect 1 "${text}" "${description}" run_security_pins "${dir}"
+}
+expect 0 "RESULT: PASS" "the real tools/security/ passes (the default folder of check-pins.sh)" \
+    "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
+# The data of the two tools: <key prefix> <name> <vendor file> <release file>
+for tool in "OSV_SCANNER|OSV-Scanner|osv-scanner-checksums.txt|osv-scanner_linux_amd64" \
+    "GITLEAKS|gitleaks|gitleaks-checksums.txt|gitleaks_$(version_of GITLEAKS_VERSION)_linux_x64.tar.gz"; do
+    IFS='|' read -r prefix name file asset <<<"${tool}"
+    tool_sha="$(version_of "${prefix}_SHA256")"
+    expect 0 "Security tool: ${real_security}/${file}: ${asset} has the sha256 of tools/versions.env" \
+        "${name}: the real vendor file has the line for ${asset} with the value of ${prefix}_SHA256" run_security_pins "${real_security}"
+    if [[ "$(grep -c "  ${asset}\$" "${real_security}/${file}")" == "1" ]] \
+        && grep -q "^${tool_sha}  ${asset}\$" "${real_security}/${file}"; then
+        echo "ok   ${file} has one line for ${asset}, with the value of ${prefix}_SHA256"
+        passed=$((passed + 1))
+    else
+        echo "FAIL ${file} has not one line for ${asset} with the value of ${prefix}_SHA256"
+        failed=$((failed + 1))
+    fi
+    # One place only
+    security_versions_case "${prefix}-onlysha" "but ${prefix}_SHA256 in tools/versions.env is ${other_security_sha}" \
+        "${name}, one place only: versions.env has another ${prefix}_SHA256" "s#^${prefix}_SHA256=.*#${prefix}_SHA256=${other_security_sha}#"
+    security_file_case "${prefix}-onlyfilesha" "${file}" "but ${prefix}_SHA256 in tools/versions.env is ${tool_sha}" \
+        "${name}, one place only: ${file} has another sha256 for the release file" "s#^[0-9a-f]\{64\}  ${asset}\$#${other_security_sha}  ${asset}#"
+    security_file_case "${prefix}-nofile" "${file}" "has no line for ${asset}" \
+        "${name}, ${file} has no line for the release file (the line is of another file)" "s#  ${asset}\$#  other_file#"
+    dir="$(mk_security_tool "${prefix}-dupline")" && echo "${other_security_sha}  ${asset}" >>"${dir}/${file}"
+    expect 1 "has 2 lines for ${asset}, but it must have one" "${name}, ${file}: two lines for the release file" run_security_pins "${dir}"
+    dir="$(mk_security_tool "${prefix}-garbage")" && echo "this is not a checksum line" >>"${dir}/${file}"
+    expect 1 "the form is not \`<sha256 value>  <file name>\`" "${name}, ${file}: a line that is not a checksum line" run_security_pins "${dir}"
+    dir="$(mk_security_tool "${prefix}-empty")" && : >"${dir}/${file}"
+    expect 1 "has no line for ${asset}" "${name}, an empty ${file}" run_security_pins "${dir}"
+    dir="$(mk_security_tool "${prefix}-missing")" && rm "${dir}/${file}"
+    expect 1 "${file} does not exist" "${name}, no ${file}" run_security_pins "${dir}"
+    dir="$(mk_security_tool "${prefix}-blank")" && printf '\n\n' >>"${dir}/${file}"
+    expect 0 "RESULT: PASS" "${name}, ${file}: blank lines are no problem" run_security_pins "${dir}"
+    # The form of the values in versions.env
+    sed -e "s#^${prefix}_SHA256=.*#${prefix}_SHA256=${tool_sha:1}#" "${real_versions}" >"${work}/securityver-shaform.env"
+    expect 1 "it must be a sha256 value (64 lower case hexadecimal characters)" "${name}, versions.env: ${prefix}_SHA256 is not a sha256 value" \
+        run_security_pins "${real_security}" "${work}/securityver-shaform.env"
+    sed -e "s#^${prefix}_VERSION=.*#${prefix}_VERSION=^1.0#" "${real_versions}" >"${work}/securityver-range.env"
+    expect 1 "it must be an exact version" "${name}, versions.env: ${prefix}_VERSION is not an exact version" \
+        run_security_pins "${real_security}" "${work}/securityver-range.env"
+    grep -v "^${prefix}_VERSION=" "${real_versions}" >"${work}/securityver-nover.env"
+    expect 1 "${prefix}_VERSION is not in tools/versions.env" "${name}, versions.env has no ${prefix}_VERSION" \
+        run_security_pins "${real_security}" "${work}/securityver-nover.env"
+    grep -v "^${prefix}_SHA256=" "${real_versions}" >"${work}/securityver-nosha.env"
+    expect 1 "${prefix}_SHA256 is not in tools/versions.env" "${name}, versions.env has no ${prefix}_SHA256" \
+        run_security_pins "${real_security}" "${work}/securityver-nosha.env"
+done
+# The file name of gitleaks has the version, so a version in versions.env that the file does not have stops the check
+security_versions_case GITLEAKS-onlyversion "has no line for gitleaks_${other_security_version}_linux_x64.tar.gz" \
+    "gitleaks, one place only: versions.env has another GITLEAKS_VERSION" "s#^GITLEAKS_VERSION=.*#GITLEAKS_VERSION=${other_security_version}#"
+# Both places with the same new value pass (the procedure of tools/security/README.md)
+dir="$(mk_security_tool gitleaks-both)"
+sed -i -e "s#^[0-9a-f]\{64\}  gitleaks_$(version_of GITLEAKS_VERSION)_linux_x64.tar.gz\$#${other_security_sha}  gitleaks_${other_security_version}_linux_x64.tar.gz#" "${dir}/gitleaks-checksums.txt"
+sed -e "s#^GITLEAKS_VERSION=.*#GITLEAKS_VERSION=${other_security_version}#" -e "s#^GITLEAKS_SHA256=.*#GITLEAKS_SHA256=${other_security_sha}#" "${real_versions}" >"${work}/securityver-both.env"
+expect 0 "RESULT: PASS" "gitleaks, both places changed to the same new value (versions.env and the file): the check passes" run_security_pins "${dir}" "${work}/securityver-both.env"
+# The folder
+expect 1 "the folder ${work}/no-such-security-tool (the checksums of the release of OSV-Scanner) does not exist" "no folder tools/security/" run_security_pins "${work}/no-such-security-tool"
+# The checks are separate: a bad file of OSV-Scanner does not hide the result of gitleaks, and the other way round
+dir="$(mk_security_tool separate)" && sed -i -e "s#^$(version_of OSV_SCANNER_SHA256)#${other_security_sha}#" "${dir}/osv-scanner-checksums.txt"
+expect 1 "Security tool pin: Security tool: ${dir}/gitleaks-checksums.txt: gitleaks_$(version_of GITLEAKS_VERSION)_linux_x64.tar.gz" "a bad file of OSV-Scanner: the check of gitleaks still passes (and says so)" run_security_pins "${dir}"
+expect 1 "Breaking-changes tool pin: Breaking-changes tool: ${real_breaking}/oasdiff-checksums.txt" "a bad folder of the security tools: the check of oasdiff still passes (and says so)" \
+    env SECURITY_TOOL_DIR="${work}/no-such-security-tool" BREAKING_TOOL_DIR="${real_breaking}" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh: the pin of the generator plugin (feat-6-contracts-openapi-pipeline, Task 120.105, REQ-009, ACC-011, ACC-012)"
@@ -2548,6 +2651,20 @@ expect 1 "extra.lock is not allowed" "a fourth lock file in the folder" run_pins
 echo "[pip]" >"${extra_dir}/pip.conf"
 rm "${extra_dir}/extra.lock"
 expect 1 "pip.conf is not allowed" "a pip.conf in the folder (it could change the index)" run_pins_locks "${extra_dir}"
+# The lock file of zizmor (feat-8-traceability-security-gates, Task 100.150): the same checks as for the other lock files
+no_zizmor_dir="$(lock_copy pin-nozizmor)"
+rm "${no_zizmor_dir}/zizmor.lock"
+expect 1 "zizmor.lock does not exist" "no lock file of zizmor" run_pins_locks "${no_zizmor_dir}"
+lock_case zizmorversion 1 "has zizmor 1.32.1, but ZIZMOR_VERSION in tools/versions.env is 1.32.0" \
+    "another version of zizmor in the lock file" zizmor.lock 's#^zizmor==1.32.0#zizmor==1.32.1#'
+sed -e 's#^ZIZMOR_VERSION=.*#ZIZMOR_VERSION=1.32.1#' "${real_versions}" >"${work}/pin-env/zizmor-version.env"
+expect 1 "has zizmor 1.32.0, but ZIZMOR_VERSION in tools/versions.env is 1.32.1" "another version of zizmor in versions.env" run_pins_locks "${real_locks}" "${work}/pin-env/zizmor-version.env"
+grep -v '^ZIZMOR_VERSION=' "${real_versions}" >"${work}/pin-env/no-zizmor-version.env"
+expect 1 "ZIZMOR_VERSION is not in tools/versions.env" "no ZIZMOR_VERSION in versions.env" run_pins_locks "${real_locks}" "${work}/pin-env/no-zizmor-version.env"
+lock_case zizmornohash 1 "is not an exact pin" "zizmor with no hash" zizmor.lock '/^zizmor==/{s/ \\$//;n;d}'
+lock_case zizmordep 1 "is not an exact pin" "a dependency of zizmor that is a URL" zizmor.lock '1i foo @ https://example.invalid/foo-1.0-py3-none-any.whl'
+lock_case zizmorindex 1 "is not an exact pin" "an index option in the lock file of zizmor" zizmor.lock '1i --index-url https://example.invalid/simple'
+lock_case zizmornotool 1 "has no package" "a lock file of zizmor with no package" zizmor.lock '/^[a-z]/d;/^    /d'
 expect 0 "Python lock pin: Python locks:" "check-pins.sh says that it checked the Python locks" run_pins_locks "${real_locks}"
 
 echo

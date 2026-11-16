@@ -1,0 +1,5 @@
+"""A reader whose function gives the type in upper case (a self-test of tools/gates/traceability.py, ACC-004)."""
+
+
+def find_references(text):
+    return [("REQ", "1ca335d7-969a-443e-9392-165fdeea99a0")]

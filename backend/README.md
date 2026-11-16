@@ -82,6 +82,18 @@ just architecture-model        # the test that compares the workspace of model/ 
 
 **The cases that are not successful (ACC-002).** A class whose name has no suffix `Test` (or `IT` for the integration tests) is a case that is not successful: the default run of surefire does not start it, and the committed run of the tests is green. `BrokenAssertion` (a wrong assertion of JUnit), `BrokenPostgres` (a wrong assertion against the real container), `BrokenProperty` (a property that jqwik falsifies with a counterexample) and `BrokenLayerRule` (a layer rule that the code violates, the opposite direction of R2; the recipe `architecture-backend` runs it and ArchUnit names the violating dependency) are such classes. Each recipe runs its class separately and stops for it (the tool reports the failure), so the recipe shows the case that is not successful and exits 0.
 
+## The identifier of the VCR in the name of a test
+
+A test that verifies a requirement has the identifier of its VCR document in its display name: the text `vcr:<uuid>` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, `feat-8-traceability-security-gates`).
+
+```java
+@Test
+@DisplayName("the status has a state vcr:00000000-0000-4000-8000-000000000000")
+void theStatusHasAState() { ... }
+```
+
+The recipe `just traceability` reads the files `.java` and `.kt` in `backend/src/test/`. A `vcr:<uuid>` inside a string literal counts (also an upper case identifier), and a `vcr:<uuid>` in a comment of any form (a line comment, a trailing comment after code, a block comment over many lines) is not read. A test file outside the folders that the check reads is an error (`TEST_ROOTS`, see `tools/gates/README.md`). The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test name. The check does not read the report of the test run. No test has a `vcr:` today, because the only REQ has the status `draft` and no VCR. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
+
 ## Build
 
 ```bash

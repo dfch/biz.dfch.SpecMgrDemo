@@ -1,0 +1,3 @@
+# A fixture of test-security-gates.sh: a file that zizmor cannot read (the YAML is not correct), the failure of the tool.
+name: [not closed
+on: pull_request

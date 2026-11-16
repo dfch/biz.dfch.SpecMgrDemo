@@ -14,7 +14,9 @@
 # The jobs test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend,
 # test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend and
 # architecture-model are the jobs of feat-7-verification-architecture-tools (Task 140.100; the tools run as a
-# report without a threshold, no artifact upload, and the checkouts have no fetch-depth: 0). CODEOWNERS
+# report without a threshold, no artifact upload, and the checkouts have no fetch-depth: 0). The jobs traceability,
+# vuln-scan, secret-scan and workflow-scan are the jobs of feat-8-traceability-security-gates (Task 140.100; gate 2 and
+# the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). CODEOWNERS
 # covers this folder (/tools/), so the owner reviews each change.
 #
 # Format: <workflow file> <job> <action>...   (one line for each job; the actions are in any order)
@@ -41,3 +43,7 @@ ci.yml mutation-frontend actions/checkout extractions/setup-just actions/setup-n
 ci.yml architecture-backend actions/checkout extractions/setup-just actions/setup-java
 ci.yml architecture-frontend actions/checkout extractions/setup-just actions/setup-node pnpm/action-setup
 ci.yml architecture-model actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
+ci.yml traceability actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml vuln-scan actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
+ci.yml secret-scan actions/checkout extractions/setup-just
+ci.yml workflow-scan actions/checkout extractions/setup-just astral-sh/setup-uv

@@ -25,6 +25,12 @@
 #     threshold from the baseline of the plan): no artifact upload (the reports are console reports), and no
 #     `if:`. The checkouts have no `fetch-depth: 0` (the recipes need no base branch and no history). The
 #     owner makes the new jobs required checks of the rulesets (an open item of the plan).
+#   - feat-8-traceability-security-gates added the jobs traceability, vuln-scan, secret-scan and workflow-scan
+#     (Task 140.100). traceability is gate 2 (it stops for an error). vuln-scan, secret-scan and workflow-scan are
+#     the reports of gate 9 (no threshold: a finding does not stop the job, a failure of the tool does). CodeQL has no
+#     job: it is the hosted default setup of GitHub (no workflow file, REQ-006). The checkouts do not
+#     keep the credentials of the token. The owner makes the new jobs required checks of the rulesets (branch-protection.md,
+#     the steps of Task 140.130).
 
 name: CI
 
@@ -497,6 +503,93 @@ jobs:
         with:
           version: "12.16.1"
       - run: just architecture-model
+
+  # The jobs of feat-8-traceability-security-gates (Task 140.100, ACC-001): gate 2 and the three reports of gate 9. Each
+  # starts one recipe. CodeQL has no job (the hosted default setup of GitHub, no workflow file).
+  # Gate 2, the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference with no
+  # target, an `x-specmgr-req` that is not a REQ, an identifier of the model or of a test with no document, and an
+  # approved REQ with no VCR. It runs in the hash-locked environment of specmgr (`uv`), reads files only, and needs no history.
+  traceability:
+    name: traceability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just traceability
+
+  # Report: the known vulnerabilities in the dependencies (OSV-Scanner on the SBOM files of `just sbom`, no threshold).
+  # The job uses the network (the binary of OSV-Scanner from GitHub with a sha256, the packages of the SBOM, and the query
+  # to api.osv.dev), so the timeout is the long one of the SBOM jobs (license-check). The recipe makes the SBOM first, so the
+  # job needs the same tools as license-check (Java for the Maven Wrapper, Node and pnpm for cdxgen, uv). The conditions of the
+  # deviation for the OSV data are in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9.
+  vuln-scan:
+    name: vuln-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "26.13.0"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # pnpm/action-setup v6.1.0
+        with:
+          version: "12.16.1"
+      - run: just vuln-scan
+
+  # Report: secrets in the files and in the history of the pull request (gitleaks, no threshold). The recipe scans the commits
+  # of <base>..HEAD and stops for a shallow clone that has no merge base, so the checkout has `fetch-depth: 0` (as in
+  # commit-check). The download of gitleaks (a sha256 is compared) needs the network.
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - run: just secret-scan
+
+  # Report: the workflow files (zizmor, `--offline`, no threshold). zizmor comes from the hash-locked environment (`uv`).
+  workflow-scan:
+    name: workflow-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
+      - run: just workflow-scan
 
   # The tests of the gates themselves: the license gate with its fixtures, and the other
   # gates with good and bad input.

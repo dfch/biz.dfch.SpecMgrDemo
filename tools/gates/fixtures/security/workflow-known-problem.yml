@@ -1,0 +1,13 @@
+# A fixture of test-security-gates.sh: a workflow with a KNOWN problem for zizmor (it is not a workflow of this
+# repository: it is not in .github/workflows, so GitHub never runs it).
+# The problem: the text of the title of the pull request is put into the shell script (the audit template-injection),
+# and the trigger pull_request_target runs with a write token and the code of the pull request (the audit dangerous-triggers).
+name: known problem
+on: pull_request_target
+permissions: write-all
+jobs:
+  known-problem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "${{ github.event.pull_request.title }}"

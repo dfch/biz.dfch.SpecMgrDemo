@@ -247,15 +247,29 @@ if (!Array.isArray(systems) || systems.length !== 1) {
   stop(`the model of the workspace has ${Array.isArray(systems) ? systems.length : 'no'} software system(s). The comparison has one`)
 }
 
-const knownSystemKeys = new Set(['containers', 'description', 'documentation', 'id', 'name', 'tags'])
-const knownContainerKeys = new Set(['components', 'description', 'documentation', 'id', 'name', 'relationships', 'tags', 'technology'])
-const knownComponentKeys = new Set(['description', 'documentation', 'id', 'name', 'relationships', 'tags', 'technology'])
+// The key `properties` of an element is the Structurizr map of text values. The traceability check
+// (tools/gates/traceability.py, feat-8-traceability-security-gates) reads the property `specmgr-req` of it. This
+// comparison does not use the values: it accepts the key, and stops if the value is not a map of texts.
+const knownSystemKeys = new Set(['containers', 'description', 'documentation', 'id', 'name', 'properties', 'tags'])
+const knownContainerKeys = new Set(['components', 'description', 'documentation', 'id', 'name', 'properties', 'relationships', 'tags', 'technology'])
+const knownComponentKeys = new Set(['description', 'documentation', 'id', 'name', 'properties', 'relationships', 'tags', 'technology'])
 const knownRelationshipKeys = new Set(['description', 'destinationId', 'id', 'sourceId', 'tags'])
 
 function checkKeys(element, knownKeys, where) {
   for (const key of Object.keys(element)) {
     if (!knownKeys.has(key)) {
       stop(`${where} has the key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
+    }
+  }
+  if (Object.hasOwn(element, 'properties')) {
+    const properties = element.properties
+    const isMapOfTexts =
+      typeof properties === 'object' &&
+      properties !== null &&
+      !Array.isArray(properties) &&
+      Object.values(properties).every((value) => typeof value === 'string')
+    if (!isMapOfTexts) {
+      stop(`${where} has the key properties, and its value is not a map of texts`)
     }
   }
 }

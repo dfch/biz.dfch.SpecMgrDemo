@@ -14,7 +14,10 @@
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
 # architecture-frontend and architecture-model), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
-# coverage-frontend). The gate numbers of
+# coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
+# traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
+# feat-8-traceability-security-gates (Gate 9, the security recipes vuln-scan, secret-scan and workflow-scan, and
+# their test test-security-gates). The gate numbers of
 # the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
@@ -113,8 +116,8 @@ test-build-gates:
 test-generate-gate:
     @{{ just_executable() }} _gate test-generate-gate.sh 120.120
 
-# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code and the build gates with their own tests too).
-test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates
+# Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code, the build gates, the traceability check and the security recipes with their own tests too).
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate test-security-gates
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
@@ -157,7 +160,7 @@ architecture-backend:
 architecture-frontend:
     @{{ just_executable() }} _gate architecture-frontend.sh 130.110 frontend
 
-# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model) (feat-7-verification-architecture-tools, Task 130.120).
+# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
     @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
 
@@ -168,6 +171,30 @@ coverage-backend:
 # Report: the coverage of the pnpm module with the provider v8 of Vitest (the line coverage, the report in coverage/, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
 coverage-frontend:
     @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
+
+# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
+traceability:
+    @{{ just_executable() }} _gate traceability.sh 110.130 .
+
+# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, and a reader of references with another form (ACC-004) (feat-8-traceability-security-gates, Task 110.150).
+test-traceability-gate:
+    @{{ just_executable() }} _gate test-traceability-gate.sh 110.150
+
+# Report: the known vulnerabilities in the dependencies (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). OSV-Scanner reads the SBOM files of `just sbom` (build/sbom/*.cdx.json) and asks api.osv.dev (the network is needed). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (no network, a file that cannot be read, a missing binary, a wrong checksum) stops it (exit code 1). The data of OSV has a deviation in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (feat-8-traceability-security-gates, Task 120.110).
+vuln-scan: sbom
+    @{{ just_executable() }} _gate vuln-scan.sh 120.110 "{{ sbom_dir }}"
+
+# Report: secrets in the files and in the history of the pull request (the commits in <base>..HEAD), with gitleaks (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). The allowlist is tools/security/gitleaks.toml (CODEOWNERS covers it). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (a wrong config, a base that does not exist, a shallow clone with no merge base, a wrong checksum) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.120).
+secret-scan:
+    @{{ just_executable() }} _gate secret-scan.sh 120.120 "{{ base }}" tools/security/gitleaks.toml
+
+# Report: the workflow files with zizmor, offline (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (a file that cannot be read, no input) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.130).
+workflow-scan:
+    @{{ just_executable() }} _gate workflow-scan.sh 120.130 .github/workflows
+
+# Test: the three security recipes and the function that separates a finding from a failure of the tool (ACC-005): each tool with a finding (exit code 0) and with a failure (exit code that is not 0), with stubs of the tool and of the network, and with the real gitleaks, zizmor and OSV-Scanner (feat-8-traceability-security-gates, Tasks 120.100 to 120.130).
+test-security-gates:
+    @{{ just_executable() }} _gate test-security-gates.sh 120.100
 
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:

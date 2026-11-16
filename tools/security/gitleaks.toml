@@ -1,0 +1,28 @@
+# The configuration of gitleaks for `just secret-scan` (feat-8-traceability-security-gates, Task 120.120).
+#
+# Plan: FEAT feat-8-traceability-security-gates (GitHub issue #8), REQ-004, REQ-005. CODEOWNERS covers this file
+# (the folder /tools/), so a change of the allowlist needs the review of the owner. The script secret-scan.sh
+# does not honor `gitleaks:allow` comments and a `.gitleaksignore` file, so this file is the one place that hides a
+# finding.
+#
+# The rules are the default rules of gitleaks (the pinned release, GITLEAKS_VERSION in tools/versions.env).
+[extend]
+useDefault = true
+
+# The allowlist.
+#
+# Each entry has a `description` that says WHAT is hidden and WHY it is a false positive (and not a real secret),
+# and it hides as little as possible: prefer a `regexes` entry for the one value, or a `paths` entry for the one
+# file, and give the `condition = "AND"` if the entry has more than one kind of check. An entry for a whole folder
+# or for a rule needs a reason in the description that the owner accepts.
+#
+# Format (the section [[allowlists]] of gitleaks 8.x):
+#
+#   [[allowlists]]
+#   description = "The fixture tools/gates/fixtures/<name>/<file> has a value that looks like a <rule>. It is a text that the test of the gate makes on purpose, and it is no credential."
+#   paths = ['''^tools/gates/fixtures/<name>/<file>$''']
+#
+# The state at the first run on the repository (2026-11-15): the default rules find no secret in the files and in
+# the history of the repository, so there is no false positive and no entry. The self-test of the gates
+# (test-security-gates.sh) makes its fake secrets while it runs, in a temporary folder, so no fixture of the
+# repository has a value that looks like a secret. Add an entry here only for a real false positive, with the reason.

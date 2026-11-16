@@ -11,6 +11,9 @@
           "documentation" : { },
           "id" : "4",
           "name" : "api",
+          "properties" : {
+            "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0"
+          },
           "relationships" : [ {
             "description" : "The interfaces of api reference the classes of model",
             "destinationId" : "5",
