@@ -4,7 +4,7 @@ created: '2026-11-15T21:55:00.000+01:00'
 id: feat-9-walking-skeleton
 status: progress
 type: feat
-updated: '2026-11-15T21:55:00.000+01:00'
+updated: '2026-11-15T22:05:00.000+01:00'
 version: 1.0.0
 ---
 
@@ -42,7 +42,7 @@ The documents of the phase 100 are written at the planning (2026-11-15). The cod
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: The two requirements are accepted, the two verification case records exist, and the first SYSRS has the entry of the two requirements and of the two verification case records. The check of step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519 passes (the validation, the STE check and the traceability check).
+- [x] ACC-001: The two requirements are accepted, the two verification case records exist, and the first SYSRS has the entry of the two requirements and of the two verification case records. The check of step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519 passes (the validation, the STE check and the traceability check). Evidence (2026-11-15, the task 100.150 and the task 100.160): the two requirements have the status `accepted` (the note of each document records the permission of the owner), the two verification case records exist (the status `draft`), and the first SYSRS has the entry of the two requirements (the section Functional Suitability and the section Reliability) and of the two verification case records (the section Verification). `just validate` passes (7 files, 0 failed, specmgr 0.38.0), `just traceability` passes (0 error, 3 warning, the task 100.160), and the STE word check is done (reference only, the gate is on hold, the owner 2026-11-03).
 
 - [ ] ACC-002: The contract has the operation `GET /info` with the identifier of the requirement in the extension `x-specmgr-req`, and the gates of the contract pipeline (lint, breaking changes, the generated code) pass.
 
@@ -88,7 +88,7 @@ The documents of the phase 100 are written at the planning (2026-11-15). The cod
 
 - The baseline of the levels other than Critical and High of CodeQL (the option B of the planning; a later feature or a decision of the owner).
 
-- The pre-commit hooks (a GitHub issue, created on 2026-11-15; a later feature).
+- The pre-commit hooks (GitHub issue #48, created on 2026-11-15; a later feature).
 
 - The close of feat-1-frontend-technology-decision (the owner does it later, not in this feature).
 
@@ -193,9 +193,9 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 
 - [x] Task 100.140: Write the DEC about the source, the version and the license (the draft; the acceptance is the task 600.110, the owner).
 
-- [ ] Task 100.150: Do the check of the documents (the gate `just validate` on the branch of the feature, the step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519).
+- [x] Task 100.150: Do the check of the documents (the gate `just validate` on the branch of the feature, the step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519). Evidence: `just validate` passes (7 changed files, 0 failed, specmgr 0.38.0, 2026-11-15).
 
-- [ ] Task 100.160: Do the traceability check and the STE check (the step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519).
+- [x] Task 100.160: Do the traceability check and the STE check (the step 6 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519). Evidence: `just traceability` passes (2026-11-15): 64 document files with 240 references, 0 error, 3 warning — the 2 warnings `approved-req-vcr-not-in-test` (the tests are written in the phase 400) and the 1 warning `approved-req-has-no-model-element` of the requirement 271168a4-2a6f-40a1-b277-89711b18a087 (the property is given in the task 200.130). The STE word check is done (the script of feat-3-process-policy-baseline, reference only; the STE gate is on hold, the owner 2026-11-03): the new documents use only the common words that the documents of the repository have before.
 
 #### Phase 200: The Contract and the Backend
 
@@ -251,7 +251,7 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 
 ### Current Status
 
-**As of 2026-11-15 (the planning)**: The plan is written in the planning session with the owner. The documents of the phase 100 are written: the requirement of `GET /info` (accepted), the requirement of `GET /status` (accepted, the note records the permission of the owner), the two verification case records (draft), the first SYSRS (draft) and the DEC about the source, the version and the license (draft). The GitHub issue for the pre-commit hooks is created. The checks of the step 6 of the SOP are in progress (the task 100.150 and the task 100.160). The code of the phases 200 to 500 is not written. The branch `feat-9` is on the `dev` that contains the merged feat-8-traceability-security-gates (the commit `c194d5e`).
+**As of 2026-11-15 (the planning)**: The plan is written in the planning session with the owner. The documents of the phase 100 are written: the requirement of `GET /info` (accepted), the requirement of `GET /status` (accepted, the note records the permission of the owner), the two verification case records (draft), the first SYSRS (draft) and the DEC about the source, the version and the license (draft). The GitHub issue #48 for the pre-commit hooks is created. The checks of the step 6 of the SOP pass (the task 100.150 and the task 100.160: `just validate` 0 failed, `just traceability` 0 error with the 3 warning that the task 200.130 and the phase 400 remove). The code of the phases 200 to 500 is not written. The branch `feat-9` is on the `dev` that contains the merged feat-8-traceability-security-gates (the commit `c194d5e`).
 
 ### Blockers
 
@@ -260,6 +260,10 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 22:05:00.000+01:00 - The checks of the step 6 of the SOP pass
+
+`just validate` passes for the 7 files that changed (0 failed, specmgr 0.38.0). `just traceability` passes (64 document files, 240 references, 0 error, 3 warning): the 2 warnings `approved-req-vcr-not-in-test` and the 1 warning `approved-req-has-no-model-element` (the requirement 271168a4-2a6f-40a1-b277-89711b18a087) are expected; the phase 400 (the tests) and the task 200.130 (the property of the model) remove them. The STE word check is done (the script of feat-3-process-policy-baseline, reference only; the STE gate is on hold by the owner on 2026-11-03). The GitHub issue #48 (the pre-commit hooks) is created. The task 100.150, the task 100.160 and the ACC-001 are ticked.
 
 #### 2026-11-15 21:55:00.000+01:00 - The planning and the documents of the phase 100
 
@@ -273,7 +277,7 @@ The plan is written in the planning session with the owner. The owner decides: (
 
 - The walking skeleton is the feat-9, after the feat-8 (the feat-8 blocks it explicitly).
 
-- The DEC about the AGPL (5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c): the option 1. The owner determined that the clause of the section 13 (the network) applies to the reuse and the modification of the code, and it does not apply to the user that operates the web site. The owner gives the notice: "Copyright 2026 Ronald Rink, http://<repo-url>. Licensed under AGPL-3.0-only." The framing is confirmed by the owner (2026-11-15).
+- The DEC about the AGPL (5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c): the option 1. The owner determined that the clause of the section 13 (the network) applies to the reuse and the modification of the code, and it does not apply to the user that operates the web site. The owner gives the notice: "Copyright 2026 Ronald Rink, http://`<repo-url>`. Licensed under AGPL-3.0-only." The framing is confirmed by the owner (2026-11-15).
 
 - The threshold of the security (REQ-006, REQ-007): the baseline is the state of the feature (the gate passes now), each new finding blocks, a finding that is Critical or High blocks in each case, the four tools block. CodeQL: the option B (the native check, a new finding that is Critical or High; if the mechanism does not exist, CodeQL stays a report and the plan records it).
 
@@ -281,13 +285,13 @@ The plan is written in the planning session with the owner. The owner decides: (
 
 - The feat-1 stays open; the owner closes it later (not in this feature).
 
-- The pre-commit hooks: the GitHub issue is created now (2026-11-15); the work is a separate later feature.
+- The pre-commit hooks: the GitHub issue #48 is created now (2026-11-15); the work is a separate later feature.
 
 ### Related PRs / Commits
 
 - The pull request #47 (feat-8-traceability-security-gates, merged into the `dev` on 2026-11-15): the dependency of this feature.
 
-- The GitHub issue for the pre-commit hooks (created on 2026-11-15, this planning session).
+- [Issue #48](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/48): the pre-commit hooks (created on 2026-11-15, this planning session; a later feature).
 
 ### More Information
 
