@@ -4,7 +4,7 @@ created: '2026-11-15T21:55:00.000+01:00'
 id: feat-9-walking-skeleton
 status: progress
 type: feat
-updated: '2026-11-15T22:05:00.000+01:00'
+updated: '2026-11-15T22:15:00.000+01:00'
 version: 1.0.0
 ---
 
@@ -60,7 +60,7 @@ The documents of the phase 100 are written at the planning (2026-11-15). The cod
 
 - [ ] ACC-009: The dependencies of the skeleton have no finding that is Critical or High (the run of OSV-Scanner and the scan of CodeQL show it), and the license gate passes for them.
 
-- [ ] ACC-010: The DEC about the source, the version and the license is accepted (the owner), and the user interface shows the notice.
+- [ ] ACC-010: The DEC about the source, the version and the license is accepted (the owner), and the user interface shows the notice. Status (2026-11-15): the DEC is accepted (the task 600.110, the one-time permission of the owner); the criterion is NOT ticked (the part of the user interface is the task 300.110).
 
 - [ ] ACC-011: The `branch-protection.md` has the steps for the owner for the new required checks of the security gates.
 
@@ -159,7 +159,7 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 
 ### Related Decisions
 
-- DEC 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c: Provide the Source, the Version and the License of the Service in the Info Operation and the User Interface (this feature writes it, the draft; the acceptance is the ACC-010).
+- DEC 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c: Provide the Source, the Version and the License of the Service in the Info Operation and the User Interface (accepted on 2026-11-15, the task 600.110; the part of the user interface of the ACC-010 is pending, the task 300.110).
 
 - DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9: Use Only Open Source Libraries That Are Compatible With AGPL-3.0-only (the clause about networks, the license gate).
 
@@ -241,7 +241,7 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 
 - [ ] Task 600.100: Walk the acceptance criteria and give the evidence in the plan.
 
-- [ ] Task 600.110: The acceptance of the DEC about the source, the version and the license by the owner (the one-time permission, the status accepted).
+- [x] Task 600.110: The acceptance of the DEC about the source, the version and the license by the owner (the one-time permission, the status accepted). Evidence: the owner gives the one-time permission in the chat (2026-11-15: "I give you one-time permission: I accept the AGPL DEC (Task 600.110)"); the status of the DEC 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c is `accepted` (the entry of Updates of the DEC records it).
 
 - [ ] Task 600.120: The review of the owner and the pull request (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8).
 
@@ -251,15 +251,19 @@ The dependencies (the task 500.100): the choice of the dependency of the skeleto
 
 ### Current Status
 
-**As of 2026-11-15 (the planning)**: The plan is written in the planning session with the owner. The documents of the phase 100 are written: the requirement of `GET /info` (accepted), the requirement of `GET /status` (accepted, the note records the permission of the owner), the two verification case records (draft), the first SYSRS (draft) and the DEC about the source, the version and the license (draft). The GitHub issue #48 for the pre-commit hooks is created. The checks of the step 6 of the SOP pass (the task 100.150 and the task 100.160: `just validate` 0 failed, `just traceability` 0 error with the 3 warning that the task 200.130 and the phase 400 remove). The code of the phases 200 to 500 is not written. The branch `feat-9` is on the `dev` that contains the merged feat-8-traceability-security-gates (the commit `c194d5e`).
+**As of 2026-11-15 (the planning)**: The plan is written in the planning session with the owner. The documents of the phase 100 are written: the requirement of `GET /info` (accepted), the requirement of `GET /status` (accepted, the note records the permission of the owner), the two verification case records (draft), the first SYSRS (draft) and the DEC about the source, the version and the license (draft). The GitHub issue #48 for the pre-commit hooks is created. The checks of the step 6 of the SOP pass (the task 100.150 and the task 100.160: `just validate` 0 failed, `just traceability` 0 error with the 3 warning that the task 200.130 and the phase 400 remove). The DEC about the source, the version and the license is accepted (the task 600.110, the one-time permission of the owner, 2026-11-15). The code of the phases 200 to 500 is not written. The branch `feat-9` is on the `dev` that contains the merged feat-8-traceability-security-gates (the commit `c194d5e`). **The next step is the phase 200 (the contract and the backend), starting with the task 200.100.**
 
 ### Blockers
 
-- The acceptance of the DEC (the task 600.110) is an action of the owner.
+None. The acceptance of the DEC is done (the task 600.110, the one-time permission of the owner, 2026-11-15). The next step is the phase 200 (the task 200.100).
 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 22:15:00.000+01:00 - The owner accepts the DEC; handover to the phase 200
+
+The owner gives the one-time permission to accept the DEC 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c (statement in the chat, 2026-11-15: "I give you one-time permission: I accept the AGPL DEC (Task 600.110)"). The status of the DEC is `accepted` (the entry of Updates of the DEC records it). The task 600.110 is ticked; the ACC-010 stays not ticked (the part of the user interface is the task 300.110). **Handover note for the next session (SOP 766e4c27-31e3-495f-9f37-307c5f3ee0e8, the step 7):** the branch `feat-9` (the worktree `/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-9`, on the `dev` with the merged feat-8) has the complete phase 100 (the two requirements accepted, the two verification case records, the first SYSRS, the DEC accepted) and the checks pass (`just validate` 7 files 0 failed; `just traceability` 0 error, 3 warning expected). The next task is the task 200.100 (the operation `GET /info` in `contracts/openapi.yaml`, the extension `x-specmgr-req` of the requirement 271168a4-2a6f-40a1-b277-89711b18a087). The commits follow the form `type(feat-9): subject`. The branch is not pushed; the pull request is with the close (the phase 600).
 
 #### 2026-11-15 22:05:00.000+01:00 - The checks of the step 6 of the SOP pass
 
@@ -272,6 +276,10 @@ The plan is written in the planning session with the owner. The owner decides: (
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-15 22:15:00.000+01:00 - The owner accepts the DEC about the AGPL
+
+The owner gives the one-time permission to accept the DEC 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c (the statement in the chat, 2026-11-15). The status is `accepted`. The remark of the DEC stays open: a person who has competence in the law must examine it.
 
 #### 2026-11-15 21:55:00.000+01:00 - The decisions of the owner in the planning session
 

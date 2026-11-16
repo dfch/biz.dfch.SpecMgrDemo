@@ -1,9 +1,9 @@
 ---
 created: '2026-11-15T21:50:00.000+01:00'
 id: 5ddd8d7a-5e7d-4a9b-860f-7d0b1f05579c
-status: draft
+status: accepted
 type: dec
-updated: '2026-11-15T21:50:00.000+01:00'
+updated: '2026-11-15T22:15:00.000+01:00'
 version: 1.0.0
 ---
 
@@ -117,6 +117,10 @@ The values of the copyright holder and the year come from the owner. The identif
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-15 22:15:00.000+01:00 - Accepted
+
+The owner gives the one-time permission to accept this decision (statement of the owner in the chat, 2026-11-15: "I give you one-time permission: I accept the AGPL DEC (Task 600.110)"). The status is now `accepted`. The remark of the Consequences stays true: a person who has competence in the law must examine this DEC.
 
 ### 2026-11-15 21:50:00.000+01:00 - Draft written
 
