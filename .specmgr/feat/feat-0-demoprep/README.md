@@ -27,6 +27,7 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - REQ-004: The feature has scripts in `bin/` that start the demo: the backend and the frontend, the backend with the error state, the API documentation, the model site, and the rules.
 - REQ-005: The feature has screenshots of the user interface, of the API documentation and of the model, as files in the folder of the feature.
 - REQ-006: The feature has a short presentation in Markdown (6 slides, English) with the strong points, the differences to other specification frameworks, and the weak points, and the PDF made from it.
+- REQ-007: The feature has two Playwright tests that open the page of the app and read the version number from it and write it to the console: one that an agent runs with the Playwright MCP, and one head-less test with no agent. Both are in the demo and on a slide.
 
 ### Acceptance Criteria
 
@@ -38,6 +39,9 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] ACC-006: The folder `images/` has the screenshots (REQ-005).
 - [x] ACC-007: `PRESENTATION.md` and `PRESENTATION.pdf` exist, and the PDF has 6 slides (REQ-006).
 - [x] ACC-008: `just validate` and `just commit-check` pass for the branch.
+- [ ] ACC-009: `bin/170-100-00-playwright-headless.sh` starts the demo, runs a head-less Playwright test that reads the version of the page and prints it, and stops the demo. The exit code is 0 only if the printed version is the version of `GET /info` (REQ-007).
+- [ ] ACC-010: `bin/170-110-00-agent-prompt.md` has the prompt for an agent with the Playwright MCP. The agent opens the page, reads the version and prints it. The result is the same as in ACC-009 (REQ-007).
+- [ ] ACC-011: `PRESENTATION.md` and `PRESENTATION.pdf` have a slide for the two tests, and `DEMO.md` has the commands (REQ-007).
 
 ### Scope
 
@@ -122,11 +126,18 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 
 - [x] Task 160.100: Make `bin/160-100-00-show-sbom.sh`, `TOOLS.md` and the slides about the SBOM, the tools, and the DECs and RSKs.
 
+#### Phase 170: Playwright Tests (not started, see the handover)
+
+- [ ] Task 170.100: Make `bin/170-100-00-playwright-headless.mjs` and `bin/170-100-00-playwright-headless.sh` (the head-less test, no agent).
+- [ ] Task 170.110: Make `bin/170-110-00-agent-prompt.md` (the test for an agent with the Playwright MCP) and run it once with the MCP.
+- [ ] Task 170.120: Add a slide to `PRESENTATION.md` (a backup slide is acceptable), the commands to `DEMO.md`, and make `PRESENTATION.pdf` again.
+- [ ] Task 170.130: Run `just validate` and `just commit-check`, and commit.
+
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-17**: All tasks and all acceptance criteria are done (`just validate` and `just commit-check` pass). Nothing is pushed.
+**As of 2026-11-17**: Phases 100 to 160 are done. Phase 170 (the Playwright tests, ACC-009 to ACC-011) is not started. Nothing is pushed. See the handover in the Updates.
 
 ### Blockers
 
@@ -135,6 +146,28 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 07:30:00.000Z - Handover to a new agent (Phase 170)
+
+The context of the first agent was full, so Phase 170 is not started. The branch is `feat-0-demoprep` (work tree `/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0`), cut from feat-9 `8f11e3e`. The owner said: all work stays in the folder of this feature, and never search or change the root folders of the repository. Nothing is pushed. The owner accepts more than 6 slides (backup slides).
+
+State: all scripts of Phases 100 to 160 ran once and work. `PRESENTATION.pdf` has 9 slides. `just validate` and `just commit-check` passed at the last commit.
+
+What to do (Phase 170):
+- The page is `http://127.0.0.1:5273` after `bin/130-100-00-run-demo.sh` (stop with `bin/130-110-00-stop-demo.sh`). The version is in the notice at the bottom: the text `Version 0.1.0, commit <sha>` (component `ui/LicenseNotice.tsx`). The same value is in `GET http://127.0.0.1:8180/info` (field `version`). The head-less test must compare the two.
+- Head-less test: use `@playwright/test` from `build/work/frontend/node_modules` (the script `bin/140-100-01-shot.mjs` shows how to import it and that Chromium is in `~/.cache/ms-playwright`). Use the helpers of `bin/_common.sh` (`prepare_work`, `wait_for_url`, ports).
+- Agent test: the Playwright MCP tools are enabled in the session of the owner (`playwright_browser_navigate`, `playwright_browser_snapshot`, `playwright_browser_find`). Write the prompt as a file in `bin/`. Run it once with the MCP and record the real output in the plan. Do not claim a result that was not run.
+- Slide: a backup slide after the slide about the architecture. Rebuild with `bin/150-110-00-build-pdf.sh` and look at the pages.
+
+Known problems and lessons:
+- `just license-check` stopped on the last four runs (`vite@7.3.8` or `typescript@5.9.3` has no license in the SBOM of cdxgen). One earlier run passed (506 components). The cause is not found. Do not run it live in the demo. The slide about the SBOM uses the number of the passed run.
+- The tool `create_feat` of the specmgr MCP writes into the checkout of `dev`, not into the work tree. Move the file. Also the Playwright MCP writes the folder `.playwright-mcp/` into the checkout of `dev`: remove it (it is not in git).
+- Do not overwrite `README.md` of this folder (it is the plan). The guide is `DEMO.md`.
+- A file that is read right after it was written can be stale: read it again.
+- Marp ignores inline `style=` on a `div`. Use a class in the `style:` block of the slide header.
+- ArchUniTS does not see `export { x } from '...'` as a dependency.
+- Port 8080 is in use on the machine, so the demo uses 8180, 5273, 8091 and 8092.
+- The statements about other specification frameworks on slide 1 are the judgement of the author. Do not remove that remark.
 
 #### 2026-11-17 07:00:00.000Z - SBOM, tools and DEC slides
 
