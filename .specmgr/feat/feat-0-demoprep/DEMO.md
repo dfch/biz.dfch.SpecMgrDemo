@@ -32,8 +32,12 @@ The scripts do not change a file outside of this folder. The code runs from a co
 | 11 | The SBOM: make it with the gate and show the files | `$F/bin/160-100-00-show-sbom.sh` | `build/sbom/backend.cdx.json` (55 components) and `frontend.cdx.json` (451) in the root of the work tree; the gate prints the result. Needs the network |
 | 12 | Make the images again | `$F/bin/140-100-00-take-screenshots.sh` | `$F/images/` |
 | 13 | Make the PDF | `$F/bin/150-110-00-build-pdf.sh` | `$F/PRESENTATION.pdf` |
+| 14 | Test: read the version from the page (head-less, no agent) | `$F/bin/170-100-00-playwright-headless.sh` | prints `Version on the page: 0.1.0 (commit <sha>)` and `PASS`; exit code 0 only if the page and `GET /info` have the same version and commit. It starts and stops the demo itself |
+| 15 | Test: the same with an agent and the Playwright MCP | the prompt in `$F/bin/170-110-00-agent-prompt.md` (start the demo with 1 first, stop it with 3) | the agent prints the same line and `PASS` |
 
 Order for the talk: 1, 2, 3, then 4, then 5, then 8 and 9, then 10, then 3 to stop the servers.
+
+The two tests of 14 and 15 are on the backup slide of the presentation. Show 14 if there is time (about 10 seconds), and 15 only with the Playwright MCP enabled in the session.
 
 ### Notes and fallbacks
 
@@ -42,6 +46,7 @@ Order for the talk: 1, 2, 3, then 4, then 5, then 8 and 9, then 10, then 3 to st
 - **Model site.** The viewer of Structurizr shows a help dialog at the first start. Close it with the button at the top right. Use the keys of the viewer (the arrow keys) to go to the next view.
 - **No Docker or no network.** The images in `$F/images/` are the fallback for every demo: the screenshots of the user interface (`ui-up-en.png`, `ui-up-de.png`, `ui-error-en.png`), of the API specification (`api-docs.png`), of the model site (`model-site.png`) and the SVG of the four views (`model-*.svg`).
 - **SVG.** The SVG export of Structurizr works (the playwright image, started against `structurizr local`). If it fails, the script prints the fallback: the PlantUML files in `build/plantuml`, that a PlantUML server renders.
+- **Playwright MCP.** The MCP can write a folder `.playwright-mcp/` into the working folder of the session. It is not in git. Remove it after the test (`rm -rf .playwright-mcp`).
 - **Stop all.** `$F/bin/130-110-00-stop-demo.sh` stops the processes that the scripts started. `docker ps` must show no container `demoprep-structurizr-local` afterwards.
 
 ### The model and the rules

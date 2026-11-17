@@ -140,6 +140,38 @@ Status: the gate is done and merged. feat-9 is the first feature that fills the 
 
 ---
 
+## Backup: the same UI test, with an agent and without
+
+<div class="cols tiny"><div>
+
+**Head-less (no agent), repeatable**
+
+`bin/170-100-00-playwright-headless.sh`
+
+- Starts the demo, opens the page in Chromium, reads `Version 0.1.0, commit <sha>` from the notice, prints it.
+- Compares it with `GET /info`. **Exit code 0 only if both are equal.** Stops the demo.
+- Checked with a stub that gives a wrong version, and with a wrong URL: exit code 1 in both cases.
+
+</div><div>
+
+**Agent with the Playwright MCP**
+
+`bin/170-110-00-agent-prompt.md`
+
+- The prompt is a file: navigate, find the notice, read the version, print it, compare with `/info`, close the browser.
+- The agent works from the accessibility tree, not from a script. **It can adapt to a changed page, but it is not a gate** (no fixed exit code).
+- Run once in this session: same version and commit as the head-less test, equal to `/info`.
+
+</div></div>
+
+<div class="small">
+
+Same goal, two tools: the version the user sees is the version the backend reports (REQ-003 of feat-9, DEC `5ddd8d7a`). The head-less test is the repeatable one.
+
+</div>
+
+---
+
 ## 6. Agents with boundaries, on a running system
 
 <div class="cols"><div>

@@ -39,9 +39,9 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] ACC-006: The folder `images/` has the screenshots (REQ-005).
 - [x] ACC-007: `PRESENTATION.md` and `PRESENTATION.pdf` exist, and the PDF has 6 slides (REQ-006).
 - [x] ACC-008: `just validate` and `just commit-check` pass for the branch.
-- [ ] ACC-009: `bin/170-100-00-playwright-headless.sh` starts the demo, runs a head-less Playwright test that reads the version of the page and prints it, and stops the demo. The exit code is 0 only if the printed version is the version of `GET /info` (REQ-007).
-- [ ] ACC-010: `bin/170-110-00-agent-prompt.md` has the prompt for an agent with the Playwright MCP. The agent opens the page, reads the version and prints it. The result is the same as in ACC-009 (REQ-007).
-- [ ] ACC-011: `PRESENTATION.md` and `PRESENTATION.pdf` have a slide for the two tests, and `DEMO.md` has the commands (REQ-007).
+- [x] ACC-009: `bin/170-100-00-playwright-headless.sh` starts the demo, runs a head-less Playwright test that reads the version of the page and prints it, and stops the demo. The exit code is 0 only if the printed version is the version of `GET /info` (REQ-007).
+- [x] ACC-010: `bin/170-110-00-agent-prompt.md` has the prompt for an agent with the Playwright MCP. The agent opens the page, reads the version and prints it. The result is the same as in ACC-009 (REQ-007).
+- [x] ACC-011: `PRESENTATION.md` and `PRESENTATION.pdf` have a slide for the two tests, and `DEMO.md` has the commands (REQ-007).
 
 ### Scope
 
@@ -126,18 +126,18 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 
 - [x] Task 160.100: Make `bin/160-100-00-show-sbom.sh`, `TOOLS.md` and the slides about the SBOM, the tools, and the DECs and RSKs.
 
-#### Phase 170: Playwright Tests (not started, see the handover)
+#### Phase 170: Playwright Tests
 
-- [ ] Task 170.100: Make `bin/170-100-00-playwright-headless.mjs` and `bin/170-100-00-playwright-headless.sh` (the head-less test, no agent).
-- [ ] Task 170.110: Make `bin/170-110-00-agent-prompt.md` (the test for an agent with the Playwright MCP) and run it once with the MCP.
-- [ ] Task 170.120: Add a slide to `PRESENTATION.md` (a backup slide is acceptable), the commands to `DEMO.md`, and make `PRESENTATION.pdf` again.
-- [ ] Task 170.130: Run `just validate` and `just commit-check`, and commit.
+- [x] Task 170.100: Make `bin/170-100-00-playwright-headless.mjs` and `bin/170-100-00-playwright-headless.sh` (the head-less test, no agent).
+- [x] Task 170.110: Make `bin/170-110-00-agent-prompt.md` (the test for an agent with the Playwright MCP) and run it once with the MCP.
+- [x] Task 170.120: Add a slide to `PRESENTATION.md` (a backup slide is acceptable), the commands to `DEMO.md`, and make `PRESENTATION.pdf` again.
+- [x] Task 170.130: Run `just validate` and `just commit-check`, and commit.
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-17**: Phases 100 to 160 are done. Phase 170 (the Playwright tests, ACC-009 to ACC-011) is not started. Nothing is pushed. See the handover in the Updates.
+**As of 2026-11-17**: All phases (100 to 170) are done and all acceptance criteria are met. `PRESENTATION.pdf` has 10 slides (one backup slide for the two Playwright tests). Nothing is pushed.
 
 ### Blockers
 
@@ -146,6 +146,23 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 08:45:00.000Z - Phase 170: the Playwright tests
+
+Done: `bin/170-100-00-playwright-headless.{sh,mjs}`, `bin/170-110-00-agent-prompt.md`, the backup slide (slide 7 of 10), the rows 14 and 15 in `DEMO.md`, `PRESENTATION.pdf` made again (10 pages, the new page was looked at: no overflow).
+
+Real results of the runs in this session:
+- Head-less test: exit code 0. Output: `Version on the page: 0.1.0 (commit b68f496d73b0a7228d96494073495ff464cd4b61)`, `Version of GET /info: 0.1.0 (commit b68f496d73b0a7228d96494073495ff464cd4b61)`, `PASS`. The demo was stopped and the ports were free afterwards. The run takes about 10 seconds.
+- Negative checks of the head-less test (the page was real, the `/info` URL was a stub of `python3 -m http.server` on port 8193): a stub with the version `9.9.9` gave `FAIL the page and GET /info differ` and exit code 1. A stub URL with no file gave `FAIL ... gave 404` and exit code 1.
+- Agent test (the Playwright MCP in this session, the prompt of `170-110-00-agent-prompt.md`): `playwright_browser_navigate` to the page, `playwright_browser_find` with `Version` gave the paragraph `Version 0.1.0, commit b68f496d73b0a7228d96494073495ff464cd4b61`. `playwright_browser_navigate` to `/info` and `playwright_browser_evaluate` gave `0.1.0 b68f496d73b0a7228d96494073495ff464cd4b61`. The two values are equal. The agent (this session) compared them itself, with no fixed exit code, and closed the browser. The only console error of the page was a 404 for `favicon.ico`.
+
+Mistakes and corrections:
+- The first version of the head-less script had an option `--fail` that was meant to make the test fail. It does not: `--fail` changes `GET /status` only, and `GET /info` stays valid, so the test correctly passed. The option is removed, and the negative case uses the stub (above).
+- The first text of the slide said that the test is for the gate and CI. It is not part of a gate or a CI job (out of scope), so the text says "repeatable" now.
+- The Playwright MCP wrote the folder `.playwright-mcp/` into this work tree (not into the checkout of `dev` as in the earlier session). It is removed, and `git status` shows only the intended files.
+- The output line of the prompt (step 5) has the form of the head-less test. In this one run the agent gave the values and the comparison in its own words, not the exact two lines. The prompt is not changed after the run.
+
+Gates: `just validate` passed (`linted=8 failed=0`). `just commit-check` passed for the 10 commits before this one (the message of this commit can be checked only after the commit). `just license-check` was not run (known problem of the handover).
 
 #### 2026-11-17 07:30:00.000Z - Handover to a new agent (Phase 170)
 
