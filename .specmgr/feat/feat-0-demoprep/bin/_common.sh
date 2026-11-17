@@ -17,6 +17,11 @@ FRONTEND_PORT="${FRONTEND_PORT:-5273}"
 API_DOCS_PORT="${API_DOCS_PORT:-8091}"
 MODEL_SITE_PORT="${MODEL_SITE_PORT:-8092}"
 
+# Rootless Docker maps the host user to root inside the container, so "-u <host uid>" would write as another user (found on nxt).
+if [[ -z "${DOCKER_USER:-}" ]]; then
+    if docker info --format '{{.SecurityOptions}}' 2>/dev/null | grep -q rootless; then DOCKER_USER="0:0"; else DOCKER_USER="$(id -u):$(id -g)"; fi
+fi
+
 log() { printf '[%s] %s\n' "$(basename "$0")" "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "The command '$1' is not installed."; }
@@ -32,7 +37,7 @@ wait_for_url() { # <url> <seconds>
 
 structurizr() { # structurizr <args>: the image runs as the current user, the model folder is /w, the build folder is /o
     mkdir -p "${BUILD}"
-    docker run --rm -u "$(id -u):$(id -g)" -v "${MODEL_DIR}:/w:ro" -v "${BUILD}:/o" "${STRUCTURIZR_IMAGE}" "$@"
+    docker run --rm -u "${DOCKER_USER}" -v "${MODEL_DIR}:/w:ro" -v "${BUILD}:/o" "${STRUCTURIZR_IMAGE}" "$@"
 }
 
 # The rules run in a COPY of backend/ and frontend/ in build/work, so no file of the code folders changes.

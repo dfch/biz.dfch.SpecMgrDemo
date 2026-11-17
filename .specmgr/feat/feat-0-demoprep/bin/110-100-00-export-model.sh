@@ -25,11 +25,11 @@ structurizr export -w /w/workspace.dsl -f plantuml -o /o/plantuml >/dev/null
 log "SVG -> ${BUILD}/svg (starts structurizr local on 127.0.0.1:${PORT})"
 cp "${MODEL_DIR}/workspace.dsl" "${BUILD}/local/workspace.dsl"
 cleanup
-docker run -d --rm --name "${NAME}" -u "$(id -u):$(id -g)" -p "127.0.0.1:${PORT}:8080" \
+docker run -d --rm --name "${NAME}" -u "${DOCKER_USER}" -p "127.0.0.1:${PORT}:8080" \
     -v "${BUILD}/local:/usr/local/structurizr" "${STRUCTURIZR_PLAYWRIGHT_IMAGE}" local >/dev/null
 wait_for_url "http://127.0.0.1:${PORT}/workspace/1/diagrams" 90 || die "structurizr local did not start (docker logs ${NAME})."
 mkdir -p "${BUILD}/svg"
-if docker run --rm --network host -u "$(id -u):$(id -g)" -v "${BUILD}/svg:/o" "${STRUCTURIZR_PLAYWRIGHT_IMAGE}" \
+if docker run --rm --network host -u "${DOCKER_USER}" -v "${BUILD}/svg:/o" "${STRUCTURIZR_PLAYWRIGHT_IMAGE}" \
     export -f svg -url "http://127.0.0.1:${PORT}/workspace/1/diagrams" -o /o >"${BUILD}/svg-export.log" 2>&1 \
     && ls "${BUILD}"/svg/*.svg >/dev/null 2>&1; then
     log "PASS $(ls "${BUILD}"/svg/*.svg | wc -l) SVG file(s) in ${BUILD}/svg"

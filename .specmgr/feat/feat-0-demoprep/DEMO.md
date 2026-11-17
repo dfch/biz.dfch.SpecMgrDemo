@@ -6,16 +6,16 @@ The plan of the feature is in the file `README.md` of this folder. This file is 
 
 The tools of the gates are listed in `TOOLS.md`.
 
-All commands start in the root of the work tree (`/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0`). `F` is the short name for the folder of the feature:
+All commands start in the root of the work tree (the folder of `git rev-parse --show-toplevel`). `F` is the short name for the folder of the feature:
 
 ```bash
-cd /home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0
+cd "$(git rev-parse --show-toplevel)"
 F=.specmgr/feat/feat-0-demoprep
 ```
 
 The scripts do not change a file outside of this folder. The code runs from a copy in `$F/build/work` (not in git). The first run installs the frontend dependencies in the copy (`pnpm install --frozen-lockfile --ignore-scripts`) and needs the network.
 
-**Needs:** JDK 21, Maven wrapper (in the repository), Node, pnpm, Docker (the images `structurizr/structurizr:2026.10.26-noble` and `...-playwright`), rsync, curl, python3. For the PDF: `npx` and the network (Marp).
+**Needs:** JDK 21 (`javac`, not only a JRE), Maven wrapper (in the repository), Node, pnpm, Docker (the images `structurizr/structurizr:2026.10.26-noble` and `...-playwright`), rsync, curl, python3. For the PDF: `npx` and the network (Marp).
 
 | # | What | Command | Result |
 |---|---|---|---|
@@ -41,7 +41,7 @@ The two tests of 14 and 15 are on the backup slide of the presentation. Show 14 
 
 ### The prompts for the two Playwright tests
 
-Start the agent in the root of the work tree (`/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0`). The prompts below were not run word for word. The steps behind them ran once (see the Updates of `README.md`).
+Start the agent in the root of the work tree. The prompts below were not run word for word. The steps behind them ran once (see the Updates of `README.md`).
 
 **Interactive: the agent with the Playwright MCP (step 15).** Start the demo before the talk, so the Maven compile does not use time on stage:
 
@@ -94,6 +94,11 @@ opencode run "Run .specmgr/feat/feat-0-demoprep/bin/170-100-00-playwright-headle
 To show a failure: the test fails (exit code 1) if `/info` gives another version than the page. There is no script for this. The option `--fail` of the demo does not work for it, because it changes only `GET /status`. The agent run does not stop the demo, so run `$F/bin/130-110-00-stop-demo.sh` after it.
 
 ### Notes and fallbacks
+
+- **Checked on a second system (nxt, 2026-11-17).** All steps 1 to 15 ran there. Before the first run on a clean system, install JDK 21, pnpm and just with `.specmgr/feat/feat-5-foundation-monorepo-ci/bin/110.110-0{1,3,4}-install-*.sh` (they install in `~/.local/opt/biz.dfch.SpecMgrDemo`), and for each shell: `T=$HOME/.local/opt/biz.dfch.SpecMgrDemo; export JAVA_HOME=$T/jdk-21.0.13_9; export PATH=$JAVA_HOME/bin:$T/pnpm-12.16.1:$T/just-1.59.0:$PATH`. After the first `pnpm install` in the copy, run `build/work/frontend/node_modules/.bin/playwright install chromium` (the Playwright tests and the screenshots need the Chromium of the pinned Playwright version). Pull the image `structurizr/structurizr:2026.10.26-playwright` before the talk (step 7).
+- **Rootless Docker.** The scripts use `DOCKER_USER` (set in `_common.sh`): `0:0` for a rootless Docker (the host user is root in the container), else the id of the current user. Override it with the environment variable `DOCKER_USER`.
+- **Chromium sandbox (Ubuntu 23.10+).** If `kernel.apparmor_restrict_unprivileged_userns=1`, Marp cannot start Chromium with the sandbox. `150-110-00-build-pdf.sh` then starts it with `--no-sandbox` (local files only). The fonts differ between systems, so the line breaks of the PDF can differ. The committed PDF has the same text.
+- **Playwright MCP, step 15.** The first `playwright_browser_find` right after `playwright_browser_navigate` can find nothing, because the page is not rendered yet. Use `playwright_browser_wait_for` with the text `Version` first.
 
 - **Ports.** The ports are 8180 (backend), 5273 (frontend), 8091 and 8092. They are not the usual 8080 and 5173, because port 8080 is in use on the machine of the author. Change them with the environment variables `BACKEND_PORT`, `FRONTEND_PORT`, `API_DOCS_PORT` and `MODEL_SITE_PORT`.
 - **Fonts.** The page of the API specification loads a font from `fonts.googleapis.com` (finding F2 of feat-6). Without a network the page shows in a fallback font.
