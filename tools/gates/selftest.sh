@@ -1422,7 +1422,7 @@ frontend_append_case() {
 fe_new_version="9.9.9"
 fe_new_integrity="${other_integrity}"
 dir="$(mk_frontend_root real)"
-expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool ArchUniTS and the coverage provider of Vitest (@vitest/coverage-v8), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool ArchUniTS, the coverage provider of Vitest (@vitest/coverage-v8) and the packages of the user interface (React, i18next, OpenTelemetry, happy-dom), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
 expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod, TypeScript and the test tools" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
 expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
@@ -1434,7 +1434,8 @@ expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_fron
 # The test tools of feat-7-verification-architecture-tools (Phase 110): vitest, @playwright/test, axe-core, fast-check.
 # The mutation tool of feat-7-verification-architecture-tools (Phase 120): @stryker-mutator/core and
 # @stryker-mutator/vitest-runner. The coverage provider of feat-7-verification-architecture-tools (Phase 140):
-# @vitest/coverage-v8.
+# @vitest/coverage-v8. The packages of the user interface of feat-9-walking-skeleton (Phase 300): react, react-dom,
+# @types/react, @types/react-dom, i18next, react-i18next, the four packages of OpenTelemetry and happy-dom.
 for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
     "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY" \
     "vitest|VITEST_VERSION|VITEST_INTEGRITY" "@playwright/test|PLAYWRIGHT_VERSION|PLAYWRIGHT_INTEGRITY" "axe-core|AXE_CORE_VERSION|AXE_CORE_INTEGRITY" \
@@ -1442,7 +1443,15 @@ for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CO
     "@stryker-mutator/core|STRYKER_VERSION|STRYKER_INTEGRITY" \
     "@stryker-mutator/vitest-runner|STRYKER_VITEST_RUNNER_VERSION|STRYKER_VITEST_RUNNER_INTEGRITY" \
     "archunit|ARCHUNIT_TS_VERSION|ARCHUNIT_TS_INTEGRITY" \
-    "@vitest/coverage-v8|VITEST_COVERAGE_V8_VERSION|VITEST_COVERAGE_V8_INTEGRITY"; do
+    "@vitest/coverage-v8|VITEST_COVERAGE_V8_VERSION|VITEST_COVERAGE_V8_INTEGRITY" \
+    "react|REACT_VERSION|REACT_INTEGRITY" "react-dom|REACT_DOM_VERSION|REACT_DOM_INTEGRITY" \
+    "@types/react|TYPES_REACT_VERSION|TYPES_REACT_INTEGRITY" "@types/react-dom|TYPES_REACT_DOM_VERSION|TYPES_REACT_DOM_INTEGRITY" \
+    "i18next|I18NEXT_VERSION|I18NEXT_INTEGRITY" "react-i18next|REACT_I18NEXT_VERSION|REACT_I18NEXT_INTEGRITY" \
+    "@opentelemetry/api|OPENTELEMETRY_API_VERSION|OPENTELEMETRY_API_INTEGRITY" \
+    "@opentelemetry/sdk-trace-web|OPENTELEMETRY_SDK_TRACE_WEB_VERSION|OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY" \
+    "@opentelemetry/exporter-trace-otlp-http|OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION|OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY" \
+    "@opentelemetry/resources|OPENTELEMETRY_RESOURCES_VERSION|OPENTELEMETRY_RESOURCES_INTEGRITY" \
+    "happy-dom|HAPPY_DOM_VERSION|HAPPY_DOM_INTEGRITY"; do
     IFS='|' read -r package version_key integrity_key <<<"${entry}"
     version="$(version_of "${version_key}")"
     integrity="$(version_of "${integrity_key}")"
@@ -1472,7 +1481,10 @@ expect 0 "RESULT: PASS" "zod: all three places have the same new version and int
 # The form of the values in versions.env
 for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION \
     VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION \
-    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION ARCHUNIT_TS_VERSION VITEST_COVERAGE_V8_VERSION; do
+    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION ARCHUNIT_TS_VERSION VITEST_COVERAGE_V8_VERSION \
+    REACT_VERSION REACT_DOM_VERSION TYPES_REACT_VERSION TYPES_REACT_DOM_VERSION I18NEXT_VERSION REACT_I18NEXT_VERSION \
+    OPENTELEMETRY_API_VERSION OPENTELEMETRY_SDK_TRACE_WEB_VERSION OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION \
+    OPENTELEMETRY_RESOURCES_VERSION HAPPY_DOM_VERSION; do
     for range in "^$(version_of "${key}")" "latest" "5"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
@@ -1480,7 +1492,10 @@ for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION K
 done
 for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY \
     VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY \
-    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY ARCHUNIT_TS_INTEGRITY VITEST_COVERAGE_V8_INTEGRITY; do
+    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY ARCHUNIT_TS_INTEGRITY VITEST_COVERAGE_V8_INTEGRITY \
+    REACT_INTEGRITY REACT_DOM_INTEGRITY TYPES_REACT_INTEGRITY TYPES_REACT_DOM_INTEGRITY I18NEXT_INTEGRITY REACT_I18NEXT_INTEGRITY \
+    OPENTELEMETRY_API_INTEGRITY OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY \
+    OPENTELEMETRY_RESOURCES_INTEGRITY HAPPY_DOM_INTEGRITY; do
     sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
     expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
@@ -1509,7 +1524,7 @@ expect 1 "CANIUSE_LITE_VERSION is not in tools/versions.env" "frontend, versions
 # package.json
 frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env is 5.15.3" "package.json: a range (^) and not an exact version" 's#"kubb": "5.15.3"#"kubb": "^5.15.3"#'
 frontend_file_case pkgtag package.json "but TYPESCRIPT_VERSION in tools/versions.env is 5.9.3" "package.json: a tag and not an exact version" 's#"typescript": "5.9.3"#"typescript": "latest"#'
-frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['zod']" "package.json: a dev dependency in dependencies" \
+frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['@opentelemetry/api', '@opentelemetry/exporter-trace-otlp-http', '@opentelemetry/resources', '@opentelemetry/sdk-trace-web', 'i18next', 'react', 'react-dom', 'react-i18next', 'zod']" "package.json: a dev dependency in dependencies" \
     's#"dependencies": {#"dependencies": {\n    "typescript": "5.9.3",#'
 frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d'
 frontend_file_case pkgextra package.json "\`devDependencies\` has left-pad. It has only" "package.json: a dependency that is not in the list" 's#"typescript": "5.9.3"#"typescript": "5.9.3",\n    "left-pad": "1.3.0"#'

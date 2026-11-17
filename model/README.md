@@ -24,19 +24,31 @@ The content of the workspace (the C4 model, the level of the containers, and the
 - The components of `frontend`, named by the rule of thumb of the units (the same for the rules of ArchUniTS and for
   the comparison, see below): `types` (the folder `frontend/src/generated/types`, the generated TypeScript types),
   `zod` (the folder `frontend/src/generated/zod`, the generated Zod schemas), `test` (the folder `frontend/src/test`,
-  the tests of the module) and `root` (the files that lie directly in `frontend/src`, today
-  `frontend/src/mutation-example.ts`).
+  the tests of the module), `root` (the files that lie directly in `frontend/src`: the entry point
+  `frontend/src/main.tsx` of the walking skeleton and `frontend/src/mutation-example.ts`) and, since the walking
+  skeleton (feat-9-walking-skeleton, Phase 300), the four units of the product code: `client` (the folder
+  `frontend/src/client`, the client of the API with the validation of the responses), `i18n` (the folder
+  `frontend/src/i18n`, i18next with the catalogs EN and DE), `telemetry` (the folder `frontend/src/telemetry`, the
+  OpenTelemetry of the browser) and `ui` (the folder `frontend/src/ui`, the React components).
 - The dependencies: `frontend` -> `backend` (the frontend consumes the API of the backend, the dependency of the
   container level), `api` -> `model` (the real package dependency of the module, the interfaces of `api` reference the
   classes of `model`), `app` -> `api` (the controllers of `app` implement the generated interfaces of `api`) and
-  `app` -> `model` (the product code of `app` uses the classes of `model`), `test` -> `zod` (the tests import the
-  generated Zod schemas) and `test` -> `root` (the test of the example imports the example file).
+  `app` -> `model` (the product code of `app` uses the classes of `model`), and in the frontend: `test` -> `zod` (the
+  tests import the generated Zod schemas), `test` -> `root` (the test of the example imports the example file),
+  `test` -> `client`, `test` -> `i18n`, `test` -> `telemetry`, `test` -> `ui` and `test` -> `types` (the unit tests of
+  the product code), `root` -> `client`, `root` -> `i18n`, `root` -> `telemetry` and `root` -> `ui` (the entry point
+  builds the parts and renders the user interface), `client` -> `types` and `client` -> `zod` (the client uses the
+  generated types and validates the responses with the generated Zod schemas), and `ui` -> `client` and `ui` -> `i18n`
+  (the user interface uses the client of the API, and the languages of the i18n). The unit `ui` is the top layer: the
+  rules R5' of ArchUniTS (`just architecture-frontend`) stop a dependency of `client`, `i18n` or `telemetry` on `ui`,
+  and the rules R4' stop a dependency of the product code on the tests.
 
 The rule of thumb of the units of the frontend (the identifier of a component is the name of its unit): a unit is a
-folder that contains TypeScript source - the top-level folders of `frontend/src` (today: `test`), the folders of
-`frontend/src/generated` (today: `types` and `zod`; the generator makes two independent artifacts, so the folders of
-the generated code are the units and not the folder `generated`), and the files that lie directly in `frontend/src`
-form the unit `root`. A change of the code that adds a folder with TypeScript source (a new unit) or a file directly
+folder that contains TypeScript source - the top-level folders of `frontend/src` (today: `client`, `i18n`, `telemetry`,
+`ui` and `test`), the folders of `frontend/src/generated` (today: `types` and `zod`; the generator makes two
+independent artifacts, so the folders of the generated code are the units and not the folder `generated`), and the
+files that lie directly in `frontend/src` form the unit `root`. A source file is a file `.ts` or `.tsx` (a declaration
+file `.d.ts` is no source). A change of the code that adds a folder with TypeScript source (a new unit) or a file directly
 in `frontend/src/generated` needs a change of the workspace in the same pull request (the comparison test stops for a
 unit that is not in the model, and for a file that the rule of thumb has no unit for).
 

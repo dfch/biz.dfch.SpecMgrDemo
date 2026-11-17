@@ -148,13 +148,15 @@ against the file, before the plugin generates).
 
 The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011; the test tools of
 feat-7-verification-architecture-tools, Phase 110, the mutation tool Stryker, Phase 120, and the architecture tool
-ArchUniTS, Phase 130; the coverage provider @vitest/coverage-v8, Phase 140): the Zod generator Kubb,
-Zod and TypeScript, the test tools Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
+ArchUniTS, Phase 130; the coverage provider @vitest/coverage-v8, Phase 140; the packages of the user interface of
+feat-9-walking-skeleton, Phase 300: React, react-dom, the types of React, i18next, react-i18next, the four packages of
+OpenTelemetry for the browser and happy-dom): the Zod generator Kubb, Zod and TypeScript, the test tools Vitest,
+Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
 the peer that vitest and the tree of Kubb take as a dependency or a peer; without the pin, the resolution of pnpm
 brings the tree of vite 8 with the package lightningcss, MPL-2.0, not in the permitted list), and the mutation tool
 Stryker (the package @stryker-mutator/core, the stryker binary, and the plugin @stryker-mutator/vitest-runner that
 runs Vitest as the test runner; the peer of the plugin is vitest >=2.0.0). <project-root>/frontend has package.json,
-pnpm-workspace.yaml and pnpm-lock.yaml. The module has fifteen direct packages (FRONTEND_PACKAGES below), each with
+pnpm-workspace.yaml and pnpm-lock.yaml. The module has twenty-six direct packages (FRONTEND_PACKAGES below), each with
 a version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
 folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
 
@@ -164,11 +166,12 @@ folder with none of them is "no pnpm module"), and it fails closed. The script s
     `pnpmfile.cjs`, `.yarnrc`, `.yarnrc.yml`, `yarn.lock`, `package-lock.json`, `bunfig.toml`), or one of the three files is missing;
   * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
   * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
-    overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
-    its `devDependencies` is not exactly the other fourteen packages in the exact versions of versions.env;
+    overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly the nine runtime packages (Zod, React, react-dom,
+    i18next, react-i18next and the four packages of OpenTelemetry) in the exact versions of versions.env, or its
+    `devDependencies` is not exactly the other seventeen packages in the exact versions of versions.env;
   * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
     only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
-    does not have each of the fifteen packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    does not have each of the twenty-six packages with `specifier` and `version` as in versions.env (the version can have a suffix in
     brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
     versions.env.
 
@@ -401,7 +404,8 @@ class FrontendPackage(NamedTuple):
 
 # The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of
 # feat-7-verification-architecture-tools, Phase 110; the mutation tool Stryker, Phase 120; the
-# architecture tool ArchUniTS, Phase 130).
+# architecture tool ArchUniTS, Phase 130; the packages of the user interface of feat-9-walking-skeleton,
+# Phase 300).
 # @kubb/core has the version of `kubb`.
 FRONTEND_PACKAGES = (
     FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
@@ -426,6 +430,31 @@ FRONTEND_PACKAGES = (
     FrontendPackage(
         "@vitest/coverage-v8", "devDependencies", "VITEST_COVERAGE_V8_VERSION", "VITEST_COVERAGE_V8_INTEGRITY"
     ),
+    FrontendPackage("react", "dependencies", "REACT_VERSION", "REACT_INTEGRITY"),
+    FrontendPackage("react-dom", "dependencies", "REACT_DOM_VERSION", "REACT_DOM_INTEGRITY"),
+    FrontendPackage("@types/react", "devDependencies", "TYPES_REACT_VERSION", "TYPES_REACT_INTEGRITY"),
+    FrontendPackage("@types/react-dom", "devDependencies", "TYPES_REACT_DOM_VERSION", "TYPES_REACT_DOM_INTEGRITY"),
+    FrontendPackage("i18next", "dependencies", "I18NEXT_VERSION", "I18NEXT_INTEGRITY"),
+    FrontendPackage("react-i18next", "dependencies", "REACT_I18NEXT_VERSION", "REACT_I18NEXT_INTEGRITY"),
+    FrontendPackage(
+        "@opentelemetry/api", "dependencies", "OPENTELEMETRY_API_VERSION", "OPENTELEMETRY_API_INTEGRITY"
+    ),
+    FrontendPackage(
+        "@opentelemetry/sdk-trace-web",
+        "dependencies",
+        "OPENTELEMETRY_SDK_TRACE_WEB_VERSION",
+        "OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/exporter-trace-otlp-http",
+        "dependencies",
+        "OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION",
+        "OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/resources", "dependencies", "OPENTELEMETRY_RESOURCES_VERSION", "OPENTELEMETRY_RESOURCES_INTEGRITY"
+    ),
+    FrontendPackage("happy-dom", "devDependencies", "HAPPY_DOM_VERSION", "HAPPY_DOM_INTEGRITY"),
 )
 # The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
 FRONTEND_PACKAGE_JSON_KEYS = {
@@ -1394,8 +1423,8 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
     note = (
         f"Frontend: {folder}: Kubb, Zod, TypeScript and the test tools "
         "(Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool "
-        "ArchUniTS and the coverage provider of Vitest (@vitest/coverage-v8), package.json and lock file as in "
-        "tools/versions.env"
+        "ArchUniTS, the coverage provider of Vitest (@vitest/coverage-v8) and the packages of the user interface "
+        "(React, i18next, OpenTelemetry, happy-dom), package.json and lock file as in tools/versions.env"
     )
     return ("" if problems else note), problems
 

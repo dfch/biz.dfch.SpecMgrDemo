@@ -310,7 +310,12 @@ install_frontend() {
         @kubb/plugin-ts:KUBB_PLUGIN_TS_VERSION zod:ZOD_VERSION typescript:TYPESCRIPT_VERSION \
         vitest:VITEST_VERSION @playwright/test:PLAYWRIGHT_VERSION axe-core:AXE_CORE_VERSION fast-check:FAST_CHECK_VERSION \
         vite:VITE_VERSION @stryker-mutator/core:STRYKER_VERSION @stryker-mutator/vitest-runner:STRYKER_VITEST_RUNNER_VERSION \
-        archunit:ARCHUNIT_TS_VERSION @vitest/coverage-v8:VITEST_COVERAGE_V8_VERSION; do
+        archunit:ARCHUNIT_TS_VERSION @vitest/coverage-v8:VITEST_COVERAGE_V8_VERSION \
+        react:REACT_VERSION react-dom:REACT_DOM_VERSION @types/react:TYPES_REACT_VERSION @types/react-dom:TYPES_REACT_DOM_VERSION \
+        i18next:I18NEXT_VERSION react-i18next:REACT_I18NEXT_VERSION @opentelemetry/api:OPENTELEMETRY_API_VERSION \
+        @opentelemetry/sdk-trace-web:OPENTELEMETRY_SDK_TRACE_WEB_VERSION \
+        @opentelemetry/exporter-trace-otlp-http:OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION \
+        @opentelemetry/resources:OPENTELEMETRY_RESOURCES_VERSION happy-dom:HAPPY_DOM_VERSION; do
         package="${entry%%:*}" key="${entry##*:}"
         want="$(version_of "${key}")"
         installed="$(node -p 'require(process.argv[1]).version' "${frontend_dir}/node_modules/${package}/package.json")" \
@@ -318,5 +323,5 @@ install_frontend() {
         [[ "${installed}" == "${want}" ]] \
             || die "The installed ${package} has the version '${installed}', but ${key} in ${VERSIONS_FILE} is '${want}'."
     done
-    log "The installed Kubb, Zod, TypeScript and the test tools have the versions of tools/versions.env"
+    log "The installed Kubb, Zod, TypeScript, the test tools and the packages of the user interface have the versions of tools/versions.env"
 }
