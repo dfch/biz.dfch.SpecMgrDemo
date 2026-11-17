@@ -89,32 +89,37 @@ When the owner sets the jobs: add the eleven names to the `contexts` of the call
 shows a check in the list only after it ran once in the last 7 days, so open a pull request first - the first
 real run of these jobs is with the push of the feature (an open item of the plan of feat-7).
 
-#### Jobs that feat-8-traceability-security-gates added (the owner decides; the state of 2026-11-17 is in the column "Set")
+#### Jobs that feat-8-traceability-security-gates added (set on `dev` on 2026-11-16, not set on `main` yet; the state of 2026-11-17 is in the column "Set")
 
 These four jobs are in `.github/workflows/ci.yml` since phase 140 of feat-8 (Task 140.100, 2026-11-15), and
 `tools/gates/required-setup.txt` has a line for each. They are gate 2 and the three scans of gate 9 of DEC
 361678a6-f941-473b-a058-1ba2bacf7d3d (GitHub issue #8). The workflow still has `on: pull_request` and
-`permissions: contents: read` only. The agent cannot change the rulesets, and the owner follows the steps in "Steps for
-the owner for the gates of feat-8" below. The three scans were reports in feat-8 and are blocking gates since feat-9: the
-section "The threshold of feat-9" below has the change and the steps for the owner. The column "Set" has the state that
-the agent read on 2026-11-17 (the owner set `traceability`, `secret-scan` and `workflow-scan` on `dev` after feat-8; the
-owner did not set `vuln-scan`, and `main` has none of the four).
+`permissions: contents: read` only. The agent cannot change the rulesets. The steps in "Steps for the owner for the gates of
+feat-8" below were done on the decision of the owner: on 2026-11-16, the owner chose Option 2, and the agent ran the commands
+and applied it to the ruleset of `dev`. The column "Set" says Yes (`dev` only) for `traceability`, `secret-scan` and
+`workflow-scan`, and No for `vuln-scan` (not a required check, by the decision of the owner). The ruleset of `main` is not
+changed yet (see "The result of the steps for the owner" below). The three scans were reports in feat-8 and are blocking
+gates since feat-9: the section "The threshold of feat-9" below has the change and the steps for the owner. The agent read
+the state again on 2026-11-17 (GET only), and it is the same as the state of 2026-11-16: the owner set `traceability`,
+`secret-scan` and `workflow-scan` on `dev` (26 required checks), the owner did not set `vuln-scan`, and `main` has none of
+the four.
 
 | Check (job) | Recipe | What it stops | Gate in DEC 361678a6 | Set in the rulesets of `dev` and `main` |
 |---|---|---|---|---|
-| `traceability` | `just traceability` | A reference in the documents of `docs/` and `.specmgr/` that has no target; an `x-specmgr-req` in `contracts/openapi.yaml` that is not the identifier of a REQ; an identifier in `specmgr-req` of `model/workspace.json` or `vcr:<uuid>` in the name of a test that has no document; an approved REQ (the status `accepted` or `implemented`) with no VCR. A warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test | 2 (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342) | No (the owner sets it) |
-| `vuln-scan` | `just vuln-scan` | feat-8: a **failure of the tool** only (OSV-Scanner that does not run: no network, no answer of `api.osv.dev`, a SBOM file that cannot be read, a download with another sha256). **Since feat-9 (2026-11-17) it also stops for a finding that is Critical or High, and for a finding that is not in `tools/security/osv-baseline.txt`** (see "The threshold of feat-9" below) | 9 (the vulnerability part) | No on `dev` and on `main` (read on 2026-11-17; see "The threshold of feat-9") |
-| `secret-scan` | `just secret-scan` | feat-8: a **failure of the tool** only (gitleaks that does not run: a wrong configuration, a base that does not exist, a shallow clone with no merge base, a download with another sha256). **Since feat-9 it also stops for a secret that is not in `tools/security/gitleaks-baseline.txt`** (gitleaks gives no severity) | 9 (the secret part) | Yes on `dev` (read on 2026-11-17), no on `main` |
-| `workflow-scan` | `just workflow-scan` | feat-8: a **failure of the tool** only (zizmor that does not run: a file that cannot be read, no input). **Since feat-9 it also stops for a finding with the severity High, and for a finding that is not in `tools/security/zizmor-baseline.txt`** | 9 (the workflow part) | Yes on `dev` (read on 2026-11-17), no on `main` |
+| `traceability` | `just traceability` | A reference in the documents of `docs/` and `.specmgr/` that has no target; an `x-specmgr-req` in `contracts/openapi.yaml` that is not the identifier of a REQ; an identifier in `specmgr-req` of `model/workspace.json` or `vcr:<uuid>` in the name of a test that has no document; an approved REQ (the status `accepted` or `implemented`) with no VCR. A warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test | 2 (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342) | Yes on `dev` (2026-11-16, read again on 2026-11-17), no on `main` |
+| `vuln-scan` | `just vuln-scan` | feat-8: a **failure of the tool** only (OSV-Scanner that does not run: no network, no answer of `api.osv.dev`, a SBOM file that cannot be read, a download with another sha256). **Since feat-9 (2026-11-17) it also stops for a finding that is Critical or High, and for a finding that is not in `tools/security/osv-baseline.txt`** (see "The threshold of feat-9" below) | 9 (the vulnerability part) | No on `dev` (not a required check, by the decision of the owner on 2026-11-16, read again on 2026-11-17), no on `main` (see "The threshold of feat-9") |
+| `secret-scan` | `just secret-scan` | feat-8: a **failure of the tool** only (gitleaks that does not run: a wrong configuration, a base that does not exist, a shallow clone with no merge base, a download with another sha256). **Since feat-9 it also stops for a secret that is not in `tools/security/gitleaks-baseline.txt`** (gitleaks gives no severity) | 9 (the secret part) | Yes on `dev` (2026-11-16, read again on 2026-11-17), no on `main` |
+| `workflow-scan` | `just workflow-scan` | feat-8: a **failure of the tool** only (zizmor that does not run: a file that cannot be read, no input). **Since feat-9 it also stops for a finding with the severity High, and for a finding that is not in `tools/security/zizmor-baseline.txt`** | 9 (the workflow part) | Yes on `dev` (2026-11-16, read again on 2026-11-17), no on `main` |
 
 **CodeQL is the exception: it has no recipe and no job.** CodeQL is the fourth tool of gate 9. It runs as the hosted
 default setup of GitHub (the workflow `CodeQL Setup`, which GitHub manages, and not a file of this repository), so no
 recipe of the `justfile` starts it, `ci.yml` has no job for it, and `required-setup.txt` has no line for it. It is an
 exception to the rule "each gate is a `just` recipe that a CI job starts" and to the wish that each gate runs on the
 machine of a developer (REQ-002 and REQ-009 of feat-5-foundation-monorepo-ci). The deviation is recorded in DEC
-93a6d588-e002-4daf-9a47-45e2d77786e9 (the section of CodeQL), and the setting is a report with no threshold (REQ-006 of
+93a6d588-e002-4daf-9a47-45e2d77786e9 (the section of CodeQL), and the setting is a report with no threshold since feat-8 (REQ-006 of
 feat-8). The scan is not a check of the table above. If the owner wants CodeQL to stop a pull request, that is the
-rule `code_scanning` of the ruleset (alert thresholds of the tool `CodeQL`), a decision for a later time and not a job.
+rule `code_scanning` of the ruleset (alert thresholds of the tool `CodeQL`) and not a job: the steps for it are in "The
+threshold of feat-9" below (step 2), and the owner decides (the rule is not set; read on 2026-11-17).
 The state on 2026-11-15: the default setup is `configured` and the first scan of `dev` has 0 alerts (the plan of feat-8,
 the subsection Baseline).
 
@@ -211,6 +216,26 @@ CI. Both stay on.
 
 **Step 5 (a check, no change): CodeQL.** `gh api repos/dfch/biz.dfch.SpecMgrDemo/code-scanning/default-setup --jq '.state'` must
 answer `configured`. Nothing else is to do for CodeQL.
+
+**The result of the steps for the owner (2026-11-16).** The steps above are the procedure, and their text keeps the state
+of 2026-11-15. This is the state after the work of 2026-11-16. The agent ran the commands, and the owner made the decisions.
+
+- **Step 1 and step 2, `dev`: done.** The owner chose Option 2, and the agent applied it to the ruleset of `dev` (id 26472506).
+  `traceability`, `secret-scan` and `workflow-scan` are required checks. `vuln-scan` is not a required check: it stays a
+  report that you can see in the pull request. The ruleset has 26 required checks now (23 and 3). The check of step 2 showed the result.
+- **Step 2, `main`: not done yet.** The ruleset of `main` (id 26481206) is not changed. The decision of the owner is that all four
+  jobs (`traceability`, `vuln-scan`, `secret-scan` and `workflow-scan`) become required checks on `main`. This happens
+  after the first release that brings `ci.yml` with the four jobs to `main` (see "The order"). Then change the column
+  "Set" of the table above for `main`.
+- **Step 3: done.** The Dependabot alerts are on (the check answers 204). The Dependabot security updates stay off.
+- **Step 4: not possible.** The REST call `PATCH repos/dfch/biz.dfch.SpecMgrDemo` answers 200, but it ignores the field
+  `security_and_analysis`. A test with a control field (`secret_scanning_validity_checks`) and with the API version
+  `2026-03-10` gave the same result. The owner found no page for the secret scanning and no switch for the non-provider
+  patterns ("Scan for generic passwords") in the settings. The only item under Security and Quality, Secrets and
+  variables, Secret Protection is "Push protection", and it is on. The state: the secret scanning is on, the push
+  protection is on, and the CI job `secret-scan` (gitleaks) is a required check on `dev`. The non-provider patterns are
+  off, and the owner cannot get to the setting.
+- **Step 5: checked.** The state of CodeQL is `configured`.
 
 ## The threshold of feat-9 (the security jobs are blocking, and the CodeQL rule)
 
@@ -547,21 +572,23 @@ allowed actions, and the version file.
 
 | Gate in DEC 361678a6 | Feature | Status |
 |---|---|---|
-| 2. Traceability check | feat-8-traceability-security-gates (GitHub issue #8) | Job `traceability` exists in `ci.yml` (phase 140 of feat-8). It is not a required check yet: the owner sets it with the steps in "Steps for the owner for the gates of feat-8" |
+| 2. Traceability check | feat-8-traceability-security-gates (GitHub issue #8) | Job `traceability` exists in `ci.yml` (phase 140 of feat-8). It is a required check in the ruleset of `dev` (2026-11-16). It becomes a required check on `main` after the first release that brings `ci.yml` with the four jobs to `main` (see "Steps for the owner for the gates of feat-8") |
 | 3. Linter and check for breaking changes of the OpenAPI file | feat-6-contracts-openapi-pipeline | Jobs `lint` and `breaking-changes` exist in `ci.yml` (phase 130). They are required checks in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
 | 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline | Job `check-generated` exists in `ci.yml` (phase 130). It is a required check in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
 | 5. Architecture tests | feat-7-verification-architecture-tools | Jobs `architecture-backend`, `architecture-frontend` and `architecture-model` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |
 | 6. Unit tests and integration tests with a threshold for coverage | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `test-unit-backend` and `test-integration-backend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the coverage is the walking skeleton). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |
 | 7. Threshold for the mutation score | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `mutation-backend` and `mutation-frontend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the mutation score is the walking skeleton). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |
 | 8. End-to-end tests with an accessibility check | feat-7 (tools) and the walking skeleton (the feature is not yet created) | Job `test-e2e` (with the accessibility check of axe-core) exists in `ci.yml` (phase 140 of feat-7, as a report without a threshold). It is a required check in the rulesets of `dev` and `main` (2026-11-15) |
-| 9. Security checks (the SBOM part is in `license-check`) | feat-8-traceability-security-gates (GitHub issue #8), feat-9-walking-skeleton (the threshold) | Jobs `vuln-scan`, `secret-scan` and `workflow-scan` exist in `ci.yml` (phase 140 of feat-8). They are blocking gates since feat-9 (a finding that is Critical or High, a finding that is not in the baseline, and a failure of the tool stop a job). `secret-scan` and `workflow-scan` are required checks of `dev` (read on 2026-11-17), `vuln-scan` is not, and `main` has none of them (the owner decides, see "The threshold of feat-9"). CodeQL is the hosted default setup of GitHub: it has no recipe and no job (the exception is stated above); its native check is the rule `code_scanning` of the ruleset ("The threshold of feat-9", step 2) |
+| 9. Security checks (the SBOM part is in `license-check`) | feat-8-traceability-security-gates (GitHub issue #8), feat-9-walking-skeleton (the threshold) | Jobs `vuln-scan`, `secret-scan` and `workflow-scan` exist in `ci.yml` (phase 140 of feat-8). They are blocking gates since feat-9 (a finding that is Critical or High, a finding that is not in the baseline, and a failure of the tool stop a job). `secret-scan` and `workflow-scan` are required checks in the ruleset of `dev` (2026-11-16, read again on 2026-11-17). `vuln-scan` is not a required check on `dev` (it was a report, by the decision of the owner; the owner decides again, see "The threshold of feat-9"). On `main`, all four jobs become required checks after the first release that brings `ci.yml` with the four jobs to `main`. CodeQL is the hosted default setup of GitHub: it has no recipe and no job (the exception is stated above); its native check is the rule `code_scanning` of the ruleset ("The threshold of feat-9", step 2) |
 
   Gates 2 and 9 have the feature feat-8-traceability-security-gates (the jobs `traceability`, `vuln-scan`,
-  `secret-scan` and `workflow-scan`, and CodeQL as the hosted default setup). Until the owner adds the names to the
-  `required_status_checks` of the rulesets (the steps for the owner above), a job that is not required runs for each pull
-  request, but it does not stop a merge. The three scans were reports with no threshold in feat-8. The threshold is set by
+  `secret-scan` and `workflow-scan`, and CodeQL as the hosted default setup). Since 2026-11-16, the names
+  `traceability`, `secret-scan` and `workflow-scan` are in the `required_status_checks` of the ruleset of `dev`. The
+  ruleset of `main` does not have the four names yet (the steps for the owner above). Until the owner adds them, these
+  jobs run for each pull request to `main`, but they do not stop a merge there (and `vuln-scan` does not stop a merge on
+  `dev`). The three scans were reports with no threshold in feat-8. The threshold is set by
   feat-9-walking-skeleton (Phase 500): the baseline files are in `tools/security/`, and the steps for the owner are in
-  "The threshold of feat-9" below.
+  "The threshold of feat-9" above.
 
 - **After a change of the workflow.** A change to a job name changes the name of the check. Change the
   list of required checks in the same step, or each pull request waits for a check that never runs.
