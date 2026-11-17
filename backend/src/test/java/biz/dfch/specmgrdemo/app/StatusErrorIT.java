@@ -2,6 +2,7 @@ package biz.dfch.specmgrdemo.app;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -42,9 +43,13 @@ class StatusErrorIT {
   /** The value of the list ErrorCode of the contract: the lower case words that the character underscore joins. */
   private static final Pattern CODE_VALUE = Pattern.compile("^[a-z]+(_[a-z]+)*$");
 
-  /** The seven members of the schema Problem of the contract (the rule problem-members of the linter). */
-  private static final Set<String> PROBLEM_MEMBERS =
-      Set.of("type", "title", "status", "detail", "instance", "code", "traceId");
+  /**
+   * The members that the response of the error has, and no other: the machine values of the schema Problem of the
+   * contract. The members title and detail of the schema are optional English text for the log (the rule
+   * problem-members of the linter), and the service does not send them (REQ 1ca335d7-969a-443e-9392-165fdeea99a0:
+   * the response has no text in a language).
+   */
+  private static final Set<String> MACHINE_MEMBERS = Set.of("type", "status", "instance", "code", "traceId");
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -80,17 +85,21 @@ class StatusErrorIT {
     assertEquals(503, body.path("status").asInt(), "the status of the member of the schema Problem: " + response.body());
     String found = body.path("traceId").asString();
     assertTrue(TRACE_ID.matcher(found).matches(), "the response has the member traceId: " + response.body());
-    assertTrue(!"00000000000000000000000000000000".equals(found), "the trace identifier is the real value of the request");
+    assertNotEquals("00000000000000000000000000000000", found, "the trace identifier is the real value of the request");
 
-    // No text in a language: the members of the response are the seven members of the schema Problem of the
-    // contract, and none of them is a member for a text that a client shows (the rule problem-members of the linter
-    // tools/lint/ruleset.yaml). The member code is the machine value of the list ErrorCode (the frontend has the
-    // text of each code in its catalog), and the title and the detail are notes for the log and the developer.
+    // No text in a language: the members of the response are exactly the machine members (the member code is the
+    // value of the list ErrorCode, and the frontend has the text of each code in its catalog), and no member has
+    // the English text of the schema Problem (title, detail) or another text (message and the like).
     Set<String> members = new TreeSet<>();
     body.propertyNames().forEach(members::add);
-    assertTrue(PROBLEM_MEMBERS.containsAll(members), "the response has a member that the schema Problem has not: " + members);
-    for (String text : List.of("message", "localizedMessage", "text", "userMessage")) {
+    assertEquals(new TreeSet<>(MACHINE_MEMBERS), members, "the members of the response of the error: " + response.body());
+    for (String text : List.of("title", "detail", "message", "localizedMessage", "text", "userMessage")) {
       assertFalse(members.contains(text), "the response has no member for a text in a language: " + members);
+    }
+    for (String member : members) {
+      assertFalse(body.path(member).isNull(), "the member " + member + " has a value: " + response.body());
+      // A value of prose has spaces: the machine values (a code, a number, an identifier, a path) have none.
+      assertFalse(body.path(member).isString() && body.path(member).asString().matches(".*\\s.*"), "the member " + member + " is no sentence: " + response.body());
     }
     assertTrue(CODE_VALUE.matcher(body.path("code").asString()).matches(), "the code is a machine value and no sentence: " + response.body());
   }

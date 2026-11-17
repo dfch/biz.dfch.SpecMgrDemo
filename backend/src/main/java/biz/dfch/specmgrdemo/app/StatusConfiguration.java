@@ -12,13 +12,13 @@ import org.springframework.core.env.Environment;
  *   <li>the value up (the default): the check UpStateChecker (the system is in operation);
  *   <li>the value fail: the check FailingStateChecker (the system cannot give its state, the error response of
  *       the operation GET /status);
- *   <li>each other value: the check UpStateChecker (a value that the service knows not is no failure of the
- *       start, and no silent other check).
+ *   <li>each other value (also an empty value): the start of the service fails with a message that names the
+ *       property and the two values (no silent other check).
  * </ul>
  *
  * <p>The property is the seam of the verification (the class Javadoc of StateChecker): the test of the phase
- * 400 of the plan starts the service with the value fail (the annotation @SpringBootTest with the property),
- * and it sees the error response.
+ * 400 of the plan starts the service with the value fail (the class RunningService of the tests, which runs
+ * SpringApplication with the argument --app.state-checker=fail), and it sees the error response.
  */
 @Configuration
 public class StatusConfiguration {
@@ -37,13 +37,25 @@ public class StatusConfiguration {
    *
    * @param environment the environment of the service (the properties and the environment variables)
    * @return the check
+   * @throws IllegalStateException if the property has a value that is not up and not fail
    */
   @Bean
   public StateChecker stateChecker(Environment environment) {
     String mode = environment.getProperty(STATE_CHECKER_PROPERTY, STATE_CHECKER_UP);
-    if (STATE_CHECKER_FAIL.equals(mode)) {
-      return new FailingStateChecker();
-    }
-    return new UpStateChecker();
+    return switch (mode) {
+      case STATE_CHECKER_UP -> new UpStateChecker();
+      case STATE_CHECKER_FAIL -> new FailingStateChecker();
+      default ->
+          throw new IllegalStateException(
+              "The property "
+                  + STATE_CHECKER_PROPERTY
+                  + " has the value '"
+                  + mode
+                  + "'. The value is "
+                  + STATE_CHECKER_UP
+                  + " or "
+                  + STATE_CHECKER_FAIL
+                  + ".");
+    };
   }
 }

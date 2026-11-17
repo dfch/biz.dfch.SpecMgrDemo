@@ -184,13 +184,17 @@ public class OpenTelemetryConfiguration {
       return null;
     }
     OtlpHttpSpanExporterBuilder builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint);
-    String headers = environment.getProperty(ENV_OTEL_EXPORTER_OTLP_TRACES_HEADERS);
+    String variable = ENV_OTEL_EXPORTER_OTLP_TRACES_HEADERS;
+    String headers = environment.getProperty(variable);
     if (headers == null || headers.isBlank()) {
-      headers = environment.getProperty(ENV_OTEL_EXPORTER_OTLP_HEADERS);
+      variable = ENV_OTEL_EXPORTER_OTLP_HEADERS;
+      headers = environment.getProperty(variable);
     }
-    final String value = (headers == null || headers.isBlank()) ? null : headers;
-    if (value != null) {
-      builder.setHeaders(() -> readHeaders(value));
+    if (headers != null && !headers.isBlank()) {
+      // The read is at the start of the service (and not at the first export): a list that is not valid stops the
+      // start with a message that has no value of the list.
+      Map<String, String> values = readHeaders(variable, headers);
+      builder.setHeaders(() -> values);
     }
     return builder.build();
   }
@@ -217,20 +221,27 @@ public class OpenTelemetryConfiguration {
   }
 
   /**
-   * Read the headers (the list of the form key=value that the comma separates - the class Javadoc).
+   * Read the headers (the list of the form key=value that the comma separates - the class Javadoc). The list can
+   * have a secret (for example a token), so the message of a failure names the variable and the position of the
+   * entry (the first entry is 1), and never the text of the list.
    *
+   * @param variable the name of the variable that has the list
    * @param value the list
    * @return the map of the headers
+   * @throws IllegalStateException if an entry is not in the form key=value
    */
-  static Map<String, String> readHeaders(String value) {
+  static Map<String, String> readHeaders(String variable, String value) {
     Map<String, String> result = new LinkedHashMap<>();
-    for (String entry : value.split(",")) {
+    String[] entries = value.split(",");
+    for (int index = 0; index < entries.length; index++) {
+      String entry = entries[index];
       if (entry.isBlank()) {
         continue;
       }
       int separator = entry.indexOf('=');
-      if (separator <= 0) {
-        throw new IllegalStateException("the header " + entry + " is not in the form key=value");
+      if (separator <= 0 || entry.substring(0, separator).isBlank()) {
+        throw new IllegalStateException(
+            "The entry " + (index + 1) + " of the list in the variable " + variable + " is not in the form key=value.");
       }
       result.put(entry.substring(0, separator).trim(), entry.substring(separator + 1).trim());
     }

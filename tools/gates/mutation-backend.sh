@@ -11,9 +11,10 @@
 # code is committed, and the gate check-generated compares it with HEAD; the phase is
 # necessary, the generator execution of generate-sources adds src/generated/java as a compile
 # source root, and the goal skips a project with no compile source root). PIT mutates the
-# compiled classes of the module (target/classes, the generated model code; the module has
-# no product code) and runs the target tests (the unit tests of the generated code, see the
-# configuration in backend/pom.xml) on each mutant. The run is green (exit code 0) and makes
+# compiled classes of the module (target/classes: the generated model code and, since the
+# fixes of the review of feat-9-walking-skeleton, the product code of the package app) and runs the target
+# tests (the unit tests of the generated code and of the package app, see the configuration in
+# backend/pom.xml) on each mutant. The run is green (exit code 0) and makes
 # the HTML report and the XML report in target/pit-reports (the folder is in .gitignore
 # through target/). The XML report is the deterministic source that part 2 asserts on.
 #

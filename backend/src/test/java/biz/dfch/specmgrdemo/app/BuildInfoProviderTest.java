@@ -36,4 +36,35 @@ class BuildInfoProviderTest {
         assertThrows(IllegalStateException.class, () -> new BuildInfoProvider("build-info-not-there.properties"));
     assertTrue(result.getMessage().contains("build-info-not-there.properties"));
   }
+
+  @Test
+  void theReaderStopsForTheCommitUnknownThatIsTheDefaultOfThePom() {
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> new BuildInfoProvider("build-info-test-unknown.properties"));
+    assertTrue(result.getMessage().contains("build.info.commit"), "the message names the property: " + result.getMessage());
+    assertTrue(result.getMessage().contains("build-info-test-unknown.properties"), "the message names the resource");
+  }
+
+  @Test
+  void theReaderStopsForAPlaceholderThatTheFilterDidNotReplace() {
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> new BuildInfoProvider("build-info-test-unresolved.properties"));
+    assertTrue(result.getMessage().contains("build.info.commit"), "the message names the property: " + result.getMessage());
+  }
+
+  @Test
+  void theReaderStopsForAVersionThatTheFilterDidNotReplace() {
+    IllegalStateException result =
+        assertThrows(
+            IllegalStateException.class, () -> new BuildInfoProvider("build-info-test-unresolved-version.properties"));
+    assertTrue(result.getMessage().contains("build.info.version"), "the message names the property: " + result.getMessage());
+  }
+
+  @Test
+  void theSeamOfTheConstructorAllowsAValueThatTheBuildDidNotSet() {
+    BuildInfo unknown = new BuildInfoProvider("build-info-test-unknown.properties", true).buildInfo();
+    assertEquals("unknown", unknown.commit());
+    BuildInfo unresolved = new BuildInfoProvider("build-info-test-unresolved.properties", true).buildInfo();
+    assertEquals("${build.info.commit}", unresolved.commit());
+  }
 }

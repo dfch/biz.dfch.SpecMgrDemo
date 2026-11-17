@@ -14,7 +14,11 @@
   named here, as for each other plugin) filters the template into target/classes/build-info.properties. The property
   build.info.version is the constant of the pom (0.1.0, the version of the contract, and not a value of git). The
   property build.info.commit has the default unknown in the pom, and each just recipe that starts Maven replaces it
-  with the value of git rev-parse HEAD of the work tree (the function backend_maven_args of tools/gates/_lib.sh).
+  with the value of git rev-parse HEAD of the work tree (the function backend_maven_args of tools/gates/_lib.sh; the
+  value has the suffix -dirty if the work tree has a change that is not committed). The service does not start with
+  the default unknown or with a placeholder that the filter did not replace (the class BuildInfoProvider), so a run
+  of the service or of its tests needs the property: use the recipes of the justfile, or give
+  -Dbuild.info.commit=$(git rev-parse HEAD).
   The unit tests load the values of the build from a resource of the test classpath (a configurable resource name of
   the class BuildInfoProvider), so the test changes the value of the build and sees the change of the response (ACC-003).
 
@@ -92,8 +96,8 @@
       - PIT (org.pitest:pitest-maven, the build plugin, and org.pitest:pitest-junit5-plugin, the JUnit5 support of
         PIT as a dependency of the plugin): the mutation tests (the recipe mutation-backend). The versions are the
         ones of tools/versions.env (PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION). The configuration restricts the run to
-        the generated model code (targetClasses) and to the unit tests of the generated code (targetTests, the class
-        that is not successful and the integration test are no target tests), and it makes the HTML and the XML
+        the generated model code and the package app (targetClasses) and to the unit tests of the generated code and
+        of the package app (targetTests, the class that is not successful and the integration test are no target tests), and it makes the HTML and the XML
         report in target/pit-reports (the folder is in .gitignore through target/). The plugin has no execution
         bound to a phase: the recipe starts the goal mutationCoverage after the phase test-compile in one run of
         ./mvnw (the generator execution of the phase generate-sources adds src/generated/java as a compile source
@@ -264,7 +268,7 @@
       <artifactId>jackson-annotations</artifactId>
       <version>${jackson-annotations.version}</version>
     </dependency>
-    <!-- jakarta.annotation.Generated (Jakarta Annotations 2.1) in place of jakarta.annotation-api. Decision of the
+    <!-- jakarta.annotation.Generated (Jakarta Annotations 3.0, the 11.0.x line of Tomcat) in place of jakarta.annotation-api. Decision of the
           owner of 2026-11-04. The version is named here, and no BOM gives it. The scope is provided: the annotation
           has SOURCE retention (it is read at compile time only), so the jar stays off the runtime class path, and a
           later Spring Boot starter cannot bring jakarta.annotation-api in again with a duplicate class. -->
@@ -523,13 +527,15 @@
             of ./mvnw (./mvnw test-compile org.pitest:pitest-maven:<PIT_VERSION>:mutationCoverage
             -Dcodegen.skip=true). The phase is necessary: the generator execution of the phase generate-sources
             adds src/generated/java as a compile source root, and the goal skips a project with no compile source
-            root. PIT mutates the compiled classes of the module (target/classes, the generated code; the module
-            has no product code) and runs the target tests on each mutant.
+            root. PIT mutates the compiled classes of the module (target/classes: the generated model code and the
+            product code of the package app) and runs the target tests on each mutant.
            The configuration keeps the run small and deterministic (the plan records it, Result of the Phase 120):
-           - targetClasses: the generated model code only. The package biz.dfch.specmgrdemo.api has the interface
-             StatusApi, and an interface has no bytecode with logic, so there is no mutant in it.
-           - targetTests: the unit tests of the generated code only. The class that is not successful (no suffix
-             Test) and the integration test (the suffix IT, it needs the Docker daemon) are no target tests.
+           - targetClasses: the generated model code and the product code of the package app. The package
+             biz.dfch.specmgrdemo.api has the interface StatusApi, and an interface has no bytecode with logic, so
+             there is no mutant in it.
+           - targetTests: the unit tests of the generated code and of the package app. The class that is not
+             successful (no suffix Test) and the integration test (the suffix IT, it needs the Docker daemon) are no
+             target tests.
             - outputFormats: the HTML report (the default folder target/pit-reports) and the XML report
               (mutations.xml, the deterministic source the recipe asserts on for the surviving mutants).
            The JUnit5 support of PIT (the JUnit engine of the JUnit Platform and the jqwik engine) is the plugin
@@ -542,10 +548,12 @@
         <configuration>
           <targetClasses>
             <param>biz.dfch.specmgrdemo.model.*</param>
+            <param>biz.dfch.specmgrdemo.app.*</param>
           </targetClasses>
           <targetTests>
             <param>biz.dfch.specmgrdemo.testtools.ErrorCodeTest</param>
             <param>biz.dfch.specmgrdemo.testtools.ErrorCodePropertyTest</param>
+            <param>biz.dfch.specmgrdemo.app.*Test</param>
           </targetTests>
           <outputFormats>
             <outputFormat>HTML</outputFormat>

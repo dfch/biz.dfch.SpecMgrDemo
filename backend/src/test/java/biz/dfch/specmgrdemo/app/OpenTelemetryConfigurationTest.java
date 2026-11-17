@@ -1,6 +1,7 @@
 package biz.dfch.specmgrdemo.app;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,13 +69,69 @@ class OpenTelemetryConfigurationTest {
   void theConfigurationReadsTheHeaders() {
     assertEquals(
         java.util.Map.of("authorization", "Bearer key", "x-scope", "org"),
-        OpenTelemetryConfiguration.readHeaders("authorization=Bearer key, x-scope=org"));
+        OpenTelemetryConfiguration.readHeaders("OTEL_EXPORTER_OTLP_HEADERS", "authorization=Bearer key, x-scope=org"));
   }
 
   @Test
-  void theConfigurationStopsForAHeaderThatIsNotInTheForm() {
-    IllegalStateException result = assertThrows(IllegalStateException.class, () -> OpenTelemetryConfiguration.readHeaders("a-header"));
-    assertTrue(result.getMessage().contains("a-header"));
+  void theConfigurationStopsForAHeaderThatIsNotInTheFormAndTheMessageHasNoValueOfTheList() {
+    String secret = "s3cr3t-token-value";
+    IllegalStateException result =
+        assertThrows(
+            IllegalStateException.class,
+            () -> OpenTelemetryConfiguration.readHeaders("OTEL_EXPORTER_OTLP_HEADERS", "a=b," + secret));
+    assertTrue(result.getMessage().contains("entry 2"), "the message names the position: " + result.getMessage());
+    assertTrue(result.getMessage().contains("OTEL_EXPORTER_OTLP_HEADERS"), "the message names the variable");
+    assertFalse(result.getMessage().contains(secret), "the message has no value of the list: " + result.getMessage());
+  }
+
+  @Test
+  void theConfigurationStopsForAnEntryWithAnEmptyKey() {
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> OpenTelemetryConfiguration.readHeaders("X", " =hidden-value"));
+    assertTrue(result.getMessage().contains("entry 1"));
+    assertFalse(result.getMessage().contains("hidden-value"), "the message has no value of the list: " + result.getMessage());
+  }
+
+  @Test
+  void theConfigurationStopsForAnEntryThatStartsWithTheSeparator() {
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> OpenTelemetryConfiguration.readHeaders("X", "=v"));
+    assertTrue(result.getMessage().contains("entry 1"));
+  }
+
+  @Test
+  void theConfigurationStopsAtTheStartForAMalformedListOfTheTracesHeaders() {
+    // The list is read when the exporter is made (the start of the service), and not at the first export.
+    String secret = "s3cr3t-token-value";
+    MockEnvironment environment = new MockEnvironment();
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_ENDPOINT, "http://collector:4318");
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_TRACES_HEADERS, secret);
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> OpenTelemetryConfiguration.exporter(environment));
+    assertTrue(result.getMessage().contains(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_TRACES_HEADERS));
+    assertFalse(result.getMessage().contains(secret), "the message has no value of the list: " + result.getMessage());
+    assertThrows(IllegalStateException.class, () -> OpenTelemetryConfiguration.tracerProvider(environment));
+  }
+
+  @Test
+  void theConfigurationStopsAtTheStartForAMalformedListOfTheHeaders() {
+    String secret = "s3cr3t-token-value";
+    MockEnvironment environment = new MockEnvironment();
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_ENDPOINT, "http://collector:4318");
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_HEADERS, "ok=1," + secret);
+    IllegalStateException result =
+        assertThrows(IllegalStateException.class, () -> new OpenTelemetryConfiguration().openTelemetry(environment));
+    assertTrue(result.getMessage().contains(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_HEADERS));
+    assertTrue(result.getMessage().contains("entry 2"));
+    assertFalse(result.getMessage().contains(secret), "the message has no value of the list: " + result.getMessage());
+  }
+
+  @Test
+  void theConfigurationUsesTheHeadersOfTheListWhenItIsValid() {
+    MockEnvironment environment = new MockEnvironment();
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_ENDPOINT, "http://collector:4318");
+    environment.setProperty(OpenTelemetryConfiguration.ENV_OTEL_EXPORTER_OTLP_HEADERS, "authorization=Bearer key");
+    assertTrue(OpenTelemetryConfiguration.exporter(environment) != null);
   }
 
   @Test

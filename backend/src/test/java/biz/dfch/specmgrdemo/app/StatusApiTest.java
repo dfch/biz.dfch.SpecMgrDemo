@@ -1,6 +1,11 @@
 package biz.dfch.specmgrdemo.app;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,10 +16,23 @@ import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.TraceFlags;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Property;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -78,6 +96,211 @@ class StatusApiTest {
     }
   }
 
+  /** The members that the response of the error may have: no member carries a text in a language. */
+  private static final Set<String> MACHINE_MEMBERS = Set.of("type", "status", "instance", "code", "traceId");
+
+  private static final JsonMapper JSON = JsonMapper.builder().build();
+
+  @Test
+  void anUnknownPathGivesTheErrorResponseNotFound() throws Exception {
+    MockMvc mockMvc = setup(new UpStateChecker());
+    try (io.opentelemetry.context.Scope ignored = theSpanOfTheTest().makeCurrent()) {
+      MvcResult result =
+          mockMvc
+              .perform(get("/nope"))
+              .andExpect(status().isNotFound())
+              .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+              .andExpect(jsonPath("$.code").value("not_found"))
+              .andExpect(jsonPath("$.status").value(404))
+              .andExpect(jsonPath("$.instance").value("/nope"))
+              .andExpect(jsonPath("$.traceId").value(TRACE_ID_OF_THE_TEST))
+              .andReturn();
+      assertMachineMembersOnly(result);
+    }
+  }
+
+  @Test
+  void aWrongMethodGivesTheErrorResponseWithTheStatus405AndTheHeaderAllow() throws Exception {
+    MockMvc mockMvc = setup(new UpStateChecker());
+    try (io.opentelemetry.context.Scope ignored = theSpanOfTheTest().makeCurrent()) {
+      MvcResult result =
+          mockMvc
+              .perform(post("/status"))
+              .andExpect(status().isMethodNotAllowed())
+              .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+              .andExpect(
+                  mvcResult ->
+                      assertTrue(
+                          String.valueOf(mvcResult.getResponse().getHeader("Allow")).contains("GET"),
+                          "the header Allow of the status 405"))
+              .andExpect(jsonPath("$.code").value("validation_failed"))
+              .andExpect(jsonPath("$.status").value(405))
+              .andExpect(jsonPath("$.traceId").value(TRACE_ID_OF_THE_TEST))
+              .andReturn();
+      assertMachineMembersOnly(result);
+    }
+  }
+
+  @Test
+  void aMediaTypeThatTheOperationCannotGiveGivesTheErrorResponseWithTheStatus406() throws Exception {
+    MockMvc mockMvc = setup(new UpStateChecker());
+    try (io.opentelemetry.context.Scope ignored = theSpanOfTheTest().makeCurrent()) {
+      MvcResult result =
+          mockMvc
+              .perform(get("/status").accept(MediaType.TEXT_PLAIN))
+              .andExpect(status().isNotAcceptable())
+              .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+              .andExpect(jsonPath("$.code").value("validation_failed"))
+              .andExpect(jsonPath("$.status").value(406))
+              .andReturn();
+      assertMachineMembersOnly(result);
+    }
+  }
+
+  @Test
+  void theCodeOfAnErrorOfSpringWebMvcIsAValueOfTheListErrorCode() {
+    assertEquals("not_found", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.NOT_FOUND).getValue());
+    assertEquals("rate_limited", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS).getValue());
+    assertEquals("service_unavailable", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE).getValue());
+    assertEquals("internal_error", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.BAD_GATEWAY).getValue());
+    assertEquals("validation_failed", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.BAD_REQUEST).getValue());
+    assertEquals("validation_failed", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE).getValue());
+  }
+
+  @Test
+  void theResponseOfAnUnexpectedFailureHasNoTextOfTheFailureAndTheFailureIsInTheLog() throws Exception {
+    String secret = "the-secret-text-of-the-failure";
+    MockMvc mockMvc = setup(checkThatThrows(new IllegalStateException(secret)));
+    List<LogEvent> events =
+        withLog(
+            () -> {
+              MvcResult result =
+                  mockMvc
+                      .perform(get("/status"))
+                      .andExpect(status().isInternalServerError())
+                      .andExpect(jsonPath("$.code").value("internal_error"))
+                      .andReturn();
+              String body = result.getResponse().getContentAsString();
+              assertFalse(body.contains(secret), "the response has no text of the failure: " + body);
+              assertFalse(body.contains("IllegalStateException"), "the response has no name of the class of the failure: " + body);
+              assertMachineMembersOnly(result);
+            });
+    assertEquals(1, events.size(), "the failure is in the log once: " + events);
+    LogEvent event = events.get(0);
+    assertEquals(Level.ERROR, event.getLevel());
+    assertTrue(event.getMessage().getFormattedMessage().contains(TRACE_ID_OF_THE_TEST), "the entry of the log has the trace identifier");
+    assertTrue(event.getThrown() != null && secret.equals(event.getThrown().getMessage()), "the entry of the log has the failure");
+  }
+
+  @Test
+  void anErrorOfTheServerThatSpringGivesKeepsItsStatusAndIsInTheLogAsAnError() throws Exception {
+    MockMvc mockMvc = setup(checkThatThrows(new org.springframework.web.ErrorResponseException(org.springframework.http.HttpStatus.BAD_GATEWAY)));
+    List<LogEvent> events =
+        withLog(
+            () -> {
+              MvcResult result =
+                  mockMvc
+                      .perform(get("/status"))
+                      .andExpect(status().isBadGateway())
+                      .andExpect(jsonPath("$.code").value("internal_error"))
+                      .andExpect(jsonPath("$.status").value(502))
+                      .andReturn();
+              assertMachineMembersOnly(result);
+            });
+    assertEquals(1, events.size());
+    assertEquals(Level.ERROR, events.get(0).getLevel());
+  }
+
+  @Test
+  void aValueOfTheWrongTypeAndAnUnreadableRequestGiveTheCodeValidationFailed() throws Exception {
+    for (RuntimeException failure :
+        new RuntimeException[] {
+          new org.springframework.beans.TypeMismatchException("the value", String.class),
+          new org.springframework.http.converter.HttpMessageNotReadableException("the secret text", (org.springframework.http.HttpInputMessage) null)
+        }) {
+      MockMvc mockMvc = setup(checkThatThrows(failure));
+      try (io.opentelemetry.context.Scope ignored = theSpanOfTheTest().makeCurrent()) {
+        MvcResult result =
+            mockMvc
+                .perform(get("/status"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_failed"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andReturn();
+        assertMachineMembersOnly(result);
+        assertFalse(result.getResponse().getContentAsString().contains("secret"), "the response has no text of the failure");
+      }
+    }
+  }
+
+  @Test
+  void anErrorOfTheClientIsInTheLogAtTheLevelDebugOnly() throws Exception {
+    MockMvc mockMvc = setup(new UpStateChecker());
+    List<LogEvent> events = withLog(() -> mockMvc.perform(get("/nope")).andExpect(status().isNotFound()));
+    assertEquals(1, events.size());
+    assertEquals(Level.DEBUG, events.get(0).getLevel());
+  }
+
+  /** The action of a test that needs the log of the handler of the error. */
+  @FunctionalInterface
+  private interface LoggedAction {
+    void run() throws Exception;
+  }
+
+  /**
+   * Run the action with the span of the test, and return the events that the handler of the error
+   * (ProblemAdvice) wrote to the log during the action (all levels from DEBUG).
+   *
+   * @param action the action
+   * @return the events
+   * @throws Exception if the action fails
+   */
+  private static List<LogEvent> withLog(LoggedAction action) throws Exception {
+    Logger logger = (Logger) LogManager.getLogger(ProblemAdvice.class);
+    LogCapture capture = new LogCapture();
+    Level before = logger.getLevel();
+    logger.addAppender(capture);
+    logger.setLevel(Level.DEBUG);
+    capture.start();
+    try (io.opentelemetry.context.Scope ignored = theSpanOfTheTest().makeCurrent()) {
+      action.run();
+    } finally {
+      capture.stop();
+      logger.removeAppender(capture);
+      logger.setLevel(before);
+    }
+    return capture.events;
+  }
+
+  /**
+   * Assert that the response of the error has no member for a text in a language: the members are the machine
+   * members only (the members title and detail of the schema Problem are not sent).
+   *
+   * @param result the result of the request
+   * @throws Exception if the body cannot be read
+   */
+  private static void assertMachineMembersOnly(MvcResult result) throws Exception {
+    JsonNode body = JSON.readTree(result.getResponse().getContentAsString());
+    Set<String> members = new TreeSet<>();
+    body.propertyNames().forEach(members::add);
+    assertEquals(new TreeSet<>(MACHINE_MEMBERS), members, "the members of the response of the error");
+  }
+
+  /** The appender that keeps the events of the log (the test reads them). */
+  private static final class LogCapture extends AbstractAppender {
+
+    private final List<LogEvent> events = new CopyOnWriteArrayList<>();
+
+    LogCapture() {
+      super("capture", null, null, true, Property.EMPTY_ARRAY);
+    }
+
+    @Override
+    public void append(LogEvent event) {
+      events.add(event.toImmutable());
+    }
+  }
+
   /**
    * Make the MockMvc with the controller of the check and the handler of the error (the setup of the
    * standalone, and not a context of Spring Boot). The converter of the JSON is the one of the service (the
@@ -90,7 +313,11 @@ class StatusApiTest {
   private static MockMvc setup(StateChecker stateChecker) {
     JacksonJsonHttpMessageConverter converter =
         new JacksonJsonHttpMessageConverter(
-            JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build());
+            JsonMapper.builder()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                // The setting of src/main/resources/application.properties (spring.jackson.default-property-inclusion).
+                .changeDefaultPropertyInclusion(value -> value.withValueInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL))
+                .build());
     return MockMvcBuilders.standaloneSetup(new StatusController(stateChecker))
         .setControllerAdvice(new ProblemAdvice())
         .setMessageConverters(converter)

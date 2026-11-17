@@ -26,12 +26,17 @@ require_cmd() {
 # backend_maven_args <backend dir>
 #
 # The extra Maven arguments for a build of the Maven module (feat-9-walking-skeleton, Task 200.120): the
-# property build.info.commit with the sha of HEAD of the repository of <backend dir> (git rev-parse HEAD).
+# property build.info.commit with the sha of HEAD of the repository of <backend dir> (git rev-parse HEAD), with the
+# suffix -dirty if the work tree has a change that is not committed (a changed or a new file that git does not
+# ignore): the commit of the response of GET /info then does not name the exact source of the build.
 # The value of the property is filtered into the resource build-info.properties of the module
 # (the execution default-resources of maven-resources-plugin, backend/pom.xml), and the operation GET /info
 # gives it (the version and the commit come from the build, and not from a fixed text). The default of the
 # property in backend/pom.xml is unknown, and a <backend dir> that is no git repository with a commit (or a
-# git that is not on the PATH) gives no argument (the default of the pom applies, and the build runs).
+# git that is not on the PATH) gives no argument (the default of the pom applies, and the build runs). The
+# service does not start with the value unknown (the class BuildInfoProvider stops), so a recipe that starts
+# the service needs the commit: a build that does not compile or start the service (for example the SBOM) runs
+# without it.
 #
 # Sets MAVEN_BUILD_ARGS (an array of the arguments). The caller adds the array to its call of ./mvnw:
 #
@@ -46,6 +51,9 @@ backend_maven_args() {
     [[ $# -eq 1 && -n "${dir}" ]] || return 0
     sha="$(git -C "${dir}" rev-parse HEAD 2>/dev/null || true)"
     if [[ -n "${sha}" && "${sha}" =~ ^[0-9a-f]{40}$ ]]; then
+        if [[ -n "$(git -C "${dir}" status --porcelain 2>/dev/null || true)" ]]; then
+            sha="${sha}-dirty"
+        fi
         MAVEN_BUILD_ARGS+=("-Dbuild.info.commit=${sha}")
     fi
     return 0

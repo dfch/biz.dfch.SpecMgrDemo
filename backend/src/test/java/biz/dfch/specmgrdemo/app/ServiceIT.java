@@ -116,10 +116,64 @@ class ServiceIT {
   void theCommitOfTheBuildIsTheCommitOfTheWorkTree() throws Exception {
     // The recipe of the justfile passes the value of git rev-parse HEAD as the property build.info.commit
     // (the function backend_maven_args of tools/gates/_lib.sh), and the build filters the value into the
-    // resource of the classpath. The test asserts that the value of the resource is the commit of the work
-    // tree (the directory of the test run, the module backend).
+    // resource of the classpath. The value has the suffix -dirty if the work tree had a change that was not
+    // committed when the recipe started (the function checks it). The test asserts that the value of the resource
+    // is the commit of the work tree (the directory of the test run, the module backend), with or without the
+    // suffix. The service does not start for a build that has no commit (the class BuildInfoProvider stops), so a
+    // run in an IDE needs the property -Dbuild.info.commit=$(git rev-parse HEAD) (the message says it).
     String head = gitHead();
-    assertEquals(head, buildInfoProvider.buildInfo().commit());
+    String commit = buildInfoProvider.buildInfo().commit();
+    assertTrue(
+        commit.equals(head) || commit.equals(head + "-dirty"),
+        "the commit of the build is the commit of the work tree (" + head + ", with or without -dirty), and not '" + commit
+            + "'. The recipes of the justfile give the property build.info.commit; in an IDE use"
+            + " -Dbuild.info.commit=$(git rev-parse HEAD)");
+  }
+
+  @Test
+  void anUnknownPathGivesTheErrorResponseNotFound() throws Exception {
+    HttpResponse<String> response = send("GET", "/nope", null);
+    assertProblem(response, 404, "not_found");
+  }
+
+  @Test
+  void aWrongMethodGivesTheErrorResponseWithTheStatus405() throws Exception {
+    HttpResponse<String> response = send("POST", "/status", null);
+    assertProblem(response, 405, "validation_failed");
+    assertTrue(response.headers().firstValue("Allow").orElse("").contains("GET"), "the header Allow of the status 405");
+  }
+
+  @Test
+  void aMediaTypeThatTheOperationCannotGiveGivesTheErrorResponseWithTheStatus406() throws Exception {
+    HttpResponse<String> response = send("GET", "/status", "text/plain");
+    assertProblem(response, 406, "validation_failed");
+  }
+
+  /**
+   * Assert that the response is the response of the error of the contract with the status and the code: the
+   * media type application/problem+json, the machine members only, and the trace identifier of the request (the
+   * response has no text of an exception, and no member with a text in a language).
+   *
+   * @param response the response
+   * @param status the status
+   * @param code the code of the list ErrorCode
+   */
+  private static void assertProblem(HttpResponse<String> response, int status, String code) {
+    assertEquals(status, response.statusCode(), "the status: " + response.body());
+    assertTrue(
+        response.headers().firstValue("Content-Type").orElse("").startsWith("application/problem+json"),
+        "the media type application/problem+json: " + response.headers());
+    JsonNode body = JSON.readTree(response.body());
+    assertEquals(code, body.path("code").asString(), "the code: " + response.body());
+    assertEquals(status, body.path("status").asInt(), "the status of the member: " + response.body());
+    assertTrue(body.path("traceId").asString().matches("^[0-9a-f]{32}$"), "the trace identifier: " + response.body());
+    java.util.Set<String> members = new java.util.TreeSet<>();
+    body.propertyNames().forEach(members::add);
+    assertEquals(
+        new java.util.TreeSet<>(java.util.Set.of("type", "status", "instance", "code", "traceId")),
+        members,
+        "the members of the response of the error: " + response.body());
+    assertFalse(response.body().contains("Exception"), "the response has no text of an exception: " + response.body());
   }
 
   /**
@@ -130,8 +184,25 @@ class ServiceIT {
    * @throws Exception if the request fails
    */
   private static HttpResponse<String> get(String path) throws Exception {
+    return send("GET", path, null);
+  }
+
+  /**
+   * Make the request of the method and the path.
+   *
+   * @param method the method of the HTTP
+   * @param path the path
+   * @param accept the value of the header Accept, or null for no header
+   * @return the response
+   * @throws Exception if the request fails
+   */
+  private static HttpResponse<String> send(String method, String path, String accept) throws Exception {
     HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-    HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build();
+    HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
+    if (accept != null) {
+      builder.header("Accept", accept);
+    }
+    HttpRequest request = builder.method(method, HttpRequest.BodyPublishers.noBody()).build();
     return client.send(request, HttpResponse.BodyHandlers.ofString());
   }
 
@@ -147,7 +218,8 @@ class ServiceIT {
       String result = new String(in.readAllBytes()).trim();
       int code = process.waitFor();
       if (code != 0) {
-        throw new IllegalStateException("git rev-parse HEAD gives the exit code " + code + ": " + result);
+        throw new IllegalStateException(
+            "git rev-parse HEAD gives the exit code " + code + ": " + result + ". The test needs git and a work tree of the repository.");
       }
       return result;
     }

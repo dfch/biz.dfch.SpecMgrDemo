@@ -27,8 +27,8 @@
 # default run). The integration tests are no unit tests: the suffix IT keeps them out of the
 # run, and the run is deterministic without the Docker daemon. The class set of the report
 # is the default of the plugin: every class of target/classes (the generated code of the
-# contract - the packages biz.dfch.specmgrdemo.api and biz.dfch.specmgrdemo.model; the
-# module has no product code). The XML report is the deterministic source that the script
+# contract - the packages biz.dfch.specmgrdemo.api and biz.dfch.specmgrdemo.model - and the
+# product code of the package biz.dfch.specmgrdemo.app). The XML report is the deterministic source that the script
 # asserts on: the counters of the report element are the totals over the class set (the
 # covered and the missed lines and branches).
 #
