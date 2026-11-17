@@ -37,7 +37,7 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] ACC-005: `bin/130-120-00-serve-api-docs.sh` and `bin/130-130-00-serve-model-site.sh` serve the pages on the loopback address (REQ-004).
 - [x] ACC-006: The folder `images/` has the screenshots (REQ-005).
 - [x] ACC-007: `PRESENTATION.md` and `PRESENTATION.pdf` exist, and the PDF has 6 slides (REQ-006).
-- [ ] ACC-008: `just validate` and `just commit-check` pass for the branch.
+- [x] ACC-008: `just validate` and `just commit-check` pass for the branch.
 
 ### Scope
 
@@ -122,7 +122,7 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 
 ### Current Status
 
-**As of 2026-11-17**: All tasks are done. The open item is ACC-008 (`just validate` and `just commit-check`).
+**As of 2026-11-17**: All tasks and all acceptance criteria are done (`just validate` and `just commit-check` pass). Nothing is pushed.
 
 ### Blockers
 
