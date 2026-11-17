@@ -10,6 +10,9 @@ style: |
   table { font-size: 20px; }
   code { font-size: 0.85em; }
   .small { font-size: 18px; }
+  .tiny, .tiny li, .tiny p { font-size: 19px; line-height: 1.25; }
+  .small table { font-size: 14px; }
+  .small td, .small th { padding: 3px 8px; }
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
   img { max-width: 100%; }
 ---
@@ -72,7 +75,54 @@ Status: the gate is done and merged. feat-9 is the first feature that fills the 
 
 ---
 
-## 3. Architecture is a checked contract, not a diagram
+## 3. SBOM: made by the gate, used by two gates
+
+<div class="cols"><div class="small">
+
+- `just sbom` makes **CycloneDX 1.6** (JSON): `build/sbom/backend.cdx.json` (Maven, **55 components**) and `build/sbom/frontend.cdx.json` (pnpm lock file, **451 components**). Not in git.
+- **CI keeps both files** as the artifact `sbom` of the job `license-check` (90 days, also when the gate fails).
+- `license-check` compares each SPDX expression with the permitted list (DEC `84c37f7d`): **506 components, all permitted** (run on the feat-9 branch).
+- `vuln-scan` gives the same files to OSV-Scanner.
+
+</div><div class="small">
+
+**Fail closed**
+- A `pom.xml`, `package.json` or lock file outside the scanned set stops the gate (no hidden manifest).
+- A manifest with dependencies but an SBOM without components stops the gate.
+- A component without a licence, or an unknown licence, stops the gate.
+- The SBOM tools are hash-locked (cdxgen lock file, plug-in jar sha256).
+
+**Not done:** the SBOM is not signed or attested, and no release publishes it yet (no release exists). Dev-only tools with a non-permitted licence (`axe-core`, `caniuse-lite`) are removed from the frontend SBOM under a recorded owner decision (DEC `93a6d588`).
+
+</div></div>
+
+---
+
+## 4. The tools of the gates
+
+<div class="small">
+
+| Area | Tools (pinned in `tools/versions.env`) | Used in |
+|---|---|---|
+| Entry and scripts | just 1.59, uv 0.13 + Python 3.13, own scripts (pins, workflows, `sudo`, commits) | all, `check-*`, `commit-check` |
+| Documents, traceability | specmgr 0.38 (`lint`, `find_references`) | `validate`, `traceability` |
+| SBOM and licences | cyclonedx-maven-plugin 2.9.3, cdxgen 12.9, license-expression | `sbom`, `license-check` |
+| Security | OSV-Scanner 2.7, gitleaks 8.30, zizmor 1.32, CodeQL (GitHub) | `vuln-scan`, `secret-scan`, `workflow-scan` |
+| Contract | Spectral 6.17 (lint), oasdiff 1.35 (breaking changes), openapi-generator 7.27, Kubb 5.15 + Zod | `lint`, `breaking-changes`, `generate`, `api-docs` |
+| Build | Maven 3.10 (wrapper), JDK 21, TypeScript 5.9 | `compile` |
+| Tests | JUnit 5, Testcontainers, jqwik, Vitest, fast-check, Playwright + axe-core | `test-unit-*`, `test-integration-*`, `test-random-*`, `test-e2e` |
+| Mutation, coverage | PIT, Stryker, JaCoCo, v8 coverage | `mutation-*`, `coverage-*` (reports) |
+| Architecture | Spring Modulith, ArchUnit, ArchUniTS, structurizr-client | `architecture-backend`, `-frontend`, `-model` |
+| Gates of the gates | `selftest.sh` and the `test-*-gate` scripts | `test-gates` |
+
+</div>
+
+<div class="small">Demo only (not a gate): Structurizr (DSL, views, static site, SVG), Marp (this PDF), Playwright (screenshots).</div>
+
+---
+
+
+## 5. Architecture is a checked contract, not a diagram
 
 <div style="text-align:center">
 
@@ -90,7 +140,7 @@ Status: the gate is done and merged. feat-9 is the first feature that fills the 
 
 ---
 
-## 4. Agents with boundaries, on a running system
+## 6. Agents with boundaries, on a running system
 
 <div class="cols"><div>
 
@@ -114,16 +164,45 @@ The walking skeleton: React UI (EN/DE), `GET /status`, `GET /info`, API docs fro
 
 ---
 
-## 5. Honest status
+## 7. Decisions and risks of this demo
+
+<div class="cols tiny"><div>
+
+**21 DECs, all accepted by the owner**
+
+- **Traceability, docs:** `f21920d2` UUID traceability, `2468257f` one source of truth, `00a85fb8` ISO 29148 mapping, `7784ddef` ISO 25010 scenarios, `eb6e66ca` STE writing, `9eade4ab` terminology register
+- **Gates, quality:** `361678a6` test pyramid + blocking gates, `93594b2b` breaking changes, `f92e35a1` OpenAPI first, `9edc1071` code obeys the model
+- **Licences:** `84c37f7d` AGPL-compatible only, `93a6d588` deviation register, `5ddd8d7a` licence in `/info`
+- **Process, agents:** `cc4449cd` agent limits, `d778d444` dev/main rules, `a56f231b` commits + Definition of Done, `50ade92a` data classes
+- **Technology:** `870244cf` monorepo, `1a29c825` React, `51b00b5f` i18n, `e3eadec0` OpenTelemetry
+
+</div><div>
+
+**6 risks, all open**
+
+- `025202ba` ArchUniTS cannot do each necessary rule
+- `3be3ffd7` a necessary tool can break the licence rule
+- `5dfbf884` specmgr has no French headings, no SRS type
+- `edee1891` blocking gates slow down agents and authors
+- `f126e1b7` STE limits the words for specifications
+- `f682b3fb` a code generator can cause delay
+
+Every DEC and RSK is a specmgr document, linted in CI and cited by UUID. Only the owner accepts a DEC.
+
+</div></div>
+
+---
+
+## 8. Honest status
 
 | Done and merged | In progress or planned |
 |---|---|
 | Traceability gate, security reports (OSV, gitleaks, zizmor, CodeQL) | feat-9 walking skeleton: phases 100-400 on a branch, security thresholds not started |
 | Contract pipeline, breaking-change policy | feat-50 model as DSL source and generic rules (plan only) |
 | Pins, licence gate, SBOM, tested gates | feat-48 pre-commit hooks (plan only) |
-| 20 DECs, 4 SOPs, all validated by `specmgr lint` | ASD-STE100 check (on hold by owner decision) |
+| 21 DECs, 4 SOPs, all validated by `specmgr lint` | ASD-STE100 check (on hold by owner decision) |
 
 **Weak points, stated plainly**
 - Thin demo on `dev`: **one REQ**, one operation. Coverage and mutation score are low (backend line coverage 12%, PIT 5.8% on `dev`), **no thresholds**. Security findings do not block yet.
 - Agent boundaries are **not machine-enforced** (agents use the owner's token). No `AGENTS.md` or opencode config in the repo. The agent prompts still name gates of a sibling repo.
-- Rulesets live in GitHub settings, not in git. No release or tag yet. No legal review of the licence entries.
+- Rulesets live in GitHub settings, not in git. No release or tag yet. No legal review of the licence entries. The SBOM is not signed.

@@ -118,6 +118,10 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] Task 150.110: Make `bin/150-110-00-build-pdf.sh` and `PRESENTATION.pdf`.
 - [x] Task 150.120: Write `DEMO.md` (the exact commands) and run each command once.
 
+#### Phase 160: SBOM, Tools, Decisions
+
+- [x] Task 160.100: Make `bin/160-100-00-show-sbom.sh`, `TOOLS.md` and the slides about the SBOM, the tools, and the DECs and RSKs.
+
 ## Progress
 
 ### Current Status
@@ -131,6 +135,10 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 07:00:00.000Z - SBOM, tools and DEC slides
+
+The presentation has 9 slides now (the owner asked for the SBOM, the tools and the DECs and RSKs). One run of `just license-check` on this work tree stopped with NOT KNOWN for `vite` and `typescript` (the SBOM of cdxgen had no license for them), and an earlier run passed with 506 components. The cause is not examined. The gate stops, as it must.
 
 #### 2026-11-17 06:45:00.000Z - Demo, images and presentation made
 

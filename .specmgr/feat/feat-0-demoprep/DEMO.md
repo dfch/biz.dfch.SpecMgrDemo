@@ -4,6 +4,8 @@ The plan of the feature is in the file `README.md` of this folder. This file is 
 
 ## The guide to the demo
 
+The tools of the gates are listed in `TOOLS.md`.
+
 All commands start in the root of the work tree (`/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0`). `F` is the short name for the folder of the feature:
 
 ```bash
@@ -27,8 +29,9 @@ The scripts do not change a file outside of this folder. The code runs from a co
 | 8 | Make the rules from the model and run them against the code | `$F/bin/120-110-00-run-rules.sh --generate` | 3 ArchUnit rules, 41 ArchUniTS rules, all green |
 | 9 | Show a violated rule | `$F/bin/120-120-00-break-rule.sh` | both rules fail and name the dependency |
 | 10 | The traceability check of the repository | `just traceability` | the chain of REQ, VCR, test, OpenAPI and model |
-| 11 | Make the images again | `$F/bin/140-100-00-take-screenshots.sh` | `$F/images/` |
-| 12 | Make the PDF | `$F/bin/150-110-00-build-pdf.sh` | `$F/PRESENTATION.pdf` |
+| 11 | The SBOM: make it with the gate and show the files | `$F/bin/160-100-00-show-sbom.sh` | `build/sbom/backend.cdx.json` (55 components) and `frontend.cdx.json` (451) in the root of the work tree; the gate prints the result. Needs the network |
+| 12 | Make the images again | `$F/bin/140-100-00-take-screenshots.sh` | `$F/images/` |
+| 13 | Make the PDF | `$F/bin/150-110-00-build-pdf.sh` | `$F/PRESENTATION.pdf` |
 
 Order for the talk: 1, 2, 3, then 4, then 5, then 8 and 9, then 10, then 3 to stop the servers.
 
