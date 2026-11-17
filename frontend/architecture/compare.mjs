@@ -26,10 +26,14 @@
  * an import=, an internal specifier that resolves to no file) stops the script (exit code 2), and
  * a file that the rule of thumb has no unit for stops the script too.
  *
- * The workspace file is read strictly: the form is the one that the writer of the library
- * structurizr-java makes (the file is machine-generated-shaped and hand-maintained, see
- * model/README.md). A key or an element type that this script does not understand stops the script
- * (exit code 2).
+ * The workspace file is read strictly: the form is the one that the exporter of the pinned
+ * container structurizr/structurizr makes from model/workspace.dsl (DEC b6e8808f-86b4-41a4-92f2-33d38869beed;
+ * see model/README.md). The keys that the exporter adds to the form of the hand-maintained file are
+ * accepted here (feat-50-structurizr-model-rules, Phase 110): the top-level key `properties` (a map of
+ * texts, Task 110.100), the element key `perspectives` (an array of the objects with the text keys
+ * name, description and value, Task 110.130), and the model key `deploymentNodes` (an array of the
+ * deployment nodes, Task 110.130). The content of the top-level key `views` is not inspected. Each
+ * other key that this script does not understand stops the script (exit code 2).
  *
  * The assertions (the two conditions of ACC-003, and the other direction, recorded in the plan):
  *   - every unit has a component in the model (the components of the container frontend);
@@ -222,13 +226,27 @@ try {
   stop(`the workspace is not JSON: ${workspacePath} (${error.message})`)
 }
 
-const knownTopLevelKeys = new Set(['configuration', 'description', 'documentation', 'id', 'model', 'name', 'views'])
+const knownTopLevelKeys = new Set(['configuration', 'description', 'documentation', 'id', 'model', 'name', 'properties', 'views'])
 if (typeof workspace !== 'object' || workspace === null || Array.isArray(workspace)) {
   stop('the workspace is not an object')
 }
 for (const key of Object.keys(workspace)) {
   if (!knownTopLevelKeys.has(key)) {
     stop(`the workspace has the top-level key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
+  }
+}
+// The top-level `properties` (the exporter writes the base64 text of the source DSL under the key
+// `structurizr.dsl`, and the counts of the inspection under the keys `structurizr.inspection.*`,
+// feat-50-structurizr-model-rules, Task 110.100): a map of texts, like the `properties` of an element.
+if (Object.hasOwn(workspace, 'properties')) {
+  const topProperties = workspace.properties
+  if (
+    typeof topProperties !== 'object' ||
+    topProperties === null ||
+    Array.isArray(topProperties) ||
+    !Object.values(topProperties).every((value) => typeof value === 'string')
+  ) {
+    stop('the workspace has the top-level key properties, and its value is not a map of texts')
   }
 }
 if (typeof workspace.name !== 'string') {
@@ -238,22 +256,51 @@ if (typeof workspace.model !== 'object' || workspace.model === null) {
   stop('the workspace has no model (an object)')
 }
 for (const key of Object.keys(workspace.model)) {
-  if (key !== 'softwareSystems') {
-    stop(`the model of the workspace has the key ${key}, which the comparison does not understand (it has the software systems only)`)
+  if (key !== 'softwareSystems' && key !== 'deploymentNodes') {
+    stop(
+      `the model of the workspace has the key ${key}, which the comparison does not understand (it has the software systems and the deployment nodes only)`,
+    )
   }
 }
 const systems = workspace.model.softwareSystems
 if (!Array.isArray(systems) || systems.length !== 1) {
   stop(`the model of the workspace has ${Array.isArray(systems) ? systems.length : 'no'} software system(s). The comparison has one`)
 }
+// The model key `deploymentNodes` (the deployment unit of the model for the view of the deployment
+// viewpoint, feat-50-structurizr-model-rules, Task 110.130): an array of the deployment nodes. The
+// exporter writes the node, and not the containment of the node, so the comparison does not
+// examine the containment (it is no relationship of the model, and it is not visible in the code).
+if (Object.hasOwn(workspace.model, 'deploymentNodes')) {
+  const knownDeploymentNodeKeys = new Set(['description', 'environment', 'id', 'instances', 'name', 'properties', 'tags', 'technology'])
+  const deploymentNodes = workspace.model.deploymentNodes
+  if (!Array.isArray(deploymentNodes)) {
+    stop('the model of the workspace has the key deploymentNodes, and its value is not an array')
+  }
+  for (const node of deploymentNodes) {
+    checkKeys(node, knownDeploymentNodeKeys, 'the deployment node of the workspace')
+    if (
+      typeof node.name !== 'string' ||
+      typeof node.id !== 'string' ||
+      typeof node.environment !== 'string' ||
+      typeof node.instances !== 'string'
+    ) {
+      stop(`the deployment node of the workspace has no name, no id, no environment or no instances (a string): ${JSON.stringify(node)}`)
+    }
+  }
+}
 
 // The key `properties` of an element is the Structurizr map of text values. The traceability check
 // (tools/gates/traceability.py, feat-8-traceability-security-gates) reads the property `specmgr-req` of it. This
 // comparison does not use the values: it accepts the key, and stops if the value is not a map of texts.
-const knownSystemKeys = new Set(['containers', 'description', 'documentation', 'id', 'name', 'properties', 'tags'])
-const knownContainerKeys = new Set(['components', 'description', 'documentation', 'id', 'name', 'properties', 'relationships', 'tags', 'technology'])
-const knownComponentKeys = new Set(['description', 'documentation', 'id', 'name', 'properties', 'relationships', 'tags', 'technology'])
+// The key `perspectives` of an element is the native block of the Rozanski & Woods perspectives
+// (documentation only, feat-50-structurizr-model-rules, Task 110.130): an array of the objects with
+// the text keys name, description and value. This comparison does not use the values: it accepts
+// the key, and stops if the value is not an array of objects of that form.
+const knownSystemKeys = new Set(['containers', 'description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'tags'])
+const knownContainerKeys = new Set(['components', 'description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'relationships', 'tags', 'technology'])
+const knownComponentKeys = new Set(['description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'relationships', 'tags', 'technology'])
 const knownRelationshipKeys = new Set(['description', 'destinationId', 'id', 'sourceId', 'tags'])
+const knownPerspectiveKeys = new Set(['name', 'description', 'value'])
 
 function checkKeys(element, knownKeys, where) {
   for (const key of Object.keys(element)) {
@@ -271,6 +318,22 @@ function checkKeys(element, knownKeys, where) {
     if (!isMapOfTexts) {
       stop(`${where} has the key properties, and its value is not a map of texts`)
     }
+  }
+  if (Object.hasOwn(element, 'perspectives')) {
+    const perspectives = element.perspectives
+    if (!Array.isArray(perspectives)) {
+      stop(`${where} has the key perspectives, and its value is not an array`)
+    }
+    perspectives.forEach((perspective, index) => {
+      checkKeys(perspective, knownPerspectiveKeys, `the perspective ${index} of ${where}`)
+      if (
+        typeof perspective.name !== 'string' ||
+        typeof perspective.description !== 'string' ||
+        typeof perspective.value !== 'string'
+      ) {
+        stop(`the perspective ${index} of ${where} has the keys name, description and value, and they are not all texts`)
+      }
+    })
   }
 }
 

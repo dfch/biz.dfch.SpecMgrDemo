@@ -4,7 +4,7 @@ created: '2026-11-16T22:46:31.684+01:00'
 id: feat-50-structurizr-model-rules
 status: planning
 type: feat
-updated: '2026-11-17T12:15:17.068+01:00'
+updated: '2026-11-17T19:04:52.101+01:00'
 version: 1.0.0
 ---
 
@@ -38,13 +38,13 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: The workspace has the views Context, Functional, Development and Information (with rules), and Concurrency, Deployment and Operational (documentation only). Each view has `rw.viewpoint`.
+- [x] ACC-001: The workspace has the views Context, Functional, Development and Information (with rules), and Concurrency, Deployment and Operational (documentation only). Each view has `rw.viewpoint`.
 
-- [ ] ACC-002: The comparison run is green on the committed code: each package and unit has a component, each dependency has a relation, and each modelled code element exists in the code.
+- [x] ACC-002: The comparison run is green on the committed code: each package and unit has a component, each dependency has a relation, and each modelled code element exists in the code.
 
 - [ ] ACC-003: In a temporary copy of the repository, a package without a component and a dependency without a relation each stop the build, and the report names the violation.
 
-- [ ] ACC-004: Two runs of the JSON generation make no change, and the gate stops for a JSON that differs from the DSL (like `check-generated`).
+- [x] ACC-004: Two runs of the JSON generation make no change, and the gate stops for a JSON that differs from the DSL (like `check-generated`).
 
 - [ ] ACC-005: The runner derives the rules from the JSON. The hard-coded rules R1 to R3 and R1' to R3' are removed, and the same rules run from the model.
 
@@ -138,15 +138,15 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 #### Phase 110: The Model in DSL
 
-- [ ] Task 110.100: Convert `workspace.json` to `workspace.dsl` by hand (the 9 elements, the 4 relations). Run the comparison before and after (the conversion drift check).
+- [x] Task 110.100: Convert `workspace.json` to `workspace.dsl` by hand (the 9 elements, the 4 relations). Run the comparison before and after (the conversion drift check).
 
-- [ ] Task 110.110: Add the pinned step from the DSL to the JSON (the library or the container of Task 100.120).
+- [x] Task 110.110: Add the pinned step from the DSL to the JSON (the library or the container of Task 100.120).
 
-- [ ] Task 110.120: Add the gate "the JSON is generated and up to date" (like `check-generated`), and the test with the fixtures.
+- [x] Task 110.120: Add the gate "the JSON is generated and up to date" (like `check-generated`), and the test with the fixtures.
 
-- [ ] Task 110.130: Write the views (Context, Functional, Development, Information; Concurrency, Deployment, Operational documentation only), with `rw.viewpoint` and the perspectives. Set `!impliedRelationships` explicitly, so the implied-relationship strategy adds no relation.
+- [x] Task 110.130: Write the views (Context, Functional, Development, Information; Concurrency, Deployment, Operational documentation only), with `rw.viewpoint` and the perspectives. Set `!impliedRelationships` explicitly, so the implied-relationship strategy adds no relation.
 
-- [ ] Task 110.140: Add the `code.*` mapping and the closed-world exceptions to the elements, and keep the comparison green.
+- [x] Task 110.140: Add the `code.*` mapping and the closed-world exceptions to the elements, and keep the comparison green.
 
 #### Phase 120: The Model of the Walking Skeleton
 
@@ -196,7 +196,7 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 ### Current Status
 
-**As of 2026-11-17**: Phase 100 (Decisions and Spike) is done. The two DECs are written (the status is draft; the owner accepts them in the review of the pull request): DEC b6e8808f-86b4-41a4-92f2-33d38869beed (The DSL Is the Source and the JSON Is Generated) and DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (The Model Conventions, partly superseding DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73, whose Updates section names the supersession). The container `structurizr/structurizr` (the tag `2026.10.26-noble`, the digest `sha256:1081d615e7a539aee8b8360e36a58f42ff6412dd8f0e1b053134cb2c76ab2303`) makes the JSON from the DSL (the verified tool, pinned in `tools/versions.env`; the fallback `structurizr-dsl` 6.2.4 is confirmed and not needed). The spike shows that the rules are built from the JSON of the model in both languages (ArchUnit and ArchUniTS), and the limits (the component with several folders, the type-only imports, the dynamic imports) are recorded in the conventions DEC and in RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 (updated, the status stays open). Phase 110 (the model in DSL) is next.
+**As of 2026-11-17**: Phase 110 (the model in DSL) is done. The model is in `model/workspace.dsl` (the one file that a person edits, DEC b6e8808f-86b4-41a4-92f2-33d38869beed), and `model/workspace.json` is generated from it by the pinned container (the recipe `just generate-model`; the step names the digest of `tools/versions.env`, and not the tag; two runs make no change). The gate `just check-model-generated` stops for a JSON that is not up to date with the DSL, and for a DSL that does not parse (the line named), and its fixture test `just test-check-model-generated-gate` passes (8 cases). The model has the seven views (each with the property `rw.viewpoint`), the mapping `code.*`, and the closed-world exceptions `code.allowedExternal` (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4). The comparison stays green on the committed code (`just architecture-model`, 16 ok, and the two conditions of ACC-003 in a temporary copy still stop the run and name the violation). The strict reader `frontend/architecture/compare.mjs` accepts the keys that the exporter adds (the top-level `properties`, the element `perspectives`, the model `deploymentNodes`); the full reader refactor is Task 130.130. Phase 120 (the model of the walking skeleton) is next.
 
 ### Blockers
 
@@ -205,6 +205,10 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 17:14:00.000Z - Phase 110 done (the model in DSL)
+
+The model is in `model/workspace.dsl` (the one file that a person edits, DEC b6e8808f-86b4-41a4-92f2-33d38869beed), and `model/workspace.json` is generated from it by the pinned container (the recipe `just generate-model`; the step names the digest `STRUCTURIZR_IMAGE_DIGEST`, and not the tag). Drift check (the comparison before and after the conversion, and after each regeneration): green at each step - the backend side and the frontend side of `just architecture-model` match the code, and the two conditions of ACC-003 in a temporary copy still stop the run and name the violation. What the generated JSON adds to the hand-maintained file: the top-level key `properties` (the base64 of the DSL under `structurizr.dsl`, the counts of the inspection under `structurizr.inspection.*`), the element property `structurizr.dsl.identifier` for each element that has a variable of the DSL (the id of the element stays the digit text of the writer; no `!identifiers hierarchical` - a verified fact that extends the claim of the DEC), the element key `perspectives`, and the model key `deploymentNodes` (the deployment unit of the view of the deployment). The set of relations is exactly the 4 modelled relations (`!impliedRelationships false`; the parser adds no implied relation). The new recipes and their test, all passing: `just generate-model` (two runs make no change), `just check-model-generated` (it validates the DSL, it makes the JSON twice in a temporary folder, and it stops for a JSON that is not up to date), and `just test-check-model-generated-gate` (8 fixture cases: the good case twice, the changed-JSON case (the diff names the difference), the stale-JSON case, the broken-DSL case (the line named), the pin case, and the usage). The seven views (each with `rw.viewpoint`): Context (the view type `systemContext`), Functional (the view type `container`), Development (the view type `component`, the container `frontend`), Information (the view type `component`, the container `frontend`, the data-owning components `types` and `zod`), Concurrency (the view type `dynamic`), Deployment (the view type `deployment`, one node documented as the single deployment unit of the model) and Operational (the view type `container`). The `code.*` mapping and the closed-world exceptions (the form of DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): the container `backend` has `code.language` `java` and `code.root`; the components `api` and `model` have `code.language` `java` and `code.package`; the container `frontend` has `code.language` `typescript`; the components `types`, `zod`, `test` and `root` have `code.language` `typescript` and `code.path`. `code.allowedExternal` is on the elements that the code of depends on, per the verified imports: `api` (`org.springframework.., jakarta.validation.., jakarta.annotation`), `model` (`com.fasterxml.jackson.., org.springframework.., jakarta.validation.., jakarta.annotation`), `zod` (`zod`), `test` (`vitest, fast-check`); `types` and `root` have no external import, and `code.ignore` is not needed (the test classes of the backend are excluded by the reader, and each file of the frontend is in a unit). The minimal extension of the strict reader `frontend/architecture/compare.mjs` (the full reader refactor stays in Task 130.130): it accepts the top-level key `properties` (a map of texts), the element key `perspectives` (an array of the objects with the text keys `name`, `description` and `value`), and the model key `deploymentNodes` (an array of the nodes, validated strictly). The property `specmgr-req` of the component `api` stays as-is (the switch to `specmgr-refs` happens in Phase 150 together with the extension of the traceability gate, so the link stays gate-checked throughout). `model/README.md` is rewritten for the new state, and the workspace description names the two new DECs (b6e8808f, e85e9685). Gates that pass: `just architecture-model` (16 ok), `just architecture-backend` (4 ok), `just architecture-frontend` (2 ok), `just generate-model` (twice, no change), `just check-model-generated`, `just test-check-model-generated-gate` (8 ok), `just test-gates` (1029 ok), `just validate`, `just traceability` (0 errors), `just check-pins`, `just check-sudo`, `just check-workflows` and `just commit-check`.
 
 #### 2026-11-17 12:10:00.000Z - Phase 100 done (the decisions and the spike)
 
@@ -217,6 +221,26 @@ The feature is created from the planning session of 2026-11-16 (issue #50). The 
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 17:14:00.000Z - The view types of the seven viewpoints (the constraint of the reader)
+
+Context is the view type `systemContext`, Functional is `container`, Development and Information are `component` views of the container `frontend` (Information includes only the data-owning components `types` and `zod`), Concurrency is `dynamic`, Deployment is `deployment` (one node, the single deployment unit of the model), and Operational is `container`. The constraint (verified): the reader of the backend (structurizr-client) validates the references of the views when it reads the JSON, and the recipe `architecture-model` (fixed in this phase) removes the component `model` and the relation `api` -> `model` of the container `backend` in its temporary copy. A view that references them stops the reader before the comparison names the violation. The units of the container `frontend` are not removed in those demos, so the `component` views of `frontend` are safe.
+
+#### 2026-11-17 17:14:00.000Z - The id scheme of the elements (no `!identifiers hierarchical`)
+
+The id of the element stays the digit text of the writer (the readers resolve the id only inside the file, and any consistent scheme works). Verified fact that extends the claim of DEC b6e8808f: an element that has a variable of the DSL gets the property `structurizr.dsl.identifier` (the variable name) even without `!identifiers hierarchical`.
+
+#### 2026-11-17 17:14:00.000Z - The mapping `code.*` per element (the reading of the form of the DEC)
+
+`code.language` is on each mapped element (the DEC says it is required for a mapped element, including the components). `code.root` is on the container `backend` only (the base package of the module), and not on the Java components: the runner of Phase 130 confirms that reading, or adds `code.root` to the components (a change of the model only, no change of the code).
+
+#### 2026-11-17 17:14:00.000Z - The property `specmgr-req` stays until Phase 150 (the ordering)
+
+The conversion keeps the property `specmgr-req` of the component `api` as-is (and does not switch it to `specmgr-refs` in this phase): the switch happens in Phase 150 together with the extension of the traceability gate, so the traceability link stays gate-checked throughout the feature.
+
+#### 2026-11-17 17:14:00.000Z - The minimal reader extension now, the full refactor in Task 130.130
+
+`frontend/architecture/compare.mjs` accepts only the keys that the exporter of the pinned container adds (the top-level `properties`, the element `perspectives`, the model `deploymentNodes`), each validated strictly. The name-based comparison logic, the unit discovery, and the fix of the dynamic-import defect stay in Task 130.130 (as the plan assigns them).
 
 #### 2026-11-17 12:10:00.000Z - The tool of the DSL-to-JSON generation (verified, the fallback confirmed)
 

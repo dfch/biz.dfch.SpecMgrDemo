@@ -17,8 +17,10 @@
 # coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
 # traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
 # feat-8-traceability-security-gates (Gate 9, the security recipes vuln-scan, secret-scan and workflow-scan, and
-# their test test-security-gates). The gate numbers of
-# the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
+# their test test-security-gates), and 110.110 and 110.120 are the tasks of feat-50-structurizr-model-rules (the
+# model in DSL: the recipe generate-model, and the gate for the generated model with its test, the recipes
+# check-model-generated and test-check-model-generated-gate). The gate numbers of
+# the scripts of the features can be the same (130.xxx, 110.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
@@ -117,7 +119,7 @@ test-generate-gate:
     @{{ just_executable() }} _gate test-generate-gate.sh 120.120
 
 # Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code, the build gates, the traceability check and the security recipes with their own tests too).
-test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate test-security-gates
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate test-security-gates test-check-model-generated-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
@@ -163,6 +165,18 @@ architecture-frontend:
 # Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
     @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
+
+# Make model/workspace.json again from model/workspace.dsl with the pinned container structurizr/structurizr (the step names the digest STRUCTURIZR_IMAGE_DIGEST of tools/versions.env, and not the tag). Two runs make no change (feat-50-structurizr-model-rules, Task 110.110; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+generate-model:
+    @{{ just_executable() }} _gate generate-model.sh 110.110 model
+
+# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), and it stops if the result differs from model/workspace.json (the committed file) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+check-model-generated:
+    @{{ just_executable() }} _gate check-model-generated.sh 110.120 model
+
+# Test: the gate for the generated model with the fixtures: the good case (pass), the changed-JSON case (stop, the message names the difference), the stale-JSON case (stop), the broken-DSL case (stop, the line named), the pin case, and the usage (feat-50-structurizr-model-rules, Task 110.120).
+test-check-model-generated-gate:
+    @{{ just_executable() }} _gate test-check-model-generated-gate.sh 110.120
 
 # Report: the coverage of the Maven module with JaCoCo (the line and the branch coverage, the report in target/site/jacoco, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
 coverage-backend:
