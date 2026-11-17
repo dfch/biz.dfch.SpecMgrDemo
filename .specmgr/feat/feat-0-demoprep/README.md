@@ -155,7 +155,7 @@ To continue on another system:
 - `git fetch origin && git worktree add <folder> feat-0-demoprep` (or `git switch feat-0-demoprep`). Read `DEMO.md` first.
 - The folder `build/` is not in git. The first run of `bin/130-100-00-run-demo.sh` makes the copy in `build/work` and installs the frontend dependencies (needs the network, `pnpm`, JDK 21, `rsync`).
 - The Playwright tests need the Chromium of Playwright in `~/.cache/ms-playwright`. If it is missing, install it with `build/work/frontend/node_modules/.bin/playwright install chromium` (not tried on a clean system). Docker is needed for the Structurizr steps (the images are pulled at the first run), and `npx` plus the network for the PDF.
-- Open point: the prompt file `bin/170-110-00-agent-prompt.md` says "do not start or stop a server", and the wrapper prompt in `DEMO.md` tells the agent to stop the demo. The two texts do not agree.
+- Resolved: the prompt file and the wrapper prompt in `DEMO.md` now agree. The agent does not start or stop the demo and does not change a file. The owner starts and stops the demo and removes `.playwright-mcp/`.
 - Open point: `just license-check` stopped on the last four runs in the earlier session (see the handover below). Do not run it live.
 
 #### 2026-11-17 08:45:00.000Z - Phase 170: the Playwright tests

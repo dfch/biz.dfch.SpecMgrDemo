@@ -29,5 +29,6 @@ The same values as the head-less test (`Version on the page: 0.1.0 (commit <sha 
 
 ## Notes
 
-- The Playwright MCP can write files (a folder `.playwright-mcp/`, snapshots) into the working folder of the session. They are not in git. Remove them after the test.
+- The agent does not start or stop the demo and does not change a file. The owner starts the demo before the test and stops it after the test (see above).
+- The Playwright MCP can write files (a folder `.playwright-mcp/`, snapshots) into the working folder of the session. They are not in git. The owner removes them after the test (`rm -rf .playwright-mcp`).
 - The result of a run is in the Updates of the plan (`README.md`). A result that was not run is not recorded.

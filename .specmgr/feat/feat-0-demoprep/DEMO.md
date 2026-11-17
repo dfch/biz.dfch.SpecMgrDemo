@@ -52,10 +52,15 @@ $F/bin/130-100-00-run-demo.sh
 Prompt for the agent (the demo is running):
 
 ```text
-Read .specmgr/feat/feat-0-demoprep/bin/170-110-00-agent-prompt.md and do exactly what the section "The prompt" says, with the Playwright MCP tools. The demo is already running. Your final answer must be exactly the two result lines of step 5, and nothing else. After that, stop the demo with .specmgr/feat/feat-0-demoprep/bin/130-110-00-stop-demo.sh and delete the folder .playwright-mcp/.
+Read .specmgr/feat/feat-0-demoprep/bin/170-110-00-agent-prompt.md and do exactly what the section "The prompt" says, with the Playwright MCP tools. The demo is already running. Your final answer must be exactly the two result lines of step 5, and nothing else.
 ```
 
-Prompt for the agent (the demo is not running): add this sentence at the start: `First start the demo with .specmgr/feat/feat-0-demoprep/bin/130-100-00-run-demo.sh.`
+The agent only tests. It does not start or stop a server and does not change a file (this is the rule of the prompt file). So you start the demo before the prompt, and after the answer you stop it and remove the folder that the MCP wrote:
+
+```bash
+$F/bin/130-110-00-stop-demo.sh
+rm -rf .playwright-mcp
+```
 
 Expected answer:
 
@@ -86,7 +91,7 @@ With the `opencode run` command, the agent starts from the shell without the int
 opencode run "Run .specmgr/feat/feat-0-demoprep/bin/170-100-00-playwright-headless.sh with bash. Do not change any file. Show me the output and the exit code."
 ```
 
-To show a failure: the test fails (exit code 1) if `/info` gives another version than the page. There is no script for this. The option `--fail` of the demo does not work for it, because it changes only `GET /status`. The agent run does not stop the demo itself, so run `$F/bin/130-110-00-stop-demo.sh` if the agent did not.
+To show a failure: the test fails (exit code 1) if `/info` gives another version than the page. There is no script for this. The option `--fail` of the demo does not work for it, because it changes only `GET /status`. The agent run does not stop the demo, so run `$F/bin/130-110-00-stop-demo.sh` after it.
 
 ### Notes and fallbacks
 
