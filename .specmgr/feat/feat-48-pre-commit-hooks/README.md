@@ -110,9 +110,9 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 
 #### Phase 100: Install Recipe and Hooks Folder
 
-- [ ] Task 100.100: Write the `just` recipe `install-hooks`: set `core.hooksPath` to `tools/hooks/`, idempotent (a second run changes nothing), opt-in. Note the uninstall path (`git config --unset core.hooksPath`) in the recipe comment.
+- [x] Task 100.100: Write the `just` recipe `install-hooks`: set `core.hooksPath` to `tools/hooks/`, idempotent (a second run changes nothing), opt-in. Note the uninstall path (`git config --unset core.hooksPath`) in the recipe comment.
 
-- [ ] Task 100.110: Create the `tools/hooks/` folder with a README that names each hook and the `just` recipes it calls.
+- [x] Task 100.110: Create the `tools/hooks/` folder with a README that names each hook and the `just` recipes it calls.
 
 #### Phase 110: The Pre-Commit Hook
 
@@ -138,7 +138,7 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 
 ### Current Status
 
-**As of 2026-11-16**: The plan is written from GitHub issue #48; no task is started. The six fast gates exist as `just` recipes from feat-5-foundation-monorepo-ci (`validate`, `commit-check`, `check-workflows`, `check-pins`, `check-sudo`) and feat-6-contracts-openapi-pipeline (`lint`). The repository has no git hooks yet: no `core.hooksPath`, no `tools/hooks/` folder. The work will happen on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`.
+**As of 2026-11-17**: Phase 100 is complete. The `just install-hooks` recipe exists (opt-in: CI does not call it; idempotent: a second run changes nothing; the uninstall path `git config --unset core.hooksPath` is noted in the recipe comment), and the `tools/hooks/` folder exists with a README that names each hook and the `just` recipes it calls. No hook script exists yet: `pre-commit` and `commit-msg` arrive in Phase 110, and `pre-push` in Phase 120. The six fast gates exist as `just` recipes from feat-5-foundation-monorepo-ci (`validate`, `commit-check`, `check-workflows`, `check-pins`, `check-sudo`) and feat-6-contracts-openapi-pipeline (`lint`). The work happens on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`.
 
 ### Blockers
 
@@ -147,6 +147,16 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 16:45:26.000Z - Phase 100 complete
+
+The agent did Tasks 100.100 and 100.110.
+
+1. The recipe (Task 100.100): `just install-hooks` is in the `justfile` next to `verify-tools` (the local-machine recipes, not a gate). It runs `git config core.hooksPath tools/hooks` (the relative path resolves from the worktree top level, as git expects). The install is opt-in: no workflow file was touched and CI never calls the recipe. It is idempotent: `git config` with an unchanged value writes nothing, and the recipe adds no other state. The comment notes the uninstall path: `git config --unset core.hooksPath`.
+2. The folder (Task 100.110): `tools/hooks/` exists with a `README.md` that names each hook and the `just` recipes it calls: `pre-commit` (Phase 110: the six fast gates `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`), `commit-msg` (Phase 110: the message of the commit in progress, with the same rule as the `commit-check` gate, DEC a56f231b-d063-4bef-bbc8-3deb4daff76e: `type(feat-N): subject`), and `pre-push` (Phase 120: the six fast gates against the base). The README states that the hook scripts arrive in Phase 110 and Phase 120, and that the hooks are bypassed with `git commit --no-verify` (details in Phase 130). The folder is covered by `just check-sudo`, which scans `tools`.
+3. The test in a throwaway repository (the recipe was never run on this worktree, so the `core.hooksPath` of the developer repository is unchanged): the tracked and untracked files of the worktree were copied to a temporary directory (excluding `.git` and the build folders), a git repository was started in it (`git init`, a local `user.name` and `user.email`, `commit.gpgsign` false), and one commit was made. (1) `just install-hooks` ran, and `git config core.hooksPath` printed `tools/hooks`. (2) `git config --list` was written to a file before and after a second `just install-hooks`, and the two files were byte-identical (13 lines each: idempotent). (3) `git config --unset core.hooksPath` removed the key (`git config --get core.hooksPath` answered exit code 1, the answer for an absent key). The temporary repository and the snapshot files were deleted.
+4. The quality gates at the repository root: `just check-sudo` (PASS), `just check-workflows` (PASS), `just check-pins` (PASS), `just commit-check` (PASS), `just validate` (PASS), `just lint` (PASS).
+5. The agent changed no workflow, no pin, no DEC and no file other than the `justfile` and this plan. The changes are not committed.
 
 #### 2026-11-16 22:17:20.000Z - Created
 

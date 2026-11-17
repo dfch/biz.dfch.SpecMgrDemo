@@ -200,6 +200,10 @@ test-security-gates:
 verify-tools:
     .specmgr/feat/feat-5-foundation-monorepo-ci/bin/110.110-06-verify-tools.sh
 
+# Install the git hooks on this machine: set core.hooksPath to tools/hooks, so that git runs the hooks of the folder before a commit and before a push. The install is opt-in (CI does not call the recipe) and idempotent (a second run changes nothing). Uninstall: git config --unset core.hooksPath (feat-48-pre-commit-hooks, Task 100.100).
+install-hooks:
+    git config core.hooksPath tools/hooks
+
 # Start a gate script from tools/gates/. Stop if the script does not exist.
 [private]
 _gate script task *args:
