@@ -134,7 +134,6 @@ Status: the gate is done and merged. feat-9 is the first feature that fills the 
 
 - Structurizr model with **context, container and component views**. Elements carry `code.*` (where the code is) and `specmgr-req`.
 - Rules **derive from the model** (closed world): no arrow means a forbidden dependency. Backend: **3 ArchUnit rules**, frontend: **41 ArchUniTS rules**. Demo: add one forbidden import, the generated rule fails and names it.
-- Today the repo also has hand-written rules and a model-vs-code comparison. The DSL and the generator are a demo slice (feat-0). DSL as the source of the repo is planned (feat-50). A model generated from REQs is **not** built.
 
 </div>
 
