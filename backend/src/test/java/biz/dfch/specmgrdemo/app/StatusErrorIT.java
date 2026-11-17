@@ -1,6 +1,7 @@
 package biz.dfch.specmgrdemo.app;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -8,10 +9,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The integration test of the error response of the operation GET /status (feat-9-walking-skeleton, Phase 200,
@@ -23,10 +30,23 @@ import org.junit.jupiter.api.Test;
  * filter TraceFilter, the 32 lower case hexadecimal characters of the W3C form, the pattern of the contract).
  * The operation GET /info is no part of the failure of the check, and it gives its response 200. The OTEL_*
  * variables have the empty value (the test is deterministic, and the feature gives no collector).
+ *
+ * <p>The test of the phase 400 (the task 400.100) has the identifier of its verification case record in the
+ * display name (the text vcr:&lt;uuid&gt;, DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342): the verification case record
+ * 4f98618c-4291-4d60-995f-1fd8a60b9bfd, the criterion AC-002 (the test makes the check of the state fail).
  */
 class StatusErrorIT {
 
   private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
+
+  /** The value of the list ErrorCode of the contract: the lower case words that the character underscore joins. */
+  private static final Pattern CODE_VALUE = Pattern.compile("^[a-z]+(_[a-z]+)*$");
+
+  /** The seven members of the schema Problem of the contract (the rule problem-members of the linter). */
+  private static final Set<String> PROBLEM_MEMBERS =
+      Set.of("type", "title", "status", "detail", "instance", "code", "traceId");
+
+  private static final JsonMapper JSON = JsonMapper.builder().build();
 
   private static RunningService service;
 
@@ -44,19 +64,35 @@ class StatusErrorIT {
   }
 
   @Test
-  void theOperationSendsTheErrorResponseIfTheSystemCannotGiveItsState() throws Exception {
+  @DisplayName("vcr:4f98618c-4291-4d60-995f-1fd8a60b9bfd the operation gives the error response")
+  void theOperationGivesTheErrorResponse() throws Exception {
+    // The steps of the criterion AC-002 of the verification case record: the test makes the check of the state
+    // fail (the class starts the service with the property app.state-checker fail), the client sends the request
+    // GET /status, the response has the media type application/problem+json, an error code and a trace
+    // identifier, and the response has no text in a language.
     HttpResponse<String> response = get("/status");
     assertEquals(503, response.statusCode(), "the status 503 of the error response");
     assertTrue(
         response.headers().firstValue("Content-Type").orElse("").startsWith("application/problem+json"),
         "the media type application/problem+json");
-    assertTrue(response.body().contains("\"code\":\"service_unavailable\""), "the code of the list ErrorCode: " + response.body());
-    assertTrue(response.body().contains("\"status\":503"), "the status of the member of the schema Problem: " + response.body());
-    var matcher = Pattern.compile("\"traceId\":\"([0-9a-f]{32})\"").matcher(response.body());
-    assertTrue(matcher.find(), "the response has the member traceId: " + response.body());
-    String found = matcher.group(1);
-    assertTrue(TRACE_ID.matcher(found).matches());
+    JsonNode body = JSON.readTree(response.body());
+    assertEquals("service_unavailable", body.path("code").asString(), "the code of the list ErrorCode: " + response.body());
+    assertEquals(503, body.path("status").asInt(), "the status of the member of the schema Problem: " + response.body());
+    String found = body.path("traceId").asString();
+    assertTrue(TRACE_ID.matcher(found).matches(), "the response has the member traceId: " + response.body());
     assertTrue(!"00000000000000000000000000000000".equals(found), "the trace identifier is the real value of the request");
+
+    // No text in a language: the members of the response are the seven members of the schema Problem of the
+    // contract, and none of them is a member for a text that a client shows (the rule problem-members of the linter
+    // tools/lint/ruleset.yaml). The member code is the machine value of the list ErrorCode (the frontend has the
+    // text of each code in its catalog), and the title and the detail are notes for the log and the developer.
+    Set<String> members = new TreeSet<>();
+    body.propertyNames().forEach(members::add);
+    assertTrue(PROBLEM_MEMBERS.containsAll(members), "the response has a member that the schema Problem has not: " + members);
+    for (String text : List.of("message", "localizedMessage", "text", "userMessage")) {
+      assertFalse(members.contains(text), "the response has no member for a text in a language: " + members);
+    }
+    assertTrue(CODE_VALUE.matcher(body.path("code").asString()).matches(), "the code is a machine value and no sentence: " + response.body());
   }
 
   @Test

@@ -32,6 +32,18 @@
 # violations of the page, the test of Playwright fails (exit code not 0), and the output names the
 # violations.
 #
+# Part 1 has the end-to-end test of the walking skeleton too (feat-9-walking-skeleton, Phase 400, Task 400.110,
+# REQ-005): the file e2e/service.spec.ts opens the page of the REAL service, the backend of the build and the
+# development server of Vite of the frontend. The second webServer of playwright.config.ts starts both with the
+# script e2e/service.mjs (random ports, no collector: the variables OTEL_* of the backend and VITE_OTEL_* of the
+# frontend are empty). The backend starts with `./mvnw test -Dtest=ServiceForE2e` in backend/ (the class
+# ServiceForE2e of the tests starts the app with the class RunningService, no new tool: the module has no
+# executable jar), so the part 1 needs JDK 21 and the network for the first run (Maven Central) as the recipes of
+# the backend have. The script gives the property build.info.commit (the function backend_maven_args of _lib.sh)
+# in the variable E2E_MAVEN_ARGS, so the commit of GET /info is the commit of the work tree. The test with the
+# name `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the user interface shows the notice of the license` is the
+# criterion AC-002 of the verification case record of the operation GET /info.
+#
 # The script needs Node and pnpm (install_frontend in _lib.sh installs the module from the lock file
 # with `pnpm install --frozen-lockfile --ignore-scripts`, and stops if an installed package has
 # another version than the key of tools/versions.env) and the network for the first run (the npm
@@ -47,6 +59,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 [[ -d "$1" ]] || die "The folder of the pnpm module does not exist: $1"
 frontend_dir="$(cd "$1" && pwd)"
 install_frontend "${frontend_dir}"
+backend_dir="${frontend_dir}/../backend"
+[[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable (the end-to-end test starts the backend)"
+backend_maven_args "${backend_dir}" # the property build.info.commit (Task 200.120); the directory is resolved before the cd
+E2E_MAVEN_ARGS="${MAVEN_BUILD_ARGS[*]:-}"
+export E2E_MAVEN_ARGS
 cd "${frontend_dir}"
 
 passed=0
@@ -93,6 +110,15 @@ else
         passed=$((passed + 1))
     else
         echo "FAIL the summary of the run has a failed test: ${summary}"
+        failed=$((failed + 1))
+    fi
+    if [[ "${run_output}" == *"vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the user interface shows the notice of the license"* \
+        && "${run_output}" == *"the user interface shows the state of the system"* \
+        && "${run_output}" == *"in the second language"* ]]; then
+        echo "ok   the run has the end-to-end tests of the real service (the notice with the vcr: name, the state, and the second language)"
+        passed=$((passed + 1))
+    else
+        echo "FAIL the run has not the three end-to-end tests of the real service"
         failed=$((failed + 1))
     fi
     if [[ "${run_output}" == *"the good page has no violations"* && "${run_output}" == *"the bad page reports the violations"* ]]; then

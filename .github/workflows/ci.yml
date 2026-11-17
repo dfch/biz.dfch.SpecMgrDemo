@@ -350,7 +350,9 @@ jobs:
   # chromium browser for the pinned version into the user cache of the runner (no right is necessary, about
   # 126 MB on a fresh runner - the timeout is the long one for the download), and starts it headless (the
   # runner image has the shared libraries of a headless chromium; the first real run of the job is the
-  # verification, an open item of the plan).
+  # verification, an open item of the plan). Since feat-9-walking-skeleton (Phase 400) the job runs the
+  # end-to-end test of the real service too: the backend (./mvnw of backend/, so the job needs Java, as the other
+  # jobs of the backend do) and the development server of Vite on random ports, with no collector.
   test-e2e:
     name: test-e2e
     runs-on: ubuntu-latest
@@ -360,6 +362,10 @@ jobs:
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
         with:
           node-version: "26.13.0"
