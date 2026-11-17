@@ -4,7 +4,7 @@ created: '2026-11-16T22:46:31.684+01:00'
 id: feat-50-structurizr-model-rules
 status: planning
 type: feat
-updated: '2026-11-16T22:46:31.684+01:00'
+updated: '2026-11-17T12:15:17.068+01:00'
 version: 1.0.0
 ---
 
@@ -126,15 +126,15 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 #### Phase 100: Decisions and Spike
 
-- [ ] Task 100.100: Write the DEC "The DSL Is the Source and the JSON Is Generated" (the tool, the pin, the gate).
+- [x] Task 100.100: Write the DEC "The DSL Is the Source and the JSON Is Generated" (the tool, the pin, the gate).
 
-- [ ] Task 100.110: Write the DEC "The Model Conventions" (`code.*`, `specmgr-refs`, `rw.viewpoint`, the perspectives, the closed-world exceptions, the arrow direction). It partly supersedes DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73.
+- [x] Task 100.110: Write the DEC "The Model Conventions" (`code.*`, `specmgr-refs`, `rw.viewpoint`, the perspectives, the closed-world exceptions, the arrow direction). It partly supersedes DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73.
 
-- [ ] Task 100.120: Check the JSON export of the container `structurizr/structurizr` (and the MCP), and pin the image digest. Record the result in the FEAT.
+- [x] Task 100.120: Check the JSON export of the container `structurizr/structurizr` (and the MCP), and pin the image digest. Record the result in the FEAT.
 
-- [ ] Task 100.130: Spike: build the rules from the JSON in ArchUnit and in ArchUniTS. Record the limits (the component with several folders, the type-only imports, the dynamic imports).
+- [x] Task 100.130: Spike: build the rules from the JSON in ArchUnit and in ArchUniTS. Record the limits (the component with several folders, the type-only imports, the dynamic imports).
 
-- [ ] Task 100.140: Update RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 with the result of the spike.
+- [x] Task 100.140: Update RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 with the result of the spike.
 
 #### Phase 110: The Model in DSL
 
@@ -196,7 +196,7 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 ### Current Status
 
-**As of 2026-11-16**: The planning session of 2026-11-16 (the transcript `session-feat-50-prep-c4-ses_e1b5.md` on the feat-50 branch) gives the design, the decisions and this phase structure. The GitHub issue #50 is opened. No code and no document of the plan are written at this time; the branch `feat-50` and the worktree exist.
+**As of 2026-11-17**: Phase 100 (Decisions and Spike) is done. The two DECs are written (the status is draft; the owner accepts them in the review of the pull request): DEC b6e8808f-86b4-41a4-92f2-33d38869beed (The DSL Is the Source and the JSON Is Generated) and DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (The Model Conventions, partly superseding DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73, whose Updates section names the supersession). The container `structurizr/structurizr` (the tag `2026.10.26-noble`, the digest `sha256:1081d615e7a539aee8b8360e36a58f42ff6412dd8f0e1b053134cb2c76ab2303`) makes the JSON from the DSL (the verified tool, pinned in `tools/versions.env`; the fallback `structurizr-dsl` 6.2.4 is confirmed and not needed). The spike shows that the rules are built from the JSON of the model in both languages (ArchUnit and ArchUniTS), and the limits (the component with several folders, the type-only imports, the dynamic imports) are recorded in the conventions DEC and in RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 (updated, the status stays open). Phase 110 (the model in DSL) is next.
 
 ### Blockers
 
@@ -206,6 +206,10 @@ Today the model (`model/workspace.json`, 9 elements, 4 relations) has no views, 
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
 
+#### 2026-11-17 12:10:00.000Z - Phase 100 done (the decisions and the spike)
+
+The two DECs are written (the status is draft; the owner accepts them in the review of the pull request): DEC b6e8808f-86b4-41a4-92f2-33d38869beed (The DSL Is the Source and the JSON Is Generated) and DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (The Model Conventions; it partly supersedes DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73, and the Updates section of that DEC names it). The tool decision (the owner D1, verified): the container `structurizr/structurizr` (the tag `2026.10.26-noble`, the digest `sha256:1081d615e7a539aee8b8360e36a58f42ff6412dd8f0e1b053134cb2c76ab2303`, pinned in `tools/versions.env` as `STRUCTURIZR_IMAGE` and `STRUCTURIZR_IMAGE_DIGEST`) makes the JSON from the DSL with the command `export -f json`; the Java library `structurizr-dsl` 6.2.4 is the confirmed fallback (not needed); the Structurizr MCP cannot make the JSON (the verified limit: its tools are parse, validate, inspect, and the export to PlantUML, Mermaid and C4-PlantUML). The spike verdict: the rules are built from the JSON of the model in both languages (the forbidden pairs derived from the workspace; the green case and the red case with the violation named by the tool). The limits per language (in the conventions DEC and in the RSK): Java - a component with several packages is supported (`resideInAnyPackage`), a reference by type only is visible (the probe: the interface `StatusApi`), a dependency by reflection or injection is not visible; Node - a unit with several folders is supported only with a pattern of the type RegExp (a text glob of the form `(a|b)` is not supported), a type-only import is visible, a dynamic import is invisible; a defect of `compare.mjs` - the header says that a dynamic import stops the script, but with the pinned typescript 5.9.3 the construct `import()` is silently ignored (the fix is Task 130.130). RSK 025202ba-e4a7-4f6b-a65b-92f945b6f321 is updated (the mitigation is confirmed for each category of rule that the model gives; the status stays open; the assessment is not changed). The gates `just validate`, `just traceability`, `just check-pins`, `just check-sudo`, `just check-workflows` and `just commit-check` pass at the end of the phase.
+
 #### 2026-11-16 16:40:00.000Z - Plan written
 
 The feature is created from the planning session of 2026-11-16 (issue #50). The design, the decisions and the phase structure are in the session transcript on the feat-50 branch. The feature depends on feat-9-walking-skeleton for the product components.
@@ -213,6 +217,14 @@ The feature is created from the planning session of 2026-11-16 (issue #50). The 
 ### Decisions Made
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 12:10:00.000Z - The tool of the DSL-to-JSON generation (verified, the fallback confirmed)
+
+The container `structurizr/structurizr` (the tag `2026.10.26-noble`, the digest `sha256:1081d615e7a539aee8b8360e36a58f42ff6412dd8f0e1b053134cb2c76ab2303`) is the tool that makes the JSON of the model from the DSL (the owner decision D1, verified in Phase 100: the output has the shape of the writer, two runs make no change, the properties and the views come through, the command `validate` stops for a DSL that does not parse). The pin is in `tools/versions.env` (the keys `STRUCTURIZR_IMAGE` and `STRUCTURIZR_IMAGE_DIGEST`). The Java library `structurizr-dsl` 6.2.4 is the confirmed fallback (the owner decision of 2026-11-17), and it is not needed at this time. What is open: the DSL of the project (Phase 110) must set `!impliedRelationships false`, because the parser of the DSL adds implied relations by default (the verified result is in the DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+
+#### 2026-11-17 12:10:00.000Z - The forms of the model conventions are fixed
+
+The DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (The Model Conventions) fixes the form of the value of each property: the mapping `code.*` (the list of packages or paths that the character comma separates, a space after the comma is allowed), the exceptions `code.allowedExternal` and `code.ignore`, the arrow direction (the direction of the dependency of the code), the viewpoint `rw.viewpoint` (the seven values), the native perspectives (documentation only), and the references `specmgr-refs` (the form `TYPE UUID; TYPE UUID`, the text `; ` separates the entries, exactly one space after the semicolon). What is open: the owner accepts the DEC in the review of the pull request; the components of feat-9-walking-skeleton take the mapping when that feature merges (Phase 120, deferred by the owner decision of 2026-11-17).
 
 #### 2026-11-16 16:40:00.000Z - The views of the demo
 
