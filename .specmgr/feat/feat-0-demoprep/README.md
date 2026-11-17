@@ -137,7 +137,7 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 
 ### Current Status
 
-**As of 2026-11-17**: All phases (100 to 170) are done and all acceptance criteria are met. `PRESENTATION.pdf` has 10 slides (one backup slide for the two Playwright tests). Nothing is pushed.
+**As of 2026-11-17**: All phases (100 to 170) are done and all acceptance criteria are met. `PRESENTATION.pdf` has 10 slides (one backup slide for the two Playwright tests). The branch `feat-0-demoprep` is pushed to `origin` (see the entry of the push in the Updates).
 
 ### Blockers
 
@@ -146,6 +146,17 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 09:15:00.000Z - Prompts in DEMO.md, push, notes for another system
+
+`DEMO.md` has the section "The prompts for the two Playwright tests" (the prompts were not run word for word). The branch `feat-0-demoprep` is pushed to `origin`. Its history contains the feat-9 commits up to `8f11e3e`, because the branch was cut from there.
+
+To continue on another system:
+- `git fetch origin && git worktree add <folder> feat-0-demoprep` (or `git switch feat-0-demoprep`). Read `DEMO.md` first.
+- The folder `build/` is not in git. The first run of `bin/130-100-00-run-demo.sh` makes the copy in `build/work` and installs the frontend dependencies (needs the network, `pnpm`, JDK 21, `rsync`).
+- The Playwright tests need the Chromium of Playwright in `~/.cache/ms-playwright`. If it is missing, install it with `build/work/frontend/node_modules/.bin/playwright install chromium` (not tried on a clean system). Docker is needed for the Structurizr steps (the images are pulled at the first run), and `npx` plus the network for the PDF.
+- Open point: the prompt file `bin/170-110-00-agent-prompt.md` says "do not start or stop a server", and the wrapper prompt in `DEMO.md` tells the agent to stop the demo. The two texts do not agree.
+- Open point: `just license-check` stopped on the last four runs in the earlier session (see the handover below). Do not run it live.
 
 #### 2026-11-17 08:45:00.000Z - Phase 170: the Playwright tests
 

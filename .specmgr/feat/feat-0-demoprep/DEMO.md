@@ -39,6 +39,55 @@ Order for the talk: 1, 2, 3, then 4, then 5, then 8 and 9, then 10, then 3 to st
 
 The two tests of 14 and 15 are on the backup slide of the presentation. Show 14 if there is time (about 10 seconds), and 15 only with the Playwright MCP enabled in the session.
 
+### The prompts for the two Playwright tests
+
+Start the agent in the root of the work tree (`/home/user/src/biz.dfch.SpecMgrDemo.worktree/feat-0`). The prompts below were not run word for word. The steps behind them ran once (see the Updates of `README.md`).
+
+**Interactive: the agent with the Playwright MCP (step 15).** Start the demo before the talk, so the Maven compile does not use time on stage:
+
+```bash
+$F/bin/130-100-00-run-demo.sh
+```
+
+Prompt for the agent (the demo is running):
+
+```text
+Read .specmgr/feat/feat-0-demoprep/bin/170-110-00-agent-prompt.md and do exactly what the section "The prompt" says, with the Playwright MCP tools. The demo is already running. Your final answer must be exactly the two result lines of step 5, and nothing else. After that, stop the demo with .specmgr/feat/feat-0-demoprep/bin/130-110-00-stop-demo.sh and delete the folder .playwright-mcp/.
+```
+
+Prompt for the agent (the demo is not running): add this sentence at the start: `First start the demo with .specmgr/feat/feat-0-demoprep/bin/130-100-00-run-demo.sh.`
+
+Expected answer:
+
+```text
+Version on the page: 0.1.0 (commit <sha of HEAD>)
+PASS
+```
+
+In the one run in the session of the author, the agent gave the values in its own words and not the two exact lines. The sentence "must be exactly the two result lines" in the prompt above is there to prevent that. It is not tested yet.
+
+**Non-interactive: the head-less test (step 14).** No agent is needed. Run the script in a terminal (about 10 seconds, it starts and stops the demo itself):
+
+```bash
+$F/bin/170-100-00-playwright-headless.sh; echo "exit=$?"
+```
+
+Expected: `Version on the page: 0.1.0 (commit <sha>)`, `Version of GET /info: ...`, `PASS ...` and `exit=0`.
+
+Prompt for an agent that runs the script:
+
+```text
+Run .specmgr/feat/feat-0-demoprep/bin/170-100-00-playwright-headless.sh with bash. Do not change any file. Show me the output and the exit code.
+```
+
+With the `opencode run` command, the agent starts from the shell without the interface (not checked on this version of OpenCode):
+
+```bash
+opencode run "Run .specmgr/feat/feat-0-demoprep/bin/170-100-00-playwright-headless.sh with bash. Do not change any file. Show me the output and the exit code."
+```
+
+To show a failure: the test fails (exit code 1) if `/info` gives another version than the page. There is no script for this. The option `--fail` of the demo does not work for it, because it changes only `GET /status`. The agent run does not stop the demo itself, so run `$F/bin/130-110-00-stop-demo.sh` if the agent did not.
+
 ### Notes and fallbacks
 
 - **Ports.** The ports are 8180 (backend), 5273 (frontend), 8091 and 8092. They are not the usual 8080 and 5173, because port 8080 is in use on the machine of the author. Change them with the environment variables `BACKEND_PORT`, `FRONTEND_PORT`, `API_DOCS_PORT` and `MODEL_SITE_PORT`.
