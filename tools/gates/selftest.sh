@@ -418,6 +418,8 @@ wf_case e2ejava 1 "job 'test-e2e' lacks the required action(s) actions/setup-jav
     "$(job_range test-e2e test-e2e){/actions\/setup-java@/,/java-version:/d}"
 wf_case e2eupload 1 "job 'test-e2e' has the action(s) actions/upload-artifact, which are not in required-setup.txt" "test-e2e: an extra action (the upload of an artifact, the reports are console reports)" \
     's|^      - run: just test-e2e$|      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2\n        with:\n          name: x\n          path: build/\n&|'
+wf_case secretuv 1 "job 'secret-scan' lacks the required action(s) astral-sh/setup-uv" "secret-scan: setup-uv removed (only in this job; the level gate of the three security recipes runs in a Python environment that uv makes, feat-9-walking-skeleton, Phase 500)" \
+    "$(job_range secret-scan secret-scan){/astral-sh\/setup-uv@/,/version: \"0.13.7\"/d}"
 wf_case amupload 1 "job 'architecture-model' has the action(s) actions/upload-artifact, which are not in required-setup.txt" "architecture-model: an extra action (the upload of an artifact, the reports are console reports)" \
     's|^      - run: just architecture-model$|      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2\n        with:\n          name: x\n          path: build/\n&|'
 # an if where the gate does not allow it (the only if is for the SBOM upload of license-check). The
@@ -530,6 +532,7 @@ pin_case nutbjava 1 "\`java-version\` is 21," "test-unit-backend job: the Java v
 pin_case nutfnode 1 "\`node-version\` is 24.0.0" "test-unit-frontend job: the Node version is not the one of versions.env" "$(job_range test-unit-frontend test-unit-frontend)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
 pin_case e2enode 1 "\`node-version\` is 24.0.0" "test-e2e job: the Node version is not the one of versions.env" "$(job_range test-e2e test-e2e)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
 pin_case e2ejava 1 "\`java-version\` is 21," "test-e2e job: the Java version is not the one of versions.env" "$(job_range test-e2e test-e2e)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
+pin_case secretuvver 1 "UV_VERSION in tools/versions.env" "secret-scan job: the uv version is not the one of versions.env (the job has setup-uv since feat-9-walking-skeleton, Phase 500)" "$(job_range secret-scan secret-scan)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
 pin_case mfpnpm 1 "PNPM_VERSION in tools/versions.env" "mutation-frontend job: the pnpm version is not the one of versions.env" "$(job_range mutation-frontend mutation-frontend)s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
 pin_case amuvver 1 "UV_VERSION in tools/versions.env" "architecture-model job: the uv version is not the one of versions.env" "$(job_range architecture-model architecture-model)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
 pin_case mbjustmiss 1 "has no input \`just-version\`" "mutation-backend job: the just version is missing" "$(job_range mutation-backend mutation-backend){/just-version:/d}"

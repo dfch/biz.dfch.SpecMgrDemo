@@ -99,6 +99,25 @@ make_python_env() {
         || die "uv did not install ${lock_name} from ${lock_file} (see the message of uv above)"
 }
 
+# make_python_bare_env
+#
+# Makes a temporary virtual environment with a Python of PYTHON_VERSION and NO package (feat-9-walking-skeleton,
+# Task 500.120): for a gate script of this folder that uses the standard library only, for example
+# security_threshold.py. Nothing is installed, so no lock file is needed. It sets GATE_ENV_DIR (the temporary folder) and
+# GATE_PYTHON (the Python of the environment), like make_python_env, and removes the folder when the script ends. The
+# caller that has its own trap on EXIT must remove "${GATE_ENV_DIR}" in that trap too (a trap that is set later replaces
+# this one).
+make_python_bare_env() {
+    local python_version
+    python_version="$(version_of PYTHON_VERSION)"
+    [[ "${python_version}" =~ ^3\.[0-9]+$ ]] || die "PYTHON_VERSION is not a minor version like 3.13: '${python_version}'"
+    require_cmd uv
+    GATE_ENV_DIR="$(mktemp -d)"
+    trap 'rm -rf "${GATE_ENV_DIR}"' EXIT
+    uv venv --quiet --python "${python_version}" "${GATE_ENV_DIR}/venv" || die "uv could not make a virtual environment with Python ${python_version}"
+    GATE_PYTHON="${GATE_ENV_DIR}/venv/bin/python"
+}
+
 # copy_work_tree <dest>
 #
 # Makes a temporary git repository in <dest> (feat-6-contracts-openapi-pipeline, Task 130.100): a copy of the files of this

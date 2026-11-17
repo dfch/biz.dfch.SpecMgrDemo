@@ -1,0 +1,23 @@
+# The baseline of zizmor (feat-9-walking-skeleton, Task 500.110, REQ-006). The state of the feature on 2026-11-17:
+# 11 findings, all of the severity Medium (the confidence is Low), all of the audit `artipacked`: a step of
+# `actions/checkout` in .github/workflows/ci.yml that does not set `persist-credentials: false`. 0 High.
+#
+# One line for each finding: the audit, the file, and the place in the file (the path of the keys and the indexes of the
+# YAML, so a change of the line numbers does not change the line): `<audit> <file> <place>`.
+#
+# The rules of the level gate (tools/security/README.md, tools/gates/security_threshold.py):
+#   - A finding that is not in this file stops the gate (a new finding).
+#   - A finding with the severity High stops the gate in each case. This file must have no line of this level.
+#   - A line of this file that has no finding any more is a warning: delete the line (the baseline gets smaller).
+# CODEOWNERS covers /tools/, so the owner reviews each change of this file.
+artipacked .github/workflows/ci.yml jobs/test-unit-backend/steps/0
+artipacked .github/workflows/ci.yml jobs/test-integration-backend/steps/0
+artipacked .github/workflows/ci.yml jobs/test-unit-frontend/steps/0
+artipacked .github/workflows/ci.yml jobs/test-e2e/steps/0
+artipacked .github/workflows/ci.yml jobs/test-random-backend/steps/0
+artipacked .github/workflows/ci.yml jobs/test-random-frontend/steps/0
+artipacked .github/workflows/ci.yml jobs/mutation-backend/steps/0
+artipacked .github/workflows/ci.yml jobs/mutation-frontend/steps/0
+artipacked .github/workflows/ci.yml jobs/architecture-backend/steps/0
+artipacked .github/workflows/ci.yml jobs/architecture-frontend/steps/0
+artipacked .github/workflows/ci.yml jobs/architecture-model/steps/0

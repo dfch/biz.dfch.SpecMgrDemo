@@ -1,0 +1,18 @@
+# The baseline of OSV-Scanner (feat-9-walking-skeleton, Task 500.110, REQ-006). The state of the feature on 2026-11-17:
+# 5 findings, all of the level Medium (CVSS 6.9 and 6.3), all in the frontend (npm). 0 Critical, 0 High.
+#
+# One line for each finding: the OSV identifier, a space, and the package with its version (<name>@<version>).
+# The file has the identifiers and the counts only: no advisory text and no copy of a record (the condition of the
+# deviation of the OSV data, DEC 93a6d588-e002-4daf-9a47-45e2d77786e9).
+#
+# The rules of the level gate (tools/security/README.md, tools/gates/security_threshold.py):
+#   - A finding that is not in this file stops the gate (a new finding).
+#   - A finding that is Critical or High stops the gate in each case. This file must have no line of these levels.
+#   - A line of this file that has no finding any more is a warning: delete the line (the baseline gets smaller).
+#   - A new version of the package is another line: the finding of the old version is no finding any more.
+# CODEOWNERS covers /tools/, so the owner reviews each change of this file.
+GHSA-g3hv-75wg-m249 minimatch@10.2.6
+GHSA-4mjr-xmp4-gh2g qs@6.15.1
+GHSA-6pq8-jhm2-2vcw qs@6.15.1
+GHSA-q8mj-m7cp-5q26 qs@6.15.1
+GHSA-x5fp-wj9c-mxmx qs@6.15.1

@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
-# feat-8-traceability-security-gates, Task 120.120 (REQ-004, REQ-005, ACC-005, ACC-006)
+# feat-8-traceability-security-gates, Task 120.120 (REQ-004, REQ-005, ACC-005, ACC-006), and
+# feat-9-walking-skeleton, Task 500.120 (REQ-006, ACC-007: the level gate)
 #
 # Gate 9, part 2 (DEC 361678a6-f941-473b-a058-1ba2bacf7d3d): secrets in the files and in the history of the pull
-# request, with gitleaks. It is a REPORT with no threshold: a finding does not stop the gate.
+# request, with gitleaks. Since feat-9 it is a BLOCKING gate: a finding that is not in the baseline file stops (gitleaks
+# gives no severity, so the level of each finding is Unrated, and the baseline is the only rule; see the text at the top
+# of security_threshold.py), and a line of the baseline that has no finding any more is a warning.
 #
-# Usage: secret-scan.sh <base> <config>
-#   <base>    the branch that the pull request goes to, for example origin/dev (the variable `base` of the
-#             `justfile`; see "The base of the comparison" in tools/gates/README.md)
-#   <config>  the gitleaks configuration with the allowlist, for example tools/security/gitleaks.toml. The path is
-#             relative to the repository (GATE_WORK_ROOT in the tests). CODEOWNERS covers the folder tools/.
+# Usage: secret-scan.sh <base> <config> <baseline file>
+#   <base>           the branch that the pull request goes to, for example origin/dev (the variable `base` of the
+#                    `justfile`; see "The base of the comparison" in tools/gates/README.md)
+#   <config>         the gitleaks configuration with the allowlist, for example tools/security/gitleaks.toml. The path is
+#                    relative to the repository (GATE_WORK_ROOT in the tests). CODEOWNERS covers the folder tools/.
+#   <baseline file>  tools/security/gitleaks-baseline.txt: one line for each finding of the state of the feature, the
+#                    fingerprint of gitleaks (`<file>:<rule>:<line>` for the files, `<commit>:<file>:<rule>:<line>` for the
+#                    history). The file must exist, also if it has no line (the state of the feature: no finding). The
+#                    path is relative to the repository like <config>.
 #
 # What the script does (two scans, and the script runs both before it decides):
 #   1. The FILES. It copies the files that git knows or that .gitignore does not ignore (`git ls-files --cached
@@ -32,6 +39,11 @@
 #     --gitleaks-ignore-path <empty>   a file `.gitleaksignore` does not hide a finding
 #   So the allowlist in the config (covered by CODEOWNERS) is the one place that hides a finding.
 #
+# Each scan writes its report as JSON (`--report-format json --report-path`, in a temporary folder, not in the
+# repository). After both scans, the level gate reads the fingerprints of both reports and the baseline file
+# (security_level_gate in _security.sh). The report in the log is the verbose output of gitleaks (redacted) and the
+# findings with the state (baseline or NEW) of the level gate.
+#
 # The script separates a finding from a failure of the tool (run_security_tool in _security.sh). The exit code of
 # gitleaks for "leaks found" is set with --exit-code 2 (the default is 1, which is also the code of a fatal error, so the
 # default cannot separate the two):
@@ -42,21 +54,23 @@
 #   One case has the exit code 0 and is a failure: git cannot read the range, and gitleaks logs an ERR line. The
 #   script treats an output with an ERR or FTL line as a failure.
 #
-# Exit codes: 0 the report is done (with or without a finding); 1 a failure of the tool, a base that does not exist,
-# a shallow clone with no merge base, a config that does not exist, or a download with another checksum. The script does
-# not change the repository. gitleaks goes to build/tools/ (it is in .gitignore).
+# Exit codes: 0 the gate passes (no finding that is not in the baseline); 1 a new finding, a failure of the tool, a base
+# that does not exist, a shallow clone with no merge base, a config or a baseline file that does not exist, or a download
+# with another checksum. The script does not change the repository. gitleaks goes to build/tools/ (it is in .gitignore).
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_security.sh"
 
-[[ $# -eq 2 ]] || die "Usage: secret-scan.sh <base> <config>"
+[[ $# -eq 3 ]] || die "Usage: secret-scan.sh <base> <config> <baseline file>"
 base="$1"
 config="$2"
+baseline="$3"
 
 require_cmd git
 require_cmd tar
 cd "${WORK_ROOT}"
 [[ -f "${config}" ]] || die "The gitleaks config does not exist: ${config}"
+[[ -f "${baseline}" ]] || die "The baseline file does not exist: ${baseline}. The file must exist (it can have no line). The gate does not pass without it."
 git rev-parse --verify --quiet "${base}^{commit}" >/dev/null \
     || die "The base '${base}' does not exist. In CI, actions/checkout needs fetch-depth: 0."
 if ! merge_base="$(git merge-base "${base}" HEAD)"; then
@@ -68,9 +82,11 @@ fi
 log "Base: ${base}, merge base: ${merge_base}"
 
 install_gitleaks
+make_python_bare_env
 
 work="$(mktemp -d)"
-trap 'rm -rf "${work}"' EXIT
+# The trap of make_python_bare_env is replaced here, so it removes the environment too.
+trap 'rm -rf "${work}" "${GATE_ENV_DIR}"' EXIT
 mkdir -p "${work}/files" "${work}/no-ignore-file"
 config_abs="$(cd "$(dirname "${config}")" && pwd)/$(basename "${config}")"
 
@@ -83,23 +99,30 @@ done | tar --null -T - -cf - | tar -C "${work}/files" -xf -
 
 git_dir="$(git rev-parse --absolute-git-dir)"
 common=(--config "${config_abs}" --exit-code 2 --redact --no-banner --no-color --ignore-gitleaks-allow
-    --gitleaks-ignore-path "${work}/no-ignore-file" --verbose)
+    --gitleaks-ignore-path "${work}/no-ignore-file" --verbose --report-format json)
 status=0
 
-log "gitleaks $(version_of GITLEAKS_VERSION): the files (a copy of the files of git), no threshold"
-scan_files() { (cd "${work}/files" && "${GITLEAKS_BIN}" dir . "${common[@]}"); }
+# A clean run writes the report `[]` (checked for the pinned release). If the file is not there for a run with no
+# finding, it is the same: no finding. A run with a finding and no readable report is a failure of the level gate.
+ensure_report() { [[ -e "$1" ]] || echo '[]' >"$1"; }
+
+log "gitleaks $(version_of GITLEAKS_VERSION): the files (a copy of the files of git), level gate with the baseline ${baseline}"
+scan_files() { (cd "${work}/files" && "${GITLEAKS_BIN}" dir . "${common[@]}" --report-path "${work}/files.json"); }
 run_security_tool "gitleaks (files)" "2" "leaks found" '(^|[[:space:]])(ERR|FTL)[[:space:]]' -- scan_files || status=1
 files_result="${SECURITY_RESULT}"
 files_count="$(grep -Eo 'leaks found: [0-9]+' <<<"${SECURITY_OUTPUT}" | head -n 1 | grep -Eo '[0-9]+' || true)"
+[[ "${files_result}" == "clean" ]] && ensure_report "${work}/files.json"
 
-log "gitleaks $(version_of GITLEAKS_VERSION): the history ${base}..HEAD, no threshold"
+log "gitleaks $(version_of GITLEAKS_VERSION): the history ${base}..HEAD, level gate with the baseline ${baseline}"
 run_security_tool "gitleaks (history)" "2" "leaks found" '(^|[[:space:]])(ERR|FTL)[[:space:]]' -- \
-    "${GITLEAKS_BIN}" git "${git_dir}" "${common[@]}" --log-opts="${base}..HEAD" || status=1
+    "${GITLEAKS_BIN}" git "${git_dir}" "${common[@]}" --report-path "${work}/history.json" --log-opts="${base}..HEAD" || status=1
 history_result="${SECURITY_RESULT}"
 history_count="$(grep -Eo 'leaks found: [0-9]+' <<<"${SECURITY_OUTPUT}" | head -n 1 | grep -Eo '[0-9]+' || true)"
+[[ "${history_result}" == "clean" ]] && ensure_report "${work}/history.json"
 
 if [[ "${files_result}" == "failure" || "${history_result}" == "failure" ]]; then
     exit 1
 fi
 log "REPORT: files: ${files_count:-0} finding(s); history ${base}..HEAD: ${history_count:-0} finding(s). The secrets are redacted in the report."
+security_level_gate "gitleaks" gitleaks "${baseline}" "${work}/files.json" "${work}/history.json" || status=1
 exit "${status}"

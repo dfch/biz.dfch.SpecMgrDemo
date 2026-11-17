@@ -1,0 +1,14 @@
+# A fixture of test-security-gates.sh (feat-9-walking-skeleton, Task 500.120): a workflow that zizmor reports ONE finding
+# of the severity Medium for (the audit artipacked: the step of actions/checkout does not set persist-credentials: false).
+# It is the case of a finding that the baseline can have (it is not Critical or High). It is not a workflow of this
+# repository: it is not in .github/workflows, so GitHub never runs it.
+name: medium problem
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  medium:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+      - run: echo "no expression in this step"

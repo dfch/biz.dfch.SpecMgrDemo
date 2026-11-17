@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # feat-8-traceability-security-gates, Tasks 120.100 to 120.130 (REQ-004, REQ-005, ACC-005, ACC-006)
 #
-# Test of the three security recipes (vuln-scan.sh, secret-scan.sh, workflow-scan.sh) and of the function that
-# separates a finding from a failure of the tool (security_classify and run_security_tool in _security.sh).
+# Test of the three security recipes (vuln-scan.sh, secret-scan.sh, workflow-scan.sh), of the function that
+# separates a finding from a failure of the tool (security_classify and run_security_tool in _security.sh) and of the
+# level gate with the baseline files (security_level_gate in _security.sh, security_threshold.py).
 #
 # Usage: test-security-gates.sh
 #
-# ACC-005: each security recipe ends with exit code 0 for a finding and with an exit code that is not 0 for a failure of
-# the tool. This test shows the two cases for each tool:
+# feat-8 ACC-005: each security recipe ends with an exit code that is not 0 for a failure of the tool, and a finding
+# does not look like a failure. Since feat-9-walking-skeleton (Task 500.120, ACC-007) the recipes are blocking gates with
+# a level gate: exit code 0 for no finding and for a finding of the baseline (an old line of the baseline is a warning),
+# and exit code 1 for a new finding, for a finding that is Critical or High (also if the baseline has a line for it:
+# that is an error of the feature), and for the failure of the tool. This test shows each case for each tool:
 #
 #   Part 1  the function: the table of exit codes of the three tools (OSV-Scanner, gitleaks, zizmor), a value that is no
 #           number, a signal, the finding marker and the failure marker of run_security_tool.
@@ -28,6 +32,13 @@
 #           that does not exist.
 #   Part 5  the form of the scripts and of the recipes (the options that the plan and the deviation DEC need, the
 #           recipes in the justfile, the allowlist of gitleaks, CODEOWNERS).
+#   Part 6  the level gate itself (security_threshold.py with the report files of the three tools, made while the test
+#           runs): the levels (CVSS score, label, zizmor severity, gitleaks has none), the new finding, the finding that
+#           is Critical or High (also with a line in the baseline), the old line, the finding of the baseline that
+#           passes, and each input that cannot be used (a missing or wrong baseline, a wrong report). The real files
+#           tools/security/*-baseline.txt are examined too (the form, no line twice, no level that is not allowed).
+#           In parts 2, 3 and 4 the recipes show the same cases with a stub of the tool (OSV-Scanner, gitleaks) and with
+#           the real tools (gitleaks, zizmor).
 #
 # The install of the cache is verified again (no marker file): a cache with a changed binary (OSV-Scanner), or with a
 # changed or missing archive (gitleaks), is not started and is replaced by a new download, or the install stops. A real
@@ -49,8 +60,10 @@ require_cmd sha256sum
 
 fixtures="${GATES_DIR}/fixtures/security"
 real_config="${REPO_ROOT}/tools/security/gitleaks.toml"
+real_gl_baseline="${REPO_ROOT}/tools/security/gitleaks-baseline.txt"
 [[ -d "${fixtures}" ]] || die "No folder ${fixtures}"
 [[ -f "${real_config}" ]] || die "No file ${real_config}"
+[[ -f "${real_gl_baseline}" ]] || die "No file ${real_gl_baseline}"
 
 work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
@@ -249,6 +262,18 @@ fi
 [[ -n "\${STUB_STARTED_FILE:-}" ]] && echo "started" >>"\${STUB_STARTED_FILE}"
 [[ -n "\${STUB_ARGS_FILE:-}" ]] && printf '%s\n' "\$@" >"\${STUB_ARGS_FILE}"
 [[ -n "\${STUB_OUTPUT:-}" ]] && printf '%s\n' "\${STUB_OUTPUT}"
+# The report of the tool (JSON): the file STUB_REPORT_<FIRST ARGUMENT> (STUB_REPORT_SCAN for OSV-Scanner, STUB_REPORT_DIR
+# and STUB_REPORT_GIT for the two scans of gitleaks) or STUB_REPORT_FILE is copied to the path of the option --output-file
+# (OSV-Scanner) or --report-path (gitleaks). With no such variable the tool writes no report.
+prev=""
+for arg in "\$@"; do
+    if [[ "\${prev}" == "--output-file" || "\${prev}" == "--report-path" ]]; then
+        report_variable="STUB_REPORT_\${1^^}"
+        report_source="\${!report_variable:-\${STUB_REPORT_FILE:-}}"
+        [[ -n "\${report_source}" ]] && cp "\${report_source}" "\${arg}"
+    fi
+    prev="\${arg}"
+done
 exit "\${STUB_EXIT:-0}"
 STUB
 }
@@ -283,31 +308,128 @@ echo "not an sbom file" >"${sbom}/notes.txt"
 echo '{}' >"${sbom}/other.json"
 args_file="${work}/osv-args.txt"
 
-run_vuln() { env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" "$@" "${GATES_DIR}/vuln-scan.sh" "${sbom}"; }
+# The baseline files and the report files of the cases are made while the test runs (the repository has no copy of a
+# record: the reports have an identifier, a package and a score only).
+bl_dir="${work}/baselines"
+mkdir -p "${bl_dir}"
+# mk_baseline <name> [<line>...] : a baseline file with a comment and the lines (the file is printed)
+mk_baseline() {
+    local file="${bl_dir}/$1.txt"
+    shift
+    printf '# the baseline of a case of test-security-gates.sh\n' >"${file}"
+    [[ $# -eq 0 ]] || printf '%s\n' "$@" >>"${file}"
+    echo "${file}"
+}
+# osv_pkg <id> <name> <version> <score> [<label>] : one package of a report of OSV-Scanner (JSON) with one finding
+osv_pkg() {
+    local label_json=""
+    [[ -n "${5:-}" ]] && label_json=",\"database_specific\":{\"severity\":\"$5\"}"
+    printf '{"package":{"name":"%s","version":"%s","ecosystem":"npm"},"groups":[{"ids":["%s"],"aliases":["%s"],"max_severity":"%s"}],"vulnerabilities":[{"id":"%s"%s}]}' \
+        "$2" "$3" "$1" "$1" "$4" "$1" "${label_json}"
+}
+# osv_report <file> [<package JSON>...] : the report of OSV-Scanner (the file is printed)
+osv_report() {
+    local file="$1" joined
+    shift
+    joined="$(IFS=,; echo "$*")"
+    printf '{"results":[{"source":{"path":"build/sbom/frontend.cdx.json","type":"sbom"},"packages":[%s]}]}\n' "${joined}" >"${file}"
+    echo "${file}"
+}
+osv_empty="$(osv_report "${work}/osv-report-empty.json")"
+osv_medium="$(osv_report "${work}/osv-report-medium.json" "$(osv_pkg GHSA-4mjr-xmp4-gh2g qs 6.15.1 6.3)")"
+osv_two="$(osv_report "${work}/osv-report-two.json" "$(osv_pkg GHSA-4mjr-xmp4-gh2g qs 6.15.1 6.3)" "$(osv_pkg GHSA-g3hv-75wg-m249 minimatch 10.2.6 6.9)")"
+osv_critical="$(osv_report "${work}/osv-report-critical.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc spring-web 9.9.9 9.8)")"
+osv_high="$(osv_report "${work}/osv-report-high.json" "$(osv_pkg GHSA-dddd-eeee-ffff left-pad 1.0.0 7.5)")"
+osv_label_only="$(osv_report "${work}/osv-report-label.json" "$(osv_pkg GHSA-gggg-hhhh-iiii left-pad 1.0.0 "" CRITICAL)")"
+osv_unknown="$(osv_report "${work}/osv-report-unknown.json" "$(osv_pkg GHSA-jjjj-kkkk-llll left-pad 1.0.0 "")")"
+bl_empty="$(mk_baseline osv-empty)"
+bl_qs="$(mk_baseline osv-qs "GHSA-4mjr-xmp4-gh2g qs@6.15.1")"
+bl_qs_minimatch="$(mk_baseline osv-qs-minimatch "GHSA-4mjr-xmp4-gh2g qs@6.15.1" "GHSA-g3hv-75wg-m249 minimatch@10.2.6")"
 
-expect 0 "OSV-Scanner: no finding (exit code 0)" "vuln-scan: the stub has no finding, exit code 0" \
-    run_vuln STUB_EXIT=0 STUB_OUTPUT="No issues found"
-expect 0 "REPORT: Total 2 packages affected by 5 known vulnerabilities" "vuln-scan: the stub has findings (exit code 1), the recipe ends with exit code 0 and prints the summary (ACC-005)" \
-    run_vuln STUB_EXIT=1 STUB_OUTPUT="Total 2 packages affected by 5 known vulnerabilities (0 Critical, 0 High, 5 Medium, 0 Low, 0 Unknown) from 1 ecosystem."
-expect 0 "FINDINGS (exit code 1)" "vuln-scan: a finding says that the gate does not stop (no threshold)" \
-    run_vuln STUB_EXIT=1 STUB_OUTPUT="Total 1 package affected by 1 known vulnerability (0 Critical, 0 High, 1 Medium, 0 Low, 0 Unknown) from 1 ecosystem."
-expect 0 "Data: OSV.dev (https://osv.dev)" "vuln-scan: the attribution of the OSV data is in the output (the condition of the deviation)" \
-    run_vuln STUB_EXIT=1 STUB_OUTPUT="Total 1 package affected by 1 known vulnerability"
-expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 127" "vuln-scan: exit code 127 (general error, for example no network) of the tool stops the recipe (ACC-005)" \
-    run_vuln STUB_EXIT=127 STUB_OUTPUT="Error during extraction: max retries exceeded"
+# run_vuln <baseline file> <report file or "-"> [<env VAR=value>...] : the recipe form with the stub of OSV-Scanner. The
+# report is the file that the stub writes for the option --output-file ("-": the stub writes no report).
+run_vuln() {
+    local baseline="$1" report="$2"
+    shift 2
+    local report_env=()
+    [[ "${report}" == "-" ]] || report_env=(STUB_REPORT_FILE="${report}")
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" "${report_env[@]}" "$@" \
+        "${GATES_DIR}/vuln-scan.sh" "${sbom}" "${baseline}"
+}
+
+# ACC-007, the cases of the level gate (the stub of OSV-Scanner gives the exit code and the report of each case)
+expect 0 "THRESHOLD PASS" "vuln-scan: the stub has no finding (exit code 0, the empty baseline): the gate passes" \
+    run_vuln "${bl_empty}" "${osv_empty}" STUB_EXIT=0 STUB_OUTPUT="No issues found"
+expect 0 "THRESHOLD PASS" "vuln-scan: a finding that is in the baseline (Medium, exit code 1 of the tool): the gate passes with exit code 0 (ACC-007)" \
+    run_vuln "${bl_qs}" "${osv_medium}" STUB_EXIT=1
+expect 0 "Medium        baseline GHSA-4mjr-xmp4-gh2g qs@6.15.1 (CVSS 6.3)" "vuln-scan: the report shows the level, the identifier, the package and the state of the finding" \
+    run_vuln "${bl_qs}" "${osv_medium}" STUB_EXIT=1
+expect 0 "SUMMARY: OSV-Scanner: 2 finding(s) (0 Critical, 0 High, 2 Medium, 0 Low, 0 Informational, 0 Unknown); baseline osv-qs-minimatch.txt: 2 line(s)" "vuln-scan: the summary has the counts of the levels and of the lines of the baseline" \
+    run_vuln "${bl_qs_minimatch}" "${osv_two}" STUB_EXIT=1
+expect 1 "THRESHOLD STOP" "vuln-scan: a new finding (it is not in the baseline) stops the gate with exit code 1 (ACC-007)" \
+    run_vuln "${bl_empty}" "${osv_medium}" STUB_EXIT=1
+expect 1 "STOP: a new finding that is not in the baseline (Medium): GHSA-4mjr-xmp4-gh2g qs@6.15.1" "vuln-scan: the message names the new finding (the identifier and the package)" \
+    run_vuln "${bl_empty}" "${osv_medium}" STUB_EXIT=1
+expect 1 "STOP: a new finding that is not in the baseline (Medium): GHSA-g3hv-75wg-m249 minimatch@10.2.6" "vuln-scan: one new finding of two stops (the finding of the baseline does not hide it)" \
+    run_vuln "${bl_qs}" "${osv_two}" STUB_EXIT=1
+expect 1 "STOP: a finding that is Critical stops in each case: GHSA-aaaa-bbbb-cccc spring-web@9.9.9 (CVSS 9.8)" "vuln-scan: a new finding that is Critical (CVSS 9.8) stops the gate (ACC-007)" \
+    run_vuln "${bl_empty}" "${osv_critical}" STUB_EXIT=1
+expect 1 "STOP: a finding that is High stops in each case: GHSA-dddd-eeee-ffff left-pad@1.0.0 (CVSS 7.5)" "vuln-scan: a new finding that is High (CVSS 7.5) stops the gate (ACC-007)" \
+    run_vuln "${bl_empty}" "${osv_high}" STUB_EXIT=1
+expect 1 "ERROR OF THE FEATURE: the baseline has a line for a finding that is Critical" "vuln-scan: a Critical finding that has a line in the baseline stops the gate, and the message says that the baseline is wrong (ACC-007)" \
+    run_vuln "$(mk_baseline osv-critical-line "GHSA-aaaa-bbbb-cccc spring-web@9.9.9")" "${osv_critical}" STUB_EXIT=1
+expect 1 "ERROR OF THE FEATURE: the baseline has a line for a finding that is High" "vuln-scan: a High finding that has a line in the baseline stops the gate, and the message says that the baseline is wrong (ACC-007)" \
+    run_vuln "$(mk_baseline osv-high-line "GHSA-dddd-eeee-ffff left-pad@1.0.0")" "${osv_high}" STUB_EXIT=1
+expect 1 "GHSA-gggg-hhhh-iiii left-pad@1.0.0 (no score)" "vuln-scan: a record with no score and the label CRITICAL is Critical (the label of the database is used) and stops the gate" \
+    run_vuln "$(mk_baseline osv-label-line "GHSA-gggg-hhhh-iiii left-pad@1.0.0")" "${osv_label_only}" STUB_EXIT=1
+expect 0 "THRESHOLD PASS" "vuln-scan: a finding with no score and no label (Unknown) that is in the baseline passes (it is no stop by its level)" \
+    run_vuln "$(mk_baseline osv-unknown-line "GHSA-jjjj-kkkk-llll left-pad@1.0.0")" "${osv_unknown}" STUB_EXIT=1
+expect 1 "STOP: a new finding that is not in the baseline (Unknown)" "vuln-scan: a new finding with no score and no label (Unknown) stops the gate as a new finding" \
+    run_vuln "${bl_empty}" "${osv_unknown}" STUB_EXIT=1
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: GHSA-g3hv-75wg-m249 minimatch@10.2.6" "vuln-scan: a line of the baseline that has no finding any more is a warning, and the gate passes with exit code 0 (ACC-007, the old line)" \
+    run_vuln "${bl_qs_minimatch}" "${osv_medium}" STUB_EXIT=1
+expect 0 "1 old baseline line(s)" "vuln-scan: the result counts the old lines" \
+    run_vuln "${bl_qs_minimatch}" "${osv_medium}" STUB_EXIT=1
+expect 0 "WARNING: the baseline line has no finding any more" "vuln-scan: the old line is a warning also if the tool has no finding at all (exit code 0)" \
+    run_vuln "${bl_qs}" "${osv_empty}" STUB_EXIT=0
+expect 1 "THRESHOLD STOP" "vuln-scan: an old line and a new finding: the new finding stops the gate (the old line is only a warning)" \
+    run_vuln "${bl_qs}" "${osv_high}" STUB_EXIT=1
+expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 127" "vuln-scan: exit code 127 (general error, for example no network) of the tool stops the recipe, with a baseline that matches (ACC-005, ACC-007)" \
+    run_vuln "${bl_qs}" "${osv_medium}" STUB_EXIT=127 STUB_OUTPUT="Error during extraction: max retries exceeded"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 128" "vuln-scan: exit code 128 (no packages found) stops the recipe" \
-    run_vuln STUB_EXIT=128 STUB_OUTPUT="No package sources found"
+    run_vuln "${bl_empty}" "${osv_empty}" STUB_EXIT=128 STUB_OUTPUT="No package sources found"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 2" "vuln-scan: another code stops the recipe" \
-    run_vuln STUB_EXIT=2
-expect_not 1 "REPORT:" "vuln-scan: a failure prints no REPORT line (the table of a failed run, with 0 packages, is not a report)" \
-    run_vuln STUB_EXIT=127 STUB_OUTPUT="Total 0 packages affected by 0 known vulnerabilities (0 Critical, 0 High, 0 Medium, 0 Low, 0 Unknown) from 0 ecosystems."
+    run_vuln "${bl_empty}" "${osv_empty}" STUB_EXIT=2
+expect_not 1 "THRESHOLD" "vuln-scan: a failure of the tool does not start the level gate (no verdict of the gate, also if the stub wrote a report with no finding)" \
+    run_vuln "${bl_empty}" "${osv_empty}" STUB_EXIT=127 STUB_OUTPUT="Total 0 packages affected by 0 known vulnerabilities (0 Critical, 0 High, 0 Medium, 0 Low, 0 Unknown) from 0 ecosystems."
+expect_fail "FAILURE OF THE LEVEL GATE" "vuln-scan: a tool with exit code 1 that wrote no report stops the recipe (the gate has no input, so it does not pass)" \
+    run_vuln "${bl_qs}" - STUB_EXIT=1
+expect_fail "FAILURE OF THE LEVEL GATE" "vuln-scan: a tool with exit code 0 that wrote no report stops the recipe" \
+    run_vuln "${bl_empty}" - STUB_EXIT=0
+echo "this is not json" >"${work}/osv-report-broken.json"
+expect_fail "the report file is not JSON" "vuln-scan: a report that is not JSON stops the recipe" \
+    run_vuln "${bl_empty}" "${work}/osv-report-broken.json" STUB_EXIT=1
+echo '{"no":"results"}' >"${work}/osv-report-form.json"
+expect_fail "the report of OSV-Scanner has no list \`results\`" "vuln-scan: a report with another form stops the recipe" \
+    run_vuln "${bl_empty}" "${work}/osv-report-form.json" STUB_EXIT=1
+expect_fail "The baseline file does not exist" "vuln-scan: a baseline file that does not exist stops the recipe (the gate must read it)" \
+    run_vuln "${bl_dir}/no-such-baseline.txt" "${osv_empty}" STUB_EXIT=0
+expect_fail "the line is not of the form" "vuln-scan: a line of the baseline with a wrong form stops the recipe" \
+    run_vuln "$(mk_baseline osv-badline "this is not an identifier")" "${osv_empty}" STUB_EXIT=0
+expect_fail "the line is twice in the baseline" "vuln-scan: a line twice in the baseline stops the recipe" \
+    run_vuln "$(mk_baseline osv-twice "GHSA-4mjr-xmp4-gh2g qs@6.15.1" "GHSA-4mjr-xmp4-gh2g qs@6.15.1")" "${osv_medium}" STUB_EXIT=1
+expect 0 "Data: OSV.dev (https://osv.dev)" "vuln-scan: the attribution of the OSV data is in the output (the condition of the deviation)" \
+    run_vuln "${bl_qs}" "${osv_medium}" STUB_EXIT=1
+expect_not 1 "Data: OSV.dev" "vuln-scan: a failure of the tool prints no attribution of data (no report, no data)" \
+    run_vuln "${bl_empty}" "${osv_empty}" STUB_EXIT=127
 
-# The arguments of the scan: -L for each *.cdx.json file, no other file, no --licenses
-env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" STUB_EXIT=0 "${GATES_DIR}/vuln-scan.sh" "${sbom}" >/dev/null 2>&1 || true
+# The arguments of the scan: -L for each *.cdx.json file, no other file, no --licenses, the JSON report in a file
+env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" STUB_ARGS_FILE="${args_file}" STUB_REPORT_FILE="${osv_empty}" STUB_EXIT=0 "${GATES_DIR}/vuln-scan.sh" "${sbom}" "${bl_empty}" >/dev/null 2>&1 || true
 if [[ "$(grep -c '^-L$' "${args_file}")" == "2" ]] && grep -qx "${sbom}/backend.cdx.json" "${args_file}" \
     && grep -qx "${sbom}/frontend.cdx.json" "${args_file}" && ! grep -q 'notes.txt\|other.json' "${args_file}" \
-    && ! grep -q -- '--licenses' "${args_file}" && [[ "$(sed -n 1,2p "${args_file}" | tr '\n' ' ')" == "scan source " ]]; then
-    echo "ok   vuln-scan: the tool is started with 'scan source', one -L for each *.cdx.json file, no other file and no --licenses"
+    && ! grep -q -- '--licenses' "${args_file}" && [[ "$(sed -n 1,2p "${args_file}" | tr '\n' ' ')" == "scan source " ]] \
+    && grep -qx -- '--format' "${args_file}" && grep -qx 'json' "${args_file}" && grep -qx -- '--output-file' "${args_file}"; then
+    echo "ok   vuln-scan: the tool is started with 'scan source', --format json, --output-file, one -L for each *.cdx.json file, no other file and no --licenses"
     passed=$((passed + 1))
 else
     echo "FAIL vuln-scan: the arguments of the tool are not the expected ones"
@@ -319,10 +441,12 @@ empty_sbom="${work}/sbom-empty"
 mkdir -p "${empty_sbom}"
 echo "x" >"${empty_sbom}/readme.txt"
 expect_fail "has no *.cdx.json file" "vuln-scan: a folder with no *.cdx.json file stops the recipe (a scan of nothing must not pass)" \
-    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${empty_sbom}"
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${empty_sbom}" "${bl_empty}"
 expect_fail "The folder of the SBOM files does not exist" "vuln-scan: a folder that does not exist stops the recipe" \
-    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${work}/no-such-folder"
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${work}/no-such-folder" "${bl_empty}"
 expect_fail "Usage: vuln-scan.sh" "vuln-scan: no argument stops the recipe" env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh"
+expect_fail "Usage: vuln-scan.sh" "vuln-scan: no baseline file argument stops the recipe (the form of feat-8 is not accepted)" \
+    env OSV_SCANNER_HOME="${osv_home}" VERSIONS_FILE="${versions_osv}" "${GATES_DIR}/vuln-scan.sh" "${sbom}"
 
 # The install with the sha256 check. A small file is the "download" (a file:// URL, no network). The versions file of
 # the case has the sha256 of that file, so the pin is checked in each case.
@@ -434,15 +558,15 @@ mkdir -p "${work}/sbom-real"
 cp "${work}/sbom-real.cdx.json" "${work}/sbom-real/frontend.cdx.json"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 127" "vuln-scan: the REAL OSV-Scanner without the network (a proxy that refuses the connection) ends with exit code 127, and the recipe stops (ACC-005)" \
     env OSV_SCANNER_HOME="${real_osv_home}" HTTPS_PROXY="http://127.0.0.1:9" HTTP_PROXY="http://127.0.0.1:9" https_proxy="http://127.0.0.1:9" http_proxy="http://127.0.0.1:9" \
-    "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-real"
+    "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-real" "${bl_empty}"
 mkdir -p "${work}/sbom-nopackage"
 echo '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[]}' >"${work}/sbom-nopackage/frontend.cdx.json"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 128" "vuln-scan: the REAL OSV-Scanner with an SBOM that has no package ends with exit code 128, and the recipe stops (a scan of nothing must not pass)" \
-    env OSV_SCANNER_HOME="${real_osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-nopackage"
+    env OSV_SCANNER_HOME="${real_osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-nopackage" "${bl_empty}"
 mkdir -p "${work}/sbom-broken"
 echo '{this is not json' >"${work}/sbom-broken/frontend.cdx.json"
 expect_fail "FAILURE OF THE TOOL: OSV-Scanner ended with exit code 127" "vuln-scan: the REAL OSV-Scanner with an SBOM file that cannot be read ends with exit code 127, and the recipe stops (ACC-005)" \
-    env OSV_SCANNER_HOME="${real_osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-broken"
+    env OSV_SCANNER_HOME="${real_osv_home}" "${GATES_DIR}/vuln-scan.sh" "${work}/sbom-broken" "${bl_empty}"
 fi
 
 # ======================================================================================================================
@@ -479,6 +603,7 @@ mk_repo() {
     rm -rf "${dir}"
     mkdir -p "${dir}/tools/security"
     cp "${real_config}" "${dir}/tools/security/gitleaks.toml"
+    cp "${real_gl_baseline}" "${dir}/tools/security/gitleaks-baseline.txt"
     (
         cd "${dir}"
         git init --quiet --initial-branch=dev
@@ -493,10 +618,26 @@ mk_repo() {
     )
 }
 commit_all() { (cd "$1" && git add -A && git commit --quiet --no-verify -m "$2"); }
-run_secret() { # run_secret <repo> [env VAR=value...] : the recipe form, base origin/dev and the config of the repository
+run_secret() { # run_secret <repo> [env VAR=value...] : the recipe form, base origin/dev, the config and the baseline file of the repository
     local repo="$1"
     shift
-    env GATE_WORK_ROOT="${repo}" "$@" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${repo}" "$@" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt
+}
+# set_gl_baseline <repo> [<line>...] : the baseline file of the repository (a comment and the lines)
+set_gl_baseline() {
+    local repo="$1"
+    shift
+    printf '# the baseline of a case of test-security-gates.sh\n' >"${repo}/tools/security/gitleaks-baseline.txt"
+    [[ $# -eq 0 ]] || printf '%s\n' "$@" >>"${repo}/tools/security/gitleaks-baseline.txt"
+}
+# gl_report <file> [<fingerprint>...] : the report of gitleaks (JSON) with one entry for each fingerprint (no secret in it)
+gl_report() {
+    local file="$1" entries="" fingerprint
+    shift
+    for fingerprint in "$@"; do
+        entries+="${entries:+,}{\"RuleID\":\"stripe-access-token\",\"Fingerprint\":\"${fingerprint}\"}"
+    done
+    printf '[%s]\n' "${entries}" >"${file}"
 }
 
 # --- the stub
@@ -508,12 +649,49 @@ echo "some work" >"${stub_repo}/work.txt"
 commit_all "${stub_repo}" "work"
 gl_args="${work}/gitleaks-args.txt"
 
-expect 0 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan: the stub has no finding (exit code 0)" \
+# ACC-007, the cases of the level gate (the stub of gitleaks gives the exit code and the report of each scan)
+gl_fp_files="config.txt:stripe-access-token:1"
+gl_fp_history="1111111111111111111111111111111111111111:config.txt:stripe-access-token:1"
+gl_report "${work}/gl-report-files.json" "${gl_fp_files}"
+gl_report "${work}/gl-report-history.json" "${gl_fp_history}"
+gl_report "${work}/gl-report-none.json"
+gl_stub_findings=(STUB_REPORT_DIR="${work}/gl-report-files.json" STUB_REPORT_GIT="${work}/gl-report-history.json")
+expect 0 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan: the stub has no finding (exit code 0, the report has no entry)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="INF no leaks found" STUB_REPORT_FILE="${work}/gl-report-none.json"
+expect 0 "THRESHOLD PASS" "secret-scan: the stub has no finding and writes no report (a clean run: the report is empty): the gate passes" \
     run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="INF no leaks found"
-expect 0 "REPORT: files: 3 finding(s); history origin/dev..HEAD: 3 finding(s)" "secret-scan: the stub has findings (exit code 2), the recipe ends with exit code 0 and prints the counts (ACC-005)" \
-    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 3"
-expect 0 "FINDINGS (exit code 2)" "secret-scan: a finding says that the gate does not stop (no threshold)" \
+expect 1 "REPORT: files: 3 finding(s); history origin/dev..HEAD: 3 finding(s)" "secret-scan: the stub has findings (exit code 2) that are not in the baseline: the recipe prints the counts and stops with exit code 1 (ACC-007)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 3" "${gl_stub_findings[@]}"
+expect 1 "FINDINGS (exit code 2)" "secret-scan: a finding says that the level gate decides next (the gate does not pass by itself)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+expect 1 "THRESHOLD STOP" "secret-scan: a new finding (a secret that is not in the baseline) stops the gate with exit code 1 (ACC-007)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+expect 1 "STOP: a new finding that is not in the baseline (Unrated): ${gl_fp_files} (rule stripe-access-token)" "secret-scan: the message names the fingerprint of the new finding (and no secret)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+set_gl_baseline "${stub_repo}" "${gl_fp_files}" "${gl_fp_history}"
+expect 0 "THRESHOLD PASS" "secret-scan: the findings are in the baseline (the fingerprints of the files and of the history): the gate passes with exit code 0 (ACC-007)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+expect 0 "Unrated       baseline ${gl_fp_files} (rule stripe-access-token)" "secret-scan: gitleaks has no severity, so the level of a finding is Unrated, and the report shows the state baseline" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+set_gl_baseline "${stub_repo}" "${gl_fp_files}"
+expect 1 "STOP: a new finding that is not in the baseline (Unrated): ${gl_fp_history}" "secret-scan: a baseline with the fingerprint of the files only: the finding of the history is new and stops the gate" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+set_gl_baseline "${stub_repo}" "${gl_fp_files}" "${gl_fp_history}" "config.txt:stripe-access-token:99"
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: config.txt:stripe-access-token:99" "secret-scan: a line of the baseline that has no finding any more is a warning, and the gate passes with exit code 0 (ACC-007, the old line)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" "${gl_stub_findings[@]}"
+set_gl_baseline "${stub_repo}" "${gl_fp_files}"
+expect 0 "WARNING: the baseline line has no finding any more" "secret-scan: the old line is a warning also if the tool has no finding at all (exit code 0)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="INF no leaks found"
+set_gl_baseline "${stub_repo}"
+expect_fail "FAILURE OF THE LEVEL GATE" "secret-scan: a tool with exit code 2 (findings) that wrote no report stops the recipe (the gate has no input, so it does not pass)" \
     run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1"
+echo '{"not":"a list"}' >"${work}/gl-report-form.json"
+expect_fail "the report of gitleaks is not a list" "secret-scan: a report with another form stops the recipe" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=2 STUB_OUTPUT="WRN leaks found: 1" STUB_REPORT_FILE="${work}/gl-report-form.json"
+rm "${stub_repo}/tools/security/gitleaks-baseline.txt"
+expect_fail "The baseline file does not exist" "secret-scan: a baseline file that does not exist stops the recipe (the gate must read it)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0
+set_gl_baseline "${stub_repo}"
 expect_fail "FAILURE OF THE TOOL: gitleaks (files) ended with exit code 1" "secret-scan: exit code 1 of the tool (a fatal error) stops the recipe (ACC-005)" \
     run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=1 STUB_OUTPUT="FTL unable to load gitleaks config"
 expect_fail "FAILURE OF THE TOOL: gitleaks (files) ended with exit code 126" "secret-scan: exit code 126 of the tool (a wrong flag) stops the recipe" \
@@ -524,14 +702,16 @@ expect_fail "has an error line" "secret-scan: an ERR line with exit code 0 (git 
     run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_OUTPUT="11:49AM ERR [git] fatal: ambiguous argument"
 expect_not 1 "REPORT:" "secret-scan: a failure prints no REPORT line" \
     run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=1
+expect_not 1 "THRESHOLD" "secret-scan: a failure of the tool does not start the level gate (no verdict of the gate, also with a baseline that matches)" \
+    run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=1 "${gl_stub_findings[@]}"
 # The arguments: the options that the plan and the script need (the last start is the scan of the history)
 run_secret "${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 STUB_ARGS_FILE="${gl_args}" >/dev/null 2>&1 || true
 gl_all_ok=1
-for option in git "$(git -C "${stub_repo}" rev-parse --absolute-git-dir)" --exit-code 2 --redact --ignore-gitleaks-allow --gitleaks-ignore-path --log-opts=origin/dev..HEAD --no-color; do
+for option in git "$(git -C "${stub_repo}" rev-parse --absolute-git-dir)" --exit-code 2 --redact --ignore-gitleaks-allow --gitleaks-ignore-path --log-opts=origin/dev..HEAD --no-color --report-format json --report-path; do
     grep -qxF -- "${option}" "${gl_args}" || gl_all_ok=0
 done
 if [[ ${gl_all_ok} -eq 1 ]] && grep -qx -- "--config" "${gl_args}" && grep -q 'tools/security/gitleaks.toml$' "${gl_args}"; then
-    echo "ok   secret-scan: the tool is started with --config, --exit-code 2, --redact, --ignore-gitleaks-allow, --gitleaks-ignore-path and the log options base..HEAD"
+    echo "ok   secret-scan: the tool is started with --config, --exit-code 2, --redact, --ignore-gitleaks-allow, --gitleaks-ignore-path, the JSON report (--report-format json, --report-path) and the log options base..HEAD"
     passed=$((passed + 1))
 else
     echo "FAIL secret-scan: the arguments of the tool are not the expected ones"
@@ -539,9 +719,9 @@ else
     failed=$((failed + 1))
 fi
 expect_fail "The base 'origin/nothing' does not exist" "secret-scan: a base that does not exist stops the recipe" \
-    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/nothing tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/nothing tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt
 expect_fail "The gitleaks config does not exist" "secret-scan: a config that does not exist stops the recipe" \
-    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/none.toml
+    env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/none.toml tools/security/gitleaks-baseline.txt
 expect_fail "Usage: secret-scan.sh" "secret-scan: no argument stops the recipe" env GATE_WORK_ROOT="${stub_repo}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh"
 
 # --- a shallow clone (the history of the pull request is not known)
@@ -555,11 +735,11 @@ shallow="${work}/repo-shallow"
 git clone --quiet --depth 1 --branch feature "file://${shallow_src}" "${shallow}" 2>/dev/null
 (cd "${shallow}" && git fetch --quiet --depth 1 origin dev:refs/remotes/origin/dev 2>/dev/null)
 expect_fail "This is a shallow clone, and it has no merge base" "secret-scan: a shallow clone with no merge base of the base and HEAD stops the recipe (fetch-depth: 0)" \
-    env GATE_WORK_ROOT="${shallow}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${shallow}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt
 full="${work}/repo-full"
 git clone --quiet "file://${shallow_src}" "${full}" 2>/dev/null
 expect 0 "Base: origin/dev, merge base:" "secret-scan: a clone with the full history finds the merge base (stub)" \
-    env GATE_WORK_ROOT="${full}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml
+    env GATE_WORK_ROOT="${full}" GITLEAKS_HOME="${gl_home}" VERSIONS_FILE="${versions_gl}" STUB_EXIT=0 "${GATES_DIR}/secret-scan.sh" origin/dev tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt
 
 # --- the install of gitleaks with the sha256 check (a file:// URL, no network)
 gl_started="${work}/gl-started.txt"
@@ -653,16 +833,26 @@ mk_repo "${r}"
 echo "some work" >"${r}/work.txt"
 commit_all "${r}" "work"
 expect 0 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan (real gitleaks): a repository with no secret has no finding" run_secret "${r}"
+expect 0 "THRESHOLD PASS" "secret-scan (real gitleaks): a repository with no secret passes the level gate (the baseline of this repository, which has no line)" run_secret "${r}"
 
 r="${work}/repo-secret-file"
 mk_repo "${r}"
 fake_secret_line >"${r}/config.txt"
 commit_all "${r}" "add a config"
-expect 0 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a secret in a committed file is a finding in the files and in the history, the recipe ends with exit code 0 (ACC-005)" run_secret "${r}"
-expect 0 "FINDINGS (exit code 2)" "secret-scan (real gitleaks): the finding has the exit code 2 of the tool" run_secret "${r}"
-expect_not 0 "sk_live_51H8" "secret-scan (real gitleaks): the secret is redacted in the report" run_secret "${r}"
-expect 0 "RuleID:      stripe-access-token" "secret-scan (real gitleaks): the report names the rule" run_secret "${r}"
-expect 0 "File:        config.txt" "secret-scan (real gitleaks): the report names the file (a path relative to the repository)" run_secret "${r}"
+expect 1 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a secret in a committed file is a finding in the files and in the history, and it is not in the baseline, so the recipe stops with exit code 1 (ACC-007)" run_secret "${r}"
+expect 1 "FINDINGS (exit code 2)" "secret-scan (real gitleaks): the finding has the exit code 2 of the tool" run_secret "${r}"
+expect_not 1 "sk_live_51H8" "secret-scan (real gitleaks): the secret is redacted in the report" run_secret "${r}"
+expect 1 "RuleID:      stripe-access-token" "secret-scan (real gitleaks): the report names the rule" run_secret "${r}"
+expect 1 "File:        config.txt" "secret-scan (real gitleaks): the report names the file (a path relative to the repository)" run_secret "${r}"
+expect 1 "THRESHOLD STOP" "secret-scan (real gitleaks): the new finding stops the level gate" run_secret "${r}"
+secret_head="$(git -C "${r}" rev-parse HEAD)"
+set_gl_baseline "${r}" "config.txt:stripe-access-token:1" "${secret_head}:config.txt:stripe-access-token:1"
+expect 0 "THRESHOLD PASS" "secret-scan (real gitleaks): the baseline has the two fingerprints of the secret (the files and the history): the recipe passes with exit code 0 (ACC-007, the finding of the baseline)" run_secret "${r}"
+expect 0 "Unrated       baseline config.txt:stripe-access-token:1 (rule stripe-access-token)" "secret-scan (real gitleaks): the report of the level gate shows the finding with the state baseline" run_secret "${r}"
+set_gl_baseline "${r}" "config.txt:stripe-access-token:1"
+expect 1 "STOP: a new finding that is not in the baseline (Unrated): ${secret_head}:config.txt:stripe-access-token:1" "secret-scan (real gitleaks): a baseline with the fingerprint of the files only: the finding of the history is new and stops the recipe" run_secret "${r}"
+set_gl_baseline "${r}" "config.txt:stripe-access-token:1" "${secret_head}:config.txt:stripe-access-token:1" "old.txt:stripe-access-token:7"
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: old.txt:stripe-access-token:7" "secret-scan (real gitleaks): a line of the baseline that has no finding any more is a warning, and the recipe passes (ACC-007, the old line)" run_secret "${r}"
 
 r="${work}/repo-secret-history"
 mk_repo "${r}"
@@ -670,7 +860,7 @@ fake_secret_line >"${r}/config.txt"
 commit_all "${r}" "add a config"
 git -C "${r}" rm --quiet config.txt
 commit_all "${r}" "remove the config"
-expect 0 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a secret that is only in the history of the pull request (deleted in a later commit) is a finding of the history" run_secret "${r}"
+expect 1 "REPORT: files: 0 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a secret that is only in the history of the pull request (deleted in a later commit) is a finding of the history" run_secret "${r}"
 
 r="${work}/repo-secret-base"
 mk_repo "${r}"
@@ -682,12 +872,12 @@ git -C "${r}" checkout --quiet feature
 git -C "${r}" reset --quiet --hard origin/dev
 echo "pr work" >"${r}/work.txt"
 commit_all "${r}" "work"
-expect 0 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan (real gitleaks): a secret in the base is a finding of the files, and not of the history of the pull request (the range is base..HEAD)" run_secret "${r}"
+expect 1 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan (real gitleaks): a secret in the base is a finding of the files, and not of the history of the pull request (the range is base..HEAD)" run_secret "${r}"
 
 r="${work}/repo-secret-untracked"
 mk_repo "${r}"
 fake_secret_line >"${r}/not-committed.txt"
-expect 0 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan (real gitleaks): a secret in a file that is not committed is a finding of the files" run_secret "${r}"
+expect 1 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 0 finding(s)" "secret-scan (real gitleaks): a secret in a file that is not committed is a finding of the files" run_secret "${r}"
 
 r="${work}/repo-secret-ignored"
 mk_repo "${r}"
@@ -701,13 +891,13 @@ mk_repo "${r}"
 fake_secret_line >"${r}/gone.txt"
 commit_all "${r}" "add"
 rm "${r}/gone.txt"
-expect 0 "files: 0 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a file that git has and the work tree has deleted does not stop the copy (the history has the secret)" run_secret "${r}"
+expect 1 "files: 0 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a file that git has and the work tree has deleted does not stop the copy (the history has the secret)" run_secret "${r}"
 
 r="${work}/repo-secret-allow-comment"
 mk_repo "${r}"
 printf 'stripe = "sk_live_%s" # gitleaks:allow\n' "51H8jT2LkqW9xYzAbCdEfGhIjKlMn" >"${r}/config.txt"
 commit_all "${r}" "add a config"
-expect 0 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a comment gitleaks:allow does not hide a finding" run_secret "${r}"
+expect 1 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a comment gitleaks:allow does not hide a finding" run_secret "${r}"
 
 r="${work}/repo-secret-ignorefile"
 mk_repo "${r}"
@@ -715,7 +905,7 @@ fake_secret_line >"${r}/config.txt"
 commit_all "${r}" "add a config"
 fingerprint="$(git -C "${r}" rev-parse HEAD):config.txt:stripe-access-token:1"
 printf '%s\nconfig.txt:stripe-access-token:1\n' "${fingerprint}" >"${r}/.gitleaksignore"
-expect 0 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a .gitleaksignore file does not hide a finding" run_secret "${r}"
+expect 1 "REPORT: files: 1 finding(s); history origin/dev..HEAD: 1 finding(s)" "secret-scan (real gitleaks): a .gitleaksignore file does not hide a finding" run_secret "${r}"
 
 r="${work}/repo-secret-allowlist"
 mk_repo "${r}"
@@ -755,27 +945,66 @@ cp "${fixtures}/workflow-clean.yml" "${wf}/dir-clean/.github/workflows/clean.yml
 cp "${fixtures}/workflow-known-problem.yml" "${wf}/dir-problem/.github/workflows/problem.yml"
 cp "${fixtures}/workflow-clean.yml" "${wf}/dir-both/.github/workflows/clean.yml"
 cp "${fixtures}/workflow-unreadable.yml" "${wf}/dir-both/.github/workflows/unreadable.yml"
-cp "${fixtures}/workflow-clean.yml" "${fixtures}/workflow-known-problem.yml" "${fixtures}/workflow-unreadable.yml" "${wf}/"
+cp "${fixtures}/workflow-clean.yml" "${fixtures}/workflow-known-problem.yml" "${fixtures}/workflow-medium-problem.yml" "${fixtures}/workflow-unreadable.yml" "${wf}/"
 echo "nothing" >"${wf}/empty/readme.txt"
-run_wf() { env GATE_WORK_ROOT="${wf}" "${GATES_DIR}/workflow-scan.sh" "$@"; }
+# The baseline files of the cases (the paths are relative to ${wf}, the GATE_WORK_ROOT of the cases). The default of run_wf
+# is a baseline with no line; a case sets wf_baseline for the other files.
+printf '# an empty baseline\n' >"${wf}/bl-empty.txt"
+printf '# the finding of the severity Medium of workflow-medium-problem.yml\nartipacked workflow-medium-problem.yml jobs/medium/steps/0\n' >"${wf}/bl-medium.txt"
+printf '# the finding and an old line\nartipacked workflow-medium-problem.yml jobs/medium/steps/0\ntemplate-injection workflow-medium-problem.yml jobs/medium/steps/1/run\n' >"${wf}/bl-medium-old.txt"
+printf '# a line for each finding of workflow-known-problem.yml, also the three that are High (an error of the feature)\nartipacked workflow-known-problem.yml jobs/known-problem/steps/0\ndangerous-triggers workflow-known-problem.yml on\ntemplate-injection workflow-known-problem.yml jobs/known-problem/steps/1/run\nunpinned-uses workflow-known-problem.yml jobs/known-problem/steps/0/uses\n' >"${wf}/bl-known-problem.txt"
+printf '# a line with a wrong form\nthis is not an audit line\n' >"${wf}/bl-bad-form.txt"
+wf_baseline="bl-empty.txt"
+run_wf() { env GATE_WORK_ROOT="${wf}" "${GATES_DIR}/workflow-scan.sh" "${wf_baseline}" "$@"; }
 
 expect 0 "zizmor: no finding (exit code 0)" "workflow-scan: a clean workflow file has no finding (exit code 0)" run_wf workflow-clean.yml
+expect 0 "THRESHOLD PASS" "workflow-scan: a clean workflow file passes the level gate (the empty baseline)" run_wf workflow-clean.yml
 expect 0 "zizmor: no finding (exit code 0)" "workflow-scan: a folder .github/workflows with a clean workflow has no finding (exit code 0)" run_wf dir-clean/.github/workflows
-expect 0 "FINDINGS (exit code 14)" "workflow-scan: a workflow with a known problem is a finding (zizmor exit code 14), the recipe ends with exit code 0 (ACC-005)" run_wf workflow-known-problem.yml
-expect 0 "FINDINGS (exit code 14)" "workflow-scan: a folder .github/workflows with a known problem is a finding, the recipe ends with exit code 0" run_wf dir-problem/.github/workflows
-expect 0 "error[template-injection]" "workflow-scan: the report names the known problem (template-injection)" run_wf workflow-known-problem.yml
-expect 0 "error[dangerous-triggers]" "workflow-scan: the report names the known problem (dangerous-triggers)" run_wf workflow-known-problem.yml
-expect 0 "REPORT: 7 findings" "workflow-scan: the summary line of zizmor is in the report" run_wf workflow-known-problem.yml
+# a finding of the severity Medium (the case that the baseline can have)
+expect 1 "FINDINGS (exit code 13)" "workflow-scan: a workflow with a finding of the severity Medium has the exit code 13 of zizmor" run_wf workflow-medium-problem.yml
+expect 1 "THRESHOLD STOP" "workflow-scan: the finding of the severity Medium is not in the baseline: a new finding stops the gate with exit code 1 (ACC-007)" run_wf workflow-medium-problem.yml
+expect 1 "STOP: a new finding that is not in the baseline (Medium): artipacked workflow-medium-problem.yml jobs/medium/steps/0 (confidence Low)" "workflow-scan: the message names the new finding (the audit, the file and the place)" run_wf workflow-medium-problem.yml
+wf_baseline="bl-medium.txt"
+expect 0 "THRESHOLD PASS" "workflow-scan: the finding of the severity Medium is in the baseline: the gate passes with exit code 0 (ACC-007, the finding of the baseline)" run_wf workflow-medium-problem.yml
+expect 0 "Medium        baseline artipacked workflow-medium-problem.yml jobs/medium/steps/0 (confidence Low)" "workflow-scan: the report shows the level, the audit, the place and the state of the finding" run_wf workflow-medium-problem.yml
+expect 0 "THRESHOLD PASS" "workflow-scan: the old line of the baseline for a clean file is only a warning: the gate passes (see the next case)" run_wf workflow-clean.yml
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: artipacked workflow-medium-problem.yml jobs/medium/steps/0" "workflow-scan: a line of the baseline that has no finding any more is a warning, and the gate passes with exit code 0 (ACC-007, the old line)" run_wf workflow-clean.yml
+wf_baseline="bl-medium-old.txt"
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: template-injection workflow-medium-problem.yml jobs/medium/steps/1/run" "workflow-scan: a baseline with the line of the finding and an old line: the finding passes, and the old line is a warning" run_wf workflow-medium-problem.yml
+wf_baseline="bl-empty.txt"
+# the findings of the severity High
+expect 1 "FINDINGS (exit code 14)" "workflow-scan: a workflow with a known problem is a finding (zizmor exit code 14)" run_wf workflow-known-problem.yml
+expect 1 "FINDINGS (exit code 14)" "workflow-scan: a folder .github/workflows with a known problem is a finding" run_wf dir-problem/.github/workflows
+expect 1 "error[template-injection]" "workflow-scan: the report names the known problem (template-injection)" run_wf workflow-known-problem.yml
+expect 1 "error[dangerous-triggers]" "workflow-scan: the report names the known problem (dangerous-triggers)" run_wf workflow-known-problem.yml
+expect 1 "REPORT: 7 findings" "workflow-scan: the summary line of zizmor is in the report" run_wf workflow-known-problem.yml
+expect 1 "STOP: a finding that is High stops in each case: dangerous-triggers workflow-known-problem.yml on (confidence Medium)" "workflow-scan: a finding with the severity High stops the gate (ACC-007)" run_wf workflow-known-problem.yml
+expect 1 "SUMMARY: zizmor: 4 finding(s) (0 Critical, 3 High, 1 Medium, 0 Low, 0 Informational, 0 Unknown)" "workflow-scan: the summary has the counts of the levels (the findings that zizmor suppresses are no findings)" run_wf workflow-known-problem.yml
+wf_baseline="bl-known-problem.txt"
+expect 1 "ERROR OF THE FEATURE: the baseline has a line for a finding that is High" "workflow-scan: a baseline with a line for a finding that is High is an error of the feature, and the gate stops although the finding is in the baseline (ACC-007)" run_wf workflow-known-problem.yml
+expect 1 "THRESHOLD STOP" "workflow-scan: the findings that are High stop the gate also if all of them are in the baseline" run_wf workflow-known-problem.yml
+wf_baseline="bl-empty.txt"
+# a failure of the tool, and the inputs that cannot be used
 expect_fail "FAILURE OF THE TOOL: zizmor ended with exit code 1" "workflow-scan: a workflow file that zizmor cannot read stops the recipe (ACC-005)" run_wf workflow-unreadable.yml
 expect_fail "FAILURE OF THE TOOL: zizmor ended with exit code 1" "workflow-scan: a folder with a good and a bad file stops the recipe (--strict-collection)" run_wf dir-both/.github/workflows
 expect_fail "FAILURE OF THE TOOL: zizmor ended with exit code 3" "workflow-scan: a folder with no workflow (no inputs) stops the recipe" run_wf empty
+wf_baseline="bl-medium.txt"
+expect_not 1 "THRESHOLD" "workflow-scan: a failure of the tool does not start the level gate (no verdict of the gate, also with a baseline that has a line)" run_wf workflow-unreadable.yml
+wf_baseline="bl-empty.txt"
 expect_fail "The path does not exist" "workflow-scan: a path that does not exist stops the recipe" run_wf nothing-here
 expect_fail "Usage: workflow-scan.sh" "workflow-scan: no argument stops the recipe" run_wf
-expect 0 "FINDINGS (exit code 14)" "workflow-scan: more than one path (a clean file and a file with a problem) gives the findings of both" run_wf workflow-clean.yml workflow-known-problem.yml
+expect_fail "Usage: workflow-scan.sh" "workflow-scan: no baseline file (only a path) stops the recipe (the form of feat-8 is not accepted)" \
+    env GATE_WORK_ROOT="${wf}" "${GATES_DIR}/workflow-scan.sh" workflow-clean.yml
+wf_baseline="bl-does-not-exist.txt"
+expect_fail "The baseline file does not exist" "workflow-scan: a baseline file that does not exist stops the recipe (the gate must read it)" run_wf workflow-clean.yml
+wf_baseline="bl-bad-form.txt"
+expect_fail "the line is not of the form" "workflow-scan: a line of the baseline with a wrong form stops the recipe" run_wf workflow-clean.yml
+wf_baseline="bl-empty.txt"
+expect 1 "FINDINGS (exit code 14)" "workflow-scan: more than one path (a clean file and a file with a problem) gives the findings of both" run_wf workflow-clean.yml workflow-known-problem.yml
 
 # the mode of zizmor is explicit: a token in the environment does not start the online audits
 expect 0 "zizmor: no finding (exit code 0)" "workflow-scan: a token in the environment (GITHUB_TOKEN) does not change the offline mode" \
-    env GITHUB_TOKEN="not-a-real-token" GH_TOKEN="not-a-real-token" GATE_WORK_ROOT="${wf}" "${GATES_DIR}/workflow-scan.sh" workflow-clean.yml
+    env GITHUB_TOKEN="not-a-real-token" GH_TOKEN="not-a-real-token" GATE_WORK_ROOT="${wf}" "${GATES_DIR}/workflow-scan.sh" bl-empty.txt workflow-clean.yml
 
 # ======================================================================================================================
 section "Part 5: the form of the scripts and of the recipes"
@@ -785,17 +1014,23 @@ check "vuln-scan.sh reads the SBOM files with -L and uses --no-resolve" bash -c 
 check "workflow-scan.sh starts zizmor with --offline" bash -c "grep -v '^[[:space:]]*#' '${GATES_DIR}/workflow-scan.sh' | grep -q -- '--offline'"
 check "workflow-scan.sh starts zizmor with --strict-collection" bash -c "grep -v '^[[:space:]]*#' '${GATES_DIR}/workflow-scan.sh' | grep -q -- '--strict-collection'"
 check "secret-scan.sh has --exit-code 2, --redact and --ignore-gitleaks-allow" bash -c "grep -v '^[[:space:]]*#' '${GATES_DIR}/secret-scan.sh' | grep -q -- '--exit-code 2' && grep -v '^[[:space:]]*#' '${GATES_DIR}/secret-scan.sh' | grep -q -- '--redact' && grep -v '^[[:space:]]*#' '${GATES_DIR}/secret-scan.sh' | grep -q -- '--ignore-gitleaks-allow'"
-for script in vuln-scan.sh secret-scan.sh workflow-scan.sh test-security-gates.sh _security.sh; do
+for script in vuln-scan.sh secret-scan.sh workflow-scan.sh test-security-gates.sh _security.sh security_threshold.py; do
     check "${script} is executable" test -x "${GATES_DIR}/${script}"
 done
+for script in vuln-scan.sh secret-scan.sh workflow-scan.sh; do
+    check "${script} calls the level gate (security_level_gate), and its code has no text of a report with no threshold" \
+        bash -c 'code="$(grep -v "^[[:space:]]*#" "$1")"; grep -q security_level_gate <<<"${code}" && ! grep -q "no threshold" <<<"${code}"' _ "${GATES_DIR}/${script}"
+done
+check "the job secret-scan of ci.yml has the action astral-sh/setup-uv (the level gate runs in a Python environment that uv makes)" bash -c "grep -E '^ci.yml secret-scan ' '${GATES_DIR}/required-setup.txt' | grep -q 'astral-sh/setup-uv'"
 justfile="${REPO_ROOT}/justfile"
 just_recipe() { # just_recipe <recipe> <text in the body> : the justfile has the recipe with the text in its lines
     just --justfile "${justfile}" --show "$1" 2>/dev/null | grep -q -- "$2"
 }
 check "the justfile has the recipe vuln-scan with the prerequisite sbom" bash -c "just --justfile '${justfile}' --show vuln-scan | grep -q '^vuln-scan: sbom\$'"
 check "the recipe vuln-scan starts vuln-scan.sh with the SBOM folder" just_recipe vuln-scan "_gate vuln-scan.sh"
-check "the recipe secret-scan starts secret-scan.sh with the base and the config" just_recipe secret-scan "secret-scan.sh 120.120 \"{{ base }}\" tools/security/gitleaks.toml"
-check "the recipe workflow-scan starts workflow-scan.sh with .github/workflows" just_recipe workflow-scan "workflow-scan.sh 120.130 .github/workflows"
+check "the recipe vuln-scan gives the baseline file osv-baseline.txt to vuln-scan.sh (the level gate, feat-9 Task 500.120)" just_recipe vuln-scan "vuln-scan.sh 500.120 \"{{ sbom_dir }}\" tools/security/osv-baseline.txt"
+check "the recipe secret-scan starts secret-scan.sh with the base, the config and the baseline file" just_recipe secret-scan "secret-scan.sh 500.120 \"{{ base }}\" tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt"
+check "the recipe workflow-scan starts workflow-scan.sh with the baseline file and .github/workflows" just_recipe workflow-scan "workflow-scan.sh 500.120 tools/security/zizmor-baseline.txt .github/workflows"
 check "the recipe test-security-gates starts this test" just_recipe test-security-gates "test-security-gates.sh"
 check "test-gates has the prerequisite test-security-gates" bash -c "just --justfile '${justfile}' --show test-gates | grep -q '^test-gates:.* test-security-gates'"
 check "the allowlist of gitleaks has useDefault = true" grep -q '^useDefault = true' "${real_config}"
@@ -810,6 +1045,157 @@ else
     echo "FAIL the allowlist of gitleaks has ${allowlist_entries} entries and ${allowlist_descriptions} descriptions: each entry needs a reason"
     failed=$((failed + 1))
 fi
+
+# ======================================================================================================================
+section "Part 6: the level gate (security_threshold.py) and the baseline files of the repository (feat-9 Task 500.110 and 500.120, ACC-007)"
+
+# The script uses the standard library only. The environment has the Python of PYTHON_VERSION and no package. The trap of
+# make_python_bare_env is replaced, so the temporary folder of the test is removed too.
+make_python_bare_env
+trap 'rm -rf "${work}" "${GATE_ENV_DIR}"' EXIT
+threshold() { "${GATE_PYTHON}" "${GATES_DIR}/security_threshold.py" "$@"; }
+
+# OSV-Scanner: the level of the CVSS score (the same limits as the table of OSV-Scanner), the label, the higher of the two
+for score_case in "9.0|Critical" "9.8|Critical" "8.9|High" "7.0|High" "6.9|Medium" "4.0|Medium" "3.9|Low" "0.1|Low"; do
+    score="${score_case%%|*}"
+    level="${score_case##*|}"
+    expect 1 "(CVSS ${score})" "level gate (OSV): the score ${score} is the level ${level} (a new finding stops in each case)" \
+        threshold osv "${bl_empty}" "$(osv_report "${work}/osv-score.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 "${score}")")"
+    expect 1 "  ${level} " "level gate (OSV): the score ${score} is shown with the level ${level}" \
+        threshold osv "${bl_empty}" "${work}/osv-score.json"
+done
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): the score 6.9 (Medium) in the baseline passes" \
+    threshold osv "$(mk_baseline lg-osv-6-9 "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "$(osv_report "${work}/osv-6-9.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 6.9)")"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): the score 3.9 (Low) in the baseline passes" \
+    threshold osv "$(mk_baseline lg-osv-3-9 "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "$(osv_report "${work}/osv-3-9.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 3.9)")"
+expect 1 "RESULT: STOP. 0 new finding(s), 1 finding(s) that are Critical or High" "level gate (OSV): the score 7.0 (High) in the baseline stops (the baseline has no line of this level)" \
+    threshold osv "$(mk_baseline lg-osv-7-0 "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "$(osv_report "${work}/osv-7-0.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 7.0)")"
+expect 1 "GHSA-aaaa-bbbb-cccc pkg@1.0.0 (CVSS 5.0)" "level gate (OSV): a record with the score 5.0 and the label HIGH is High (the higher level of the two)" \
+    threshold osv "${bl_empty}" "$(osv_report "${work}/osv-5-high.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 5.0 HIGH)")"
+expect 1 "STOP: a finding that is High stops in each case: GHSA-aaaa-bbbb-cccc pkg@1.0.0" "level gate (OSV): the label HIGH with the score 5.0 stops in each case" \
+    threshold osv "${bl_empty}" "${work}/osv-5-high.json"
+expect 0 "Medium        baseline GHSA-aaaa-bbbb-cccc pkg@1.0.0" "level gate (OSV): a record with the score 9.0 and the label MODERATE is Critical, but a record with no score and the label MODERATE is Medium (see the next case)" \
+    threshold osv "$(mk_baseline lg-osv-moderate "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "$(osv_report "${work}/osv-moderate.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 "" MODERATE)")"
+expect 1 "Critical" "level gate (OSV): a record with the score 9.0 and the label MODERATE is Critical (the score is the higher level)" \
+    threshold osv "${bl_empty}" "$(osv_report "${work}/osv-9-moderate.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 9.0 MODERATE)")"
+# a group with two identifiers: the first identifier in the sorted order is the key (so the order of the report does not matter)
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["OSV-2026-9","GHSA-aaaa-bbbb-cccc"],"max_severity":"5.0"}],"vulnerabilities":[]}]}]}\n' >"${work}/osv-two-ids.json"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): a group with two identifiers has the key of the first identifier in the sorted order (GHSA-aaaa-bbbb-cccc)" \
+    threshold osv "$(mk_baseline lg-osv-two-ids "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-two-ids.json"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): the same finding in two packages of two SBOM files is one finding" \
+    threshold osv "${bl_qs}" "$(osv_report "${work}/osv-dup.json" "$(osv_pkg GHSA-4mjr-xmp4-gh2g qs 6.15.1 6.3)" "$(osv_pkg GHSA-4mjr-xmp4-gh2g qs 6.15.1 6.3)")"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): a scoped npm package (@types/node@26.6.6) and a Maven package (org.springframework:spring-web@7.0.10) are lines of the baseline" \
+    threshold osv "$(mk_baseline lg-osv-scoped "GHSA-aaaa-bbbb-cccc @types/node@26.6.6")" "$(osv_report "${work}/osv-scoped.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc @types/node 26.6.6 5.0)")"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): the package of a Maven artifact has the form group:artifact" \
+    threshold osv "$(mk_baseline lg-osv-maven "GHSA-aaaa-bbbb-cccc org.springframework:spring-web@7.0.10")" "$(osv_report "${work}/osv-maven.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc org.springframework:spring-web 7.0.10 5.0)")"
+expect 0 "RESULT: PASS. 0 finding(s), all in the baseline, none Critical or High; 0 old baseline line(s)." "level gate (OSV): no finding and a baseline with comments and empty lines only passes" \
+    threshold osv "$(mk_baseline lg-osv-comments)" "${osv_empty}"
+printf '# a comment\n\n   \n  GHSA-4mjr-xmp4-gh2g qs@6.15.1   \n# another comment\n' >"${bl_dir}/lg-osv-blank.txt"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): comments, empty lines and the spaces around a line are no problem" \
+    threshold osv "${bl_dir}/lg-osv-blank.txt" "${osv_medium}"
+# an input that cannot be used: exit code 2
+expect 2 "the baseline file cannot be read" "level gate: a baseline file that does not exist is exit code 2 (an input that cannot be used)" \
+    threshold osv "${bl_dir}/none.txt" "${osv_empty}"
+expect 2 "the report file cannot be read" "level gate: a report file that does not exist is exit code 2" \
+    threshold osv "${bl_empty}" "${work}/none.json"
+expect 2 "the line is not of the form" "level gate (OSV): a line of the baseline that is only an identifier is exit code 2" \
+    threshold osv "$(mk_baseline lg-osv-onlyid "GHSA-4mjr-xmp4-gh2g")" "${osv_empty}"
+expect 2 "the line is not of the form" "level gate (OSV): a line of the baseline with a URL of the advisory in place of the package is exit code 2 (no record text in the baseline)" \
+    threshold osv "$(mk_baseline lg-osv-text "GHSA-4mjr-xmp4-gh2g qs 6.15.1 prototype pollution")" "${osv_empty}"
+expect 2 "the line is twice in the baseline" "level gate: a line twice in the baseline is exit code 2" \
+    threshold osv "$(mk_baseline lg-osv-twice "GHSA-4mjr-xmp4-gh2g qs@6.15.1" "GHSA-4mjr-xmp4-gh2g qs@6.15.1")" "${osv_empty}"
+expect 2 "Usage: security_threshold.py" "level gate: an unknown tool is exit code 2" threshold nope "${bl_empty}" "${osv_empty}"
+expect 2 "Usage: security_threshold.py" "level gate: no report file is exit code 2" threshold osv "${bl_empty}"
+expect 2 "the report of OSV-Scanner has no list" "level gate (OSV): a report with another form is exit code 2" \
+    threshold osv "${bl_empty}" "${work}/osv-report-form.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg"},"groups":[]}]}]}\n' >"${work}/osv-nover.json"
+expect 2 "has no name or no version" "level gate (OSV): a package with no version is exit code 2" threshold osv "${bl_empty}" "${work}/osv-nover.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1"},"groups":[{"ids":[]}]}]}]}\n' >"${work}/osv-noid.json"
+expect 2 "has no identifier" "level gate (OSV): a group with no identifier is exit code 2" threshold osv "${bl_empty}" "${work}/osv-noid.json"
+
+# zizmor: the severity, ignored findings, the place of the finding
+zz_item() { # zz_item <audit> <severity> <file> <route JSON array> [<ignored: true|false>]
+    printf '{"ident":"%s","desc":"x","url":"u","determinations":{"confidence":"High","severity":"%s","persona":"Regular"},"locations":[{"symbolic":{"key":{"Local":{"verbatim_path":"%s"}},"annotation":"a","route":{"route":%s},"feature_kind":"Normal","kind":"Primary"},"concrete":{}}],"ignored":%s}' \
+        "$1" "$2" "$3" "$4" "${5:-false}"
+}
+zz_report() { local file="$1" joined; shift; joined="$(IFS=,; echo "$*")"; printf '[%s]\n' "${joined}" >"${file}"; echo "${file}"; }
+zz_route_job='[{"Key":"jobs"},{"Key":"lint"},{"Key":"steps"},{"Index":0}]'
+expect 1 "STOP: a finding that is High stops in each case: template-injection .github/workflows/ci.yml jobs/lint/steps/0" "level gate (zizmor): the severity High stops (zizmor has no level Critical)" \
+    threshold zizmor "${bl_empty}" "$(zz_report "${work}/zz-high.json" "$(zz_item template-injection High .github/workflows/ci.yml "${zz_route_job}")")"
+expect 1 "ERROR OF THE FEATURE: the baseline has a line for a finding that is High" "level gate (zizmor): a High finding with a line in the baseline stops, and the message says that the baseline is wrong" \
+    threshold zizmor "$(mk_baseline lg-zz-high "template-injection .github/workflows/ci.yml jobs/lint/steps/0")" "${work}/zz-high.json"
+for severity in Medium Low Informational; do
+    expect 0 "RESULT: PASS. 1 finding(s)" "level gate (zizmor): the severity ${severity} in the baseline passes" \
+        threshold zizmor "$(mk_baseline "lg-zz-${severity}" "artipacked .github/workflows/ci.yml jobs/lint/steps/0")" \
+        "$(zz_report "${work}/zz-${severity}.json" "$(zz_item artipacked "${severity}" .github/workflows/ci.yml "${zz_route_job}")")"
+    expect 1 "STOP: a new finding that is not in the baseline (${severity}): artipacked" "level gate (zizmor): the severity ${severity} that is not in the baseline stops (a new finding)" \
+        threshold zizmor "${bl_empty}" "${work}/zz-${severity}.json"
+done
+expect 0 "RESULT: PASS. 0 finding(s)" "level gate (zizmor): a finding that zizmor suppresses (ignored: true) is no finding, also with the severity High" \
+    threshold zizmor "${bl_empty}" "$(zz_report "${work}/zz-ignored.json" "$(zz_item template-injection High .github/workflows/ci.yml "${zz_route_job}" true)")"
+expect 1 "SUMMARY: zizmor: 2 finding(s)" "level gate (zizmor): the same audit in two jobs is two findings (the place is part of the line)" \
+    threshold zizmor "$(mk_baseline lg-zz-two "artipacked .github/workflows/ci.yml jobs/lint/steps/0")" \
+    "$(zz_report "${work}/zz-two.json" "$(zz_item artipacked Medium .github/workflows/ci.yml "${zz_route_job}")" "$(zz_item artipacked Medium .github/workflows/ci.yml '[{"Key":"jobs"},{"Key":"compile"},{"Key":"steps"},{"Index":0}]')")"
+expect 1 "STOP: a new finding that is not in the baseline (Medium): artipacked .github/workflows/ci.yml jobs/compile/steps/0" "level gate (zizmor): the finding in the second job is the new one" \
+    threshold zizmor "${bl_dir}/lg-zz-two.txt" "${work}/zz-two.json"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (zizmor): the place of a finding is the path of the keys and the indexes, so the line numbers of the file do not matter (a trigger has the place 'on')" \
+    threshold zizmor "$(mk_baseline lg-zz-on "dangerous-triggers-low .github/workflows/ci.yml on")" \
+    "$(zz_report "${work}/zz-on.json" "$(zz_item dangerous-triggers-low Low .github/workflows/ci.yml '[{"Key":"on"}]')")"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (zizmor): a finding with no place has the place '-'" \
+    threshold zizmor "$(mk_baseline lg-zz-noroute "obfuscation .github/workflows/ci.yml -")" \
+    "$(zz_report "${work}/zz-noroute.json" "$(zz_item obfuscation Low .github/workflows/ci.yml '[]')")"
+echo '{"not":"a list"}' >"${work}/zz-form.json"
+expect 2 "the report of zizmor is not a list" "level gate (zizmor): a report with another form is exit code 2" threshold zizmor "${bl_empty}" "${work}/zz-form.json"
+printf '[{"ident":"artipacked","determinations":{"severity":"Medium"},"locations":[],"ignored":false}]\n' >"${work}/zz-nofile.json"
+expect 2 "has no file" "level gate (zizmor): a finding with no location is exit code 2" threshold zizmor "${bl_empty}" "${work}/zz-nofile.json"
+expect 2 "the line is not of the form" "level gate (zizmor): a line of the baseline with only an audit is exit code 2" \
+    threshold zizmor "$(mk_baseline lg-zz-badform "artipacked")" "${bl_empty}" 
+expect 1 "(Unknown)" "level gate (zizmor): a severity that the gate does not know is Unknown (it is no stop by its level, and a new finding stops)" \
+    threshold zizmor "${bl_empty}" "$(zz_report "${work}/zz-unknown.json" "$(zz_item artipacked Surprising .github/workflows/ci.yml "${zz_route_job}")")"
+
+# gitleaks: no level, the fingerprints of two reports (the files and the history)
+gl_report "${work}/lg-gl-files.json" "config.txt:stripe-access-token:1"
+gl_report "${work}/lg-gl-history.json" "abc123:config.txt:stripe-access-token:1"
+expect 0 "SUMMARY: gitleaks: 2 finding(s) (0 Critical, 0 High, 0 Medium, 0 Low, 0 Informational, 0 Unknown, 2 Unrated); baseline lg-gl-both.txt: 2 line(s)" "level gate (gitleaks): the findings of the two reports are in the baseline: the gate passes, and the level is Unrated (gitleaks has no severity)" \
+    threshold gitleaks "$(mk_baseline lg-gl-both "config.txt:stripe-access-token:1" "abc123:config.txt:stripe-access-token:1")" "${work}/lg-gl-files.json" "${work}/lg-gl-history.json"
+expect 1 "STOP: a new finding that is not in the baseline (Unrated): abc123:config.txt:stripe-access-token:1" "level gate (gitleaks): a finding of the history that is not in the baseline stops the gate" \
+    threshold gitleaks "$(mk_baseline lg-gl-files-only "config.txt:stripe-access-token:1")" "${work}/lg-gl-files.json" "${work}/lg-gl-history.json"
+expect 1 "RESULT: STOP. 2 new finding(s), 0 finding(s) that are Critical or High" "level gate (gitleaks): with an empty baseline each finding of a secret is new and stops (the result counts them)" \
+    threshold gitleaks "${bl_empty}" "${work}/lg-gl-files.json" "${work}/lg-gl-history.json"
+expect 0 "SUMMARY: gitleaks: 1 finding(s)" "level gate (gitleaks): the same fingerprint in the two reports is one finding" \
+    threshold gitleaks "$(mk_baseline lg-gl-same "config.txt:stripe-access-token:1")" "${work}/lg-gl-files.json" "${work}/lg-gl-files.json"
+gl_report "${work}/lg-gl-none.json"
+expect 0 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: config.txt:stripe-access-token:1" "level gate (gitleaks): a line of the baseline for a secret that is gone is a warning (the old line), and the gate passes" \
+    threshold gitleaks "$(mk_baseline lg-gl-old "config.txt:stripe-access-token:1")" "${work}/lg-gl-none.json" "${work}/lg-gl-none.json"
+expect 0 "<a file name with spaces.txt>:rule:3" "level gate (gitleaks): a fingerprint can have spaces (the line is the whole fingerprint)" \
+    threshold gitleaks "$(mk_baseline lg-gl-space "<a file name with spaces.txt>:rule:3")" "$(printf '[{"RuleID":"rule","Fingerprint":"<a file name with spaces.txt>:rule:3"}]\n' >"${work}/lg-gl-space.json"; echo "${work}/lg-gl-space.json")"
+echo '[{"RuleID":"rule"}]' >"${work}/lg-gl-nofp.json"
+expect 2 "has no fingerprint" "level gate (gitleaks): an entry with no fingerprint is exit code 2" threshold gitleaks "${bl_empty}" "${work}/lg-gl-nofp.json"
+echo '{"x":1}' >"${work}/lg-gl-form.json"
+expect 2 "the report of gitleaks is not a list" "level gate (gitleaks): a report with another form is exit code 2" threshold gitleaks "${bl_empty}" "${work}/lg-gl-form.json"
+check "the level of a finding of gitleaks is a constant of one place (GITLEAKS_LEVEL), and its value is Unrated" \
+    grep -q '^GITLEAKS_LEVEL = UNRATED$' "${GATES_DIR}/security_threshold.py"
+
+# The baseline files of the repository (Task 500.110): they exist, they have the form that the gate reads, no line twice, no
+# text of a record. The gate reads each of them with a report that has no finding (all lines are old lines: warnings only).
+real_security_dir="${REPO_ROOT}/tools/security"
+for tool_case in "osv|osv-baseline.txt|${osv_empty}" "gitleaks|gitleaks-baseline.txt|${work}/lg-gl-none.json" "zizmor|zizmor-baseline.txt|$(zz_report "${work}/zz-none.json")"; do
+    IFS='|' read -r tool_name baseline_name report_file <<<"${tool_case}"
+    check "the baseline file tools/security/${baseline_name} exists, and the gate reads each line (the form, no line twice)" \
+        test -f "${real_security_dir}/${baseline_name}" -a -s "${real_security_dir}/${baseline_name}"
+    expect 0 "RESULT: PASS." "the gate reads tools/security/${baseline_name} (exit code 0 for a report with no finding: the lines are old lines, warnings only)" \
+        threshold "${tool_name}" "${real_security_dir}/${baseline_name}" "${report_file}"
+done
+# data_lines <file> : the lines of a baseline file that are no comment and no empty line
+data_lines() { grep -v '^[[:space:]]*\(#\|$\)' "$1" || true; }
+osv_data="$(data_lines "${real_security_dir}/osv-baseline.txt")"
+zz_data="$(data_lines "${real_security_dir}/zizmor-baseline.txt")"
+check "the baseline of OSV-Scanner has the 5 findings of the frontend (minimatch 10.2.6 and qs 6.15.1) and no other line" \
+    test "$(wc -l <<<"${osv_data}")" -eq 5 -a "$(grep -cx 'GHSA-g3hv-75wg-m249 minimatch@10.2.6' <<<"${osv_data}")" -eq 1 -a "$(grep -cx 'GHSA-[a-z0-9-]* qs@6.15.1' <<<"${osv_data}")" -eq 4
+check "the baseline of gitleaks has no line (the state of the feature: no secret)" test -z "$(data_lines "${real_security_dir}/gitleaks-baseline.txt")"
+check "no baseline file has a text of a record: each line of osv-baseline.txt is '<identifier> <package>@<version>' and each line of zizmor-baseline.txt has three words" \
+    test -z "$(grep -v '^[A-Za-z0-9._-]* [^ ]*@[^ @]*$' <<<"${osv_data}")" -a -z "$(grep -v '^[a-z0-9-]* [^ ]* [^ ]*$' <<<"${zz_data}")"
+check "CODEOWNERS covers the baseline files (the folder /tools/)" grep -Eq '^/tools/[[:space:]]+@dfch' "${REPO_ROOT}/.github/CODEOWNERS"
 
 echo
 echo "RESULT: ${passed} ok, ${failed} failed"

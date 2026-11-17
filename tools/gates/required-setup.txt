@@ -16,7 +16,9 @@
 # architecture-model are the jobs of feat-7-verification-architecture-tools (Task 140.100; the tools run as a
 # report without a threshold, no artifact upload, and the checkouts have no fetch-depth: 0). The jobs traceability,
 # vuln-scan, secret-scan and workflow-scan are the jobs of feat-8-traceability-security-gates (Task 140.100; gate 2 and
-# the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). The job test-e2e has
+# the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). The job secret-scan has
+# astral-sh/setup-uv since feat-9-walking-skeleton (Phase 500, Task 500.120): the level gate of the three security
+# recipes runs in a Python environment that uv makes. The job test-e2e has
 # actions/setup-java since feat-9-walking-skeleton (Phase 400): the end-to-end test starts the backend. CODEOWNERS
 # covers this folder (/tools/), so the owner reviews each change.
 #
@@ -46,5 +48,5 @@ ci.yml architecture-frontend actions/checkout extractions/setup-just actions/set
 ci.yml architecture-model actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
 ci.yml traceability actions/checkout extractions/setup-just astral-sh/setup-uv
 ci.yml vuln-scan actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
-ci.yml secret-scan actions/checkout extractions/setup-just
+ci.yml secret-scan actions/checkout extractions/setup-just astral-sh/setup-uv
 ci.yml workflow-scan actions/checkout extractions/setup-just astral-sh/setup-uv
