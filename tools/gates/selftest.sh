@@ -1557,15 +1557,22 @@ section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-veri
 # JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
 # maven-surefire-plugin, the mutation tool PIT (the plugin pitest-maven and its plugin
 # dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120), the
-# architecture tools Spring Modulith (spring-modulith-core and the jar spring-boot that the code
-# of the core needs), ArchUnit (archunit and archunit-junit5) and structurizr-client (feat-7-
-# verification-architecture-tools, Phase 130), and the coverage tool JaCoCo (the plugin
-# jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the properties of
-# backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION,
-# JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
-# SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION, STRUCTURIZR_VERSION and
-# JACOCO_VERSION of versions.env. The messages start with `Maven test pins:`. Each tool has a
-# version key, and each case changes one place only.
+# architecture tools Spring Modulith (spring-modulith-core; the jar spring-boot that the code of
+# the core needs is, since the walking skeleton (feat-9-walking-skeleton, Phase 200), in the scope
+# compile through the starter spring-boot-starter-web, and not a test dependency of the pom - a
+# declaration direct in the scope test would win the resolution of the scope over the dependency of
+# the starter, and the main code would not compile), ArchUnit (archunit and archunit-junit5) and
+# structurizr-client (feat-7-verification-architecture-tools, Phase 130), and the coverage tool
+# JaCoCo (the plugin jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the
+# properties of backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION,
+# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION,
+# PIT_JUNIT5_PLUGIN_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION,
+# STRUCTURIZR_VERSION and JACOCO_VERSION of versions.env. The messages start with `Maven test
+# pins:`. Each tool has a version key, and each case changes one place only. The jar spring-boot
+# has no case of the one place only in the loop below (the pom has no dependency spring-boot any
+# more): the key SPRING_BOOT_VERSION has the case of the form (below), and the tie of the version
+# is in the pom (the starter has the property spring-boot.version, the same value; the comment of
+# the pom records it).
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1614,13 +1621,15 @@ expect 0 "Maven test pins: Maven test pins: backend/pom.xml" "the real backend/p
 
 # Each tool: the two places, each alone (a changed version). The property is the one that the pom.xml
 # uses for the version (the three modules of Testcontainers have the property testcontainers.version).
+# The artifact spring-boot has no entry in the list (the section header, above): the pom has no
+# dependency org.springframework.boot:spring-boot any more (the scope compile through the starter,
+# since the walking skeleton, feat-9-walking-skeleton, Phase 200).
 for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontainers|TESTCONTAINERS_VERSION|testcontainers.version|dependency" \
     "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
     "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
     "pitest-maven|PIT_VERSION|pitest.version|plugin" \
     "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency" \
     "spring-modulith-core|SPRING_MODULITH_VERSION|spring-modulith.version|dependency" \
-    "spring-boot|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
     "archunit|ARCHUNIT_VERSION|archunit.version|dependency" \
     "archunit-junit5|ARCHUNIT_VERSION|archunit.version|dependency" \
     "structurizr-client|STRUCTURIZR_VERSION|structurizr.version|dependency" \

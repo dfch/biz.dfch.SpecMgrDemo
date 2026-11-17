@@ -23,6 +23,34 @@ require_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "Required command '$1' not found."
 }
 
+# backend_maven_args <backend dir>
+#
+# The extra Maven arguments for a build of the Maven module (feat-9-walking-skeleton, Task 200.120): the
+# property build.info.commit with the sha of HEAD of the repository of <backend dir> (git rev-parse HEAD).
+# The value of the property is filtered into the resource build-info.properties of the module
+# (the execution default-resources of maven-resources-plugin, backend/pom.xml), and the operation GET /info
+# gives it (the version and the commit come from the build, and not from a fixed text). The default of the
+# property in backend/pom.xml is unknown, and a <backend dir> that is no git repository with a commit (or a
+# git that is not on the PATH) gives no argument (the default of the pom applies, and the build runs).
+#
+# Sets MAVEN_BUILD_ARGS (an array of the arguments). The caller adds the array to its call of ./mvnw:
+#
+#   backend_maven_args "${backend_dir}"
+#   ./mvnw --batch-mode --no-transfer-progress "${MAVEN_BUILD_ARGS[@]}" ...
+#
+# An empty array gives no argument (the expansion of "${MAVEN_BUILD_ARGS[@]}" is empty with the shell of the
+# machine, bash 4.4 and newer, and the set -u of the script).
+backend_maven_args() {
+    local dir="$1" sha=""
+    MAVEN_BUILD_ARGS=()
+    [[ $# -eq 1 && -n "${dir}" ]] || return 0
+    sha="$(git -C "${dir}" rev-parse HEAD 2>/dev/null || true)"
+    if [[ -n "${sha}" && "${sha}" =~ ^[0-9a-f]{40}$ ]]; then
+        MAVEN_BUILD_ARGS+=("-Dbuild.info.commit=${sha}")
+    fi
+    return 0
+}
+
 # version_of <KEY> -- print the value of KEY from tools/versions.env.
 # The file has lines `KEY=value` with no quotes. Stop if the key is missing or empty.
 version_of() {
@@ -236,8 +264,10 @@ verify_generator_plugin() {
     repo_local="${GENERATOR_MAVEN_REPO_LOCAL:-${HOME}/.m2/repository}"
     jar="${repo_local}/org/openapitools/openapi-generator-maven-plugin/${version}/openapi-generator-maven-plugin-${version}.jar"
     log "Generator plugin: openapi-generator-maven-plugin ${version} (load the plugin, no generation)"
+    backend_maven_args "${module_dir}"
     (
         cd "${module_dir}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+            "${MAVEN_BUILD_ARGS[@]}" \
             "org.openapitools:openapi-generator-maven-plugin:${version}:generate@spring-interfaces" -Dcodegen.skip=true
     ) || die "Maven could not load the plugin openapi-generator-maven-plugin ${version} (see above)."
     [[ -f "${jar}" ]] || die "The plugin jar is not at ${jar} after Maven loaded it."

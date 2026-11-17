@@ -12,7 +12,7 @@
           "id" : "4",
           "name" : "api",
           "properties" : {
-            "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0"
+            "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0, 271168a4-2a6f-40a1-b277-89711b18a087"
           },
           "relationships" : [ {
             "description" : "The interfaces of api reference the classes of model",
@@ -30,8 +30,28 @@
           "name" : "model",
           "tags" : "Element,Component",
           "technology" : "Java class"
+        }, {
+          "description" : "The product code of the service (the top-level package biz.dfch.specmgrdemo.app, feat-9-walking-skeleton, Phase 200): the main class, the controllers of the two operations, the check of the state, the error handling and the OpenTelemetry filter.",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "app",
+          "relationships" : [ {
+            "description" : "The controllers of app implement the generated interfaces of api",
+            "destinationId" : "4",
+            "id" : "15",
+            "sourceId" : "14",
+            "tags" : "Relationship"
+          }, {
+            "description" : "The product code of app uses the classes of model (the state, the information and the problem of the operations)",
+            "destinationId" : "5",
+            "id" : "16",
+            "sourceId" : "14",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "Java class"
         } ],
-        "description" : "The Maven module of the backend: the generated Spring server interfaces and the generated model classes.",
+        "description" : "The Maven module of the backend: the generated Spring server interfaces, the generated model classes and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code of the service.",
         "documentation" : { },
         "id" : "2",
         "name" : "backend",

@@ -17,8 +17,10 @@ The content of the workspace (the C4 model, the level of the containers, and the
 - The software system `SpecMgrDemo` (the project).
 - The two containers: `backend` (the Maven module of the repository) and `frontend` (the pnpm module of the repository).
 - The components of `backend`, named like the top-level packages of the module: `api` (the package
-  `biz.dfch.specmgrdemo.api`, the generated Spring server interfaces) and `model` (the package
-  `biz.dfch.specmgrdemo.model`, the generated model classes).
+  `biz.dfch.specmgrdemo.api`, the generated Spring server interfaces), `model` (the package
+  `biz.dfch.specmgrdemo.model`, the generated model classes) and `app` (the package
+  `biz.dfch.specmgrdemo.app`, the product code of the service since the walking skeleton, feat-9-walking-skeleton,
+  Phase 200).
 - The components of `frontend`, named by the rule of thumb of the units (the same for the rules of ArchUniTS and for
   the comparison, see below): `types` (the folder `frontend/src/generated/types`, the generated TypeScript types),
   `zod` (the folder `frontend/src/generated/zod`, the generated Zod schemas), `test` (the folder `frontend/src/test`,
@@ -26,8 +28,9 @@ The content of the workspace (the C4 model, the level of the containers, and the
   `frontend/src/mutation-example.ts`).
 - The dependencies: `frontend` -> `backend` (the frontend consumes the API of the backend, the dependency of the
   container level), `api` -> `model` (the real package dependency of the module, the interfaces of `api` reference the
-  classes of `model`), `test` -> `zod` (the tests import the generated Zod schemas) and `test` -> `root` (the test of
-  the example imports the example file).
+  classes of `model`), `app` -> `api` (the controllers of `app` implement the generated interfaces of `api`) and
+  `app` -> `model` (the product code of `app` uses the classes of `model`), `test` -> `zod` (the tests import the
+  generated Zod schemas) and `test` -> `root` (the test of the example imports the example file).
 
 The rule of thumb of the units of the frontend (the identifier of a component is the name of its unit): a unit is a
 folder that contains TypeScript source - the top-level folders of `frontend/src` (today: `test`), the folders of
@@ -68,6 +71,6 @@ A property of Structurizr is a text, so the list is one text (`"<uuid>,<uuid>"`;
 - **Error** (the gate stops): an identifier that is not the identifier of a REQ document, or a value that is not an identifier.
 - **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-req`.
 
-The element of a requirement is the component that makes it. The component `api` has the identifier of the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`). Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.
+The element of a requirement is the component that makes it. The component `api` has the identifier of the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`) and of the REQ "The System Gives Its Version and Its License" (`GET /info`, the generated interface `InfoApi`, the list that the character comma separates, feat-9-walking-skeleton, the task 200.130). Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.
 
 The comparison tests (`just architecture-model`) accept the key `properties` of a software system, a container and a component, and they do not use its values. The side of the backend (structurizr-java) reads the key. The side of the frontend (`frontend/architecture/compare.mjs`) accepts the key, and stops if its value is not a map of texts.

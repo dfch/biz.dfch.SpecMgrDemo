@@ -31,6 +31,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 passed=0
@@ -50,7 +52,7 @@ mvn_run() {
 }
 
 echo "== the case that is successful (jqwik)"
-mvn_run test -Dcodegen.skip=true -Dtest='*PropertyTest'
+mvn_run test -Dcodegen.skip=true -Dtest='*PropertyTest' "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 ]]; then
     echo "FAIL the run of the property tests is not green (exit code ${run_code})"
     printf '%s\n' "${run_output}" | tail -n 40 | sed -e 's/^/     | /'
@@ -76,7 +78,7 @@ fi
 
 echo
 echo "== the case that is not successful (ACC-002)"
-mvn_run test -Dcodegen.skip=true -Dtest=BrokenProperty
+mvn_run test -Dcodegen.skip=true -Dtest=BrokenProperty "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenProperty"* && "${run_output}" == *"the sum of any two numbers is 3"* && "${run_output}" == *"expected: <3> but was:"* ]]; then
     echo "ok   jqwik finds the counterexample of the wrong property, and the run stops for it"
     passed=$((passed + 1))

@@ -58,9 +58,11 @@ verify_generator_plugin "${backend}"
 java_dir="${backend}/src/generated"
 log "Delete ${java_dir}"
 rm -rf "${java_dir}"
+backend_maven_args "${backend}" # the property build.info.commit (the value of the build, Task 200.120)
 log "Generate the Spring server interfaces (execution spring-interfaces)"
 (
     cd "${backend}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+        "${MAVEN_BUILD_ARGS[@]}" \
         "org.openapitools:openapi-generator-maven-plugin:${plugin_version}:generate@spring-interfaces"
 ) || die "Maven did not generate the Java code (see above)."
 

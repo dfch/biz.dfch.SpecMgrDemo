@@ -35,6 +35,8 @@ backend_dir="$1"
 require_cmd docker
 docker info >/dev/null 2>&1 || die "The Docker daemon does not answer (docker info). The integration tests need Docker."
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 passed=0
@@ -54,7 +56,7 @@ mvn_run() {
 }
 
 echo "== the case that is successful (Testcontainers, one container)"
-mvn_run test -Dcodegen.skip=true -Dtest='*IT'
+mvn_run test -Dcodegen.skip=true -Dtest='*IT' "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 ]]; then
     echo "FAIL the run of the integration tests is not green (exit code ${run_code})"
     printf '%s\n' "${run_output}" | tail -n 40 | sed -e 's/^/     | /'
@@ -80,7 +82,7 @@ fi
 
 echo
 echo "== the case that is not successful (ACC-002)"
-mvn_run test -Dcodegen.skip=true -Dtest=BrokenPostgres
+mvn_run test -Dcodegen.skip=true -Dtest=BrokenPostgres "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenPostgres"* && "${run_output}" == *"expected: <2> but was: <1>"* ]]; then
     echo "ok   the run stops for the wrong assertion against the real container, and the output names it"
     passed=$((passed + 1))

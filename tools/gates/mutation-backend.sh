@@ -38,6 +38,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 pitest_version="$(version_of PIT_VERSION)"
@@ -51,7 +53,7 @@ rm -rf "${report_dir}" # no old report can pass for the new one
 echo "== the report (PIT)"
 set +e
 run_output="$(./mvnw --batch-mode --no-transfer-progress test-compile \
-    "org.pitest:pitest-maven:${pitest_version}:mutationCoverage" -Dcodegen.skip=true 2>&1)"
+    "org.pitest:pitest-maven:${pitest_version}:mutationCoverage" -Dcodegen.skip=true "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
 run_code=$?
 set -e
 if [[ ${run_code} -ne 0 ]]; then

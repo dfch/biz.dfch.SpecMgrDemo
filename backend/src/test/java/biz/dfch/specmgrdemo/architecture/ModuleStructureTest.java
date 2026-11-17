@@ -16,8 +16,10 @@ import org.springframework.modulith.core.ApplicationModules;
  * model").
  *
  * <p>The rule: the top-level packages of the module are the modules of the base package
- * {@code biz.dfch.specmgrdemo} - exactly {@code api} and {@code model}, no more, no less (given the
- * code that exists today). The module structure has no violation (no cycle, no unknown module).
+ * {@code biz.dfch.specmgrdemo} - exactly {@code api}, {@code model} and {@code app}, no more, no less (given
+ * the code that exists today: the two generated packages, and, since the walking skeleton
+ * (feat-9-walking-skeleton, Phase 200), the package {@code app} with the product code of the service). The
+ * module structure has no violation (no cycle, no unknown module).
  *
  * <p>The run of the rule is green on the committed code (ACC-002: the case that is successful). The
  * case that is not successful of ArchUnit (the tool that examines the layers in a module) is the class
@@ -38,21 +40,22 @@ class ModuleStructureTest {
   private static final String BASE_PACKAGE = "biz.dfch.specmgrdemo";
 
   @Test
-  void theTopLevelPackagesAreExactlyTheModulesApiAndModel() {
+  void theTopLevelPackagesAreExactlyTheModulesApiModelAndApp() {
     ApplicationModules modules = ApplicationModules.of(BASE_PACKAGE);
     // getIdentifier() is the name of the module (getName() is deprecated in the 1.4.x line).
     Set<String> result = modules.stream().map(module -> module.getIdentifier().toString()).collect(Collectors.toSet());
     assertEquals(
-        Set.of("api", "model"),
+        Set.of("api", "model", "app"),
         result,
-        "the top-level packages of the module are the modules of " + BASE_PACKAGE + " (exactly these two, no more, no less)");
+        "the top-level packages of the module are the modules of " + BASE_PACKAGE + " (exactly these three, no more, no less)");
   }
 
   @Test
-  void apiAndModelAreModulesOfTheBasePackage() {
+  void apiModelAndAppAreModulesOfTheBasePackage() {
     ApplicationModules modules = ApplicationModules.of(BASE_PACKAGE);
     assertTrue(modules.getModuleByName("api").isPresent(), "the package api is a module of " + BASE_PACKAGE);
     assertTrue(modules.getModuleByName("model").isPresent(), "the package model is a module of " + BASE_PACKAGE);
+    assertTrue(modules.getModuleByName("app").isPresent(), "the package app is a module of " + BASE_PACKAGE);
   }
 
   @Test

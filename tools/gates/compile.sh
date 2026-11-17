@@ -27,8 +27,10 @@ frontend="$(cd "${frontend}" && pwd)"
 repo_local="${GENERATOR_MAVEN_REPO_LOCAL:-${HOME}/.m2/repository}"
 
 verify_generator_plugin "${backend}"
+backend_maven_args "${backend}" # the property build.info.commit (the value of the build, Task 200.120)
 log "Compile the Maven module: ./mvnw compile"
-(cd "${backend}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" compile) \
+(cd "${backend}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+    "${MAVEN_BUILD_ARGS[@]}" compile) \
     || die "./mvnw compile failed in ${backend} (see above)."
 
 install_frontend "${frontend}"

@@ -2,9 +2,21 @@
 <!--
   The Maven module of the backend (feat-6-contracts-openapi-pipeline, Tasks 105.100 and 120.100).
 
-  This module has no product code. It has the Spring server interfaces that the plugin openapi-generator-maven-plugin
-  makes from contracts/openapi.yaml, and the libraries that this generated code needs to compile. Build with ./mvnw:
-  the Maven Wrapper (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+  This module has the Spring server interfaces that the plugin openapi-generator-maven-plugin makes from
+  contracts/openapi.yaml, and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code that
+  implements the two operations (the package biz.dfch.specmgrdemo.app, the main class, the controllers, the state
+  checker, the error handling and the OpenTelemetry filter). Build with ./mvnw: the Maven Wrapper
+  (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+
+  The values of the build for the operation GET /info (feat-9-walking-skeleton, Task 200.120): the resource
+  src/main/resources/build-info.properties is a template with the two placeholders ${build.info.version} and
+  ${build.info.commit}. The execution default-resources of the core plugin maven-resources-plugin (the version is
+  named here, as for each other plugin) filters the template into target/classes/build-info.properties. The property
+  build.info.version is the constant of the pom (0.1.0, the version of the contract, and not a value of git). The
+  property build.info.commit has the default unknown in the pom, and each just recipe that starts Maven replaces it
+  with the value of git rev-parse HEAD of the work tree (the function backend_maven_args of tools/gates/_lib.sh).
+  The unit tests load the values of the build from a resource of the test classpath (a configurable resource name of
+  the class BuildInfoProvider), so the test changes the value of the build and sees the change of the response (ACC-003).
 
   The plugin has two executions (see the <build> section):
     - spring-interfaces, bound to the phase generate-sources. It writes the Java code to src/generated/java, and
@@ -23,8 +35,40 @@
         for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
         the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
         retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
-     - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
-       swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+      - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
+        swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+
+    The libraries of the walking skeleton (feat-9-walking-skeleton, Phase 200; the license of each one is in the
+    license table of the plan):
+      - Spring Boot (org.springframework.boot:spring-boot-starter-web, the 3.5.x line, the version 3.5.16 that the
+        jar org.springframework.boot:spring-boot of the scope test names for Spring Modulith): the web service (the
+        embedded Tomcat, the Jackson of spring-boot-starter-json, spring-webmvc). NO BOM is imported, as above: the
+        version is named here. Two exclusions of the starter (the owner's decisions, the plan records them):
+        * spring-boot-starter-logging is excluded: it brings logback (EPL-2.0 OR LGPL-2.1, and the single-license
+          form of the SBOM is not in the permitted list), and the logging implementation is spring-boot-starter-log4j2
+          (the artifacts log4j-slf4j2-impl, log4j-core, log4j-jul and log4j-api, each Apache-2.0, the version
+          2.25.5 that the declaration direct names - the version without the finding of the OSV data, REQ-008).
+        The same for the embedded Tomcat: the starter brings it at the version 10.1.55 (with a finding that is
+        Critical or High in the OSV data), and the declaration direct names the version 10.1.59 (the version
+        without the finding, REQ-008).
+        * jakarta.annotation:jakarta.annotation-api is excluded: the owner decided on 2026-11-04 (the finding F1 of
+          feat-6-contracts-openapi-pipeline) that the module must not have this artifact (EPL-2.0 OR GPL-2.0 with
+          Classpath-exception); the annotation jakarta.annotation.Generated comes from org.apache.tomcat:
+          tomcat-annotations-api above. The exclusions of the starter log4j2 are the same two.
+      - The slf4j API (org.slf4j:slf4j-api, the 2.x line, the version 2.0.16 that the bridge log4j-slf4j2-impl
+        names): the declaration is direct (and not transitive), because the test tool testcontainers has the
+        slf4j-api 1.7.36 as its dependency (the depth 2), and the bridge has it as the depth 3 (the starter, the
+        bridge, the API). The resolution of Maven gives the nearest dependency (the 1.7.36), and the bridge of the
+        2.x line finds no provider. The MIT of the API is in the permitted list.
+        `./mvnw dependency:tree` must not show jakarta.annotation-api, and the SBOM must not have logback.
+      - OpenTelemetry (io.opentelemetry:opentelemetry-sdk and io.opentelemetry:opentelemetry-exporter-otlp, the
+        version 1.68.0, each Apache-2.0, the dependencies are Apache-2.0 too, the plan records the rows): the SDK of
+        the signal trace (the one server span per request in the filter of the package app, DEC e3eadec0-a6ea-4efe-
+        8e6d-fd19287122fa), and the exporter OTLP/HTTP (the artifact opentelemetry-exporter-otlp is the HTTP
+        exporter of the 1.x line, the sender okhttp, and not the gRPC tree). The exporter is built in the
+        configuration of the application only if the endpoint of the environment variable OTEL_EXPORTER_OTLP_ENDPOINT
+        (or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) is set; with no endpoint the SDK runs with no processor, and the
+        trace identifier of each request is still real (the app starts and serves, and the feature gives no collector).
 
    The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The module has no
    product code, so the tests exercise the generated code (the example module). The license of each tool is in the
@@ -78,35 +122,42 @@
         starts them without a Spring context. The test support artifact of 1.4.14 (spring-modulith-test) is not in
         the module: its annotation @ApplicationModuleTest boots a Spring context (the annotation is wired to
         @SpringBootTest), and the module has no Spring Boot.
-      - Spring Boot (org.springframework.boot:spring-boot, the scope test): a dependency of the code of Spring
-        Modulith 1.4.14 that the POM of the artifact does not declare. The factory ApplicationModules.of(...) of
-        the core starts the lookup of the detection strategy
-        (org.springframework.modulith.core.ApplicationModuleDetectionStrategyLookup), and that lookup calls the
-        method applyTo of the class ConfigDataEnvironmentPostProcessor of this artifact in each start (a start
-        without the jar stops with the error NoClassDefFoundError). The version 3.5.16 is the one that the line
-        1.4.x of Spring Modulith has as its optional dependency (the POM of the core names 3.5.16 for
-        spring-boot-autoconfigure), and its dependencies are spring-core and spring-context 6.2.19, the same
-        versions as the module (no other jar enters the test class path). The module has no class of Spring Boot,
-        and no context of Spring Boot starts: the jar is in the scope test, and it stays out of the SBOM.
+       - Spring Boot (org.springframework.boot:spring-boot): a dependency of the code of Spring Modulith 1.4.14
+         that the POM of the artifact does not declare. The factory ApplicationModules.of(...) of the core starts
+         the lookup of the detection strategy
+         (org.springframework.modulith.core.ApplicationModuleDetectionStrategyLookup), and that lookup calls the
+         method applyTo of the class ConfigDataEnvironmentPostProcessor of this artifact in each start (a start
+         without the jar stops with the error NoClassDefFoundError). The version 3.5.16 is the one that the line
+         1.4.x of Spring Modulith has as its optional dependency (the POM of the core names 3.5.16 for
+         spring-boot-autoconfigure), and its dependencies are spring-core and spring-context 6.2.19, the same
+         versions as the module. Until the walking skeleton (feat-9-walking-skeleton, Phase 200) the jar was in
+         the scope test (the module had no class of Spring Boot, and no context of Spring Boot started, and the
+         jar stayed out of the SBOM). Since the walking skeleton the jar is in the scope compile through the
+         starter spring-boot-starter-web (the same version 3.5.16, and the service ships it, so the jar is in the
+         SBOM), and the test classpath has it for the module detection as before.
       - ArchUnit (com.tngtech.archunit:archunit and archunit-junit5): the layer rule of the module (R2, the recipe
         architecture-backend), and the source of the package dependencies of the comparison with the model (the
         recipe architecture-model). The core of Spring Modulith has the dependency archunit 1.4.2; the module names
         1.5.1, and the resolution of Maven gives 1.5.1 (the nearest dependency wins).
-      - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
-        (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The module has no product code
-        and no other reader of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
-        (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
-        module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
-        in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
+       - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
+         (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The module has no other reader
+         of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
+         (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
+         module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
+         in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
 
-
-    The test classes are in src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and
-    120) and in src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of the phase 130: the
-    module structure R1, the layer rule R2 and the comparison with the model of the recipe architecture-model). A
-    class whose name has no suffix `Test` (or `IT` for the integration tests) is a case that is not successful
-    (ACC-002 of the plan): the default run of surefire does not start it, and the recipes run it separately and stop
-    for it (tools/gates/test-*-*.sh and tools/gates/architecture-*.sh). The suffix IT keeps the integration tests
-    out of the unit run.
+    The product code of the walking skeleton is in src/main/java/biz/dfch/specmgrdemo/app/ (feat-9-walking-skeleton,
+    Phase 200): the main class, the two controllers, the check of the state, the handler of the error, the filter
+    and the configuration of OpenTelemetry (the header comment above gives the libraries). The test classes are in
+    src/test/java/biz/dfch/specmgrdemo/app/ (the unit tests and the integration tests of the walking skeleton), in
+    src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and 120) and in
+    src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of the phase 130: the module structure
+    R1, the layer rule R2 and the comparison with the model of the recipe architecture-model). The test resources
+    are in src/test/resources/ (the two files build-info-test.properties and build-info-test-changed.properties,
+    the seam of the unit test of the value of the build). A class whose name has no suffix `Test` (or `IT` for the
+    integration tests) is a case that is not successful (ACC-002 of the plan): the default run of surefire does not
+    start it, and the recipes run it separately and stop for it (tools/gates/test-*-*.sh and
+    tools/gates/architecture-*.sh). The suffix IT keeps the integration tests out of the unit run.
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -119,7 +170,7 @@
   <packaging>jar</packaging>
 
   <name>biz.dfch.SpecMgrDemo backend</name>
-  <description>The Java backend. This module has no product code. It has the generated Spring server interfaces.</description>
+  <description>The Java backend: the generated Spring server interfaces and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code that implements the two operations (the package biz.dfch.specmgrdemo.app).</description>
 
   <licenses>
     <license>
@@ -142,6 +193,32 @@
     <jakarta-validation.version>3.0.2</jakarta-validation.version>
     <jackson-annotations.version>2.21</jackson-annotations.version>
     <tomcat-annotations-api.version>10.1.61</tomcat-annotations-api.version>
+    <!-- The libraries of the walking skeleton (feat-9-walking-skeleton, Phase 200). Each version is named here,
+         and no BOM gives one (the header comment gives the exclusions of the starters). Spring Boot is the 3.5.x
+         line, the version 3.5.16 (the last of the line, checked on 2026-11-16, and the same version as the pin
+         SPRING_BOOT_VERSION of tools/versions.env and as the line 6.2.x of Spring Framework of the module). -->
+    <spring-boot.version>3.5.16</spring-boot.version>
+    <!-- The embedded Tomcat (the artifacts of the starter-tomcat that the starter web brings in, at the
+         version 10.1.55 of the starter). The declaration direct (the depth 1) gives the version 10.1.59:
+         the OSV data (the run of 2026-11-16, the report of just vuln-scan) has findings for the 10.1.55
+         (a finding that is Critical or High in each of the GSAs), and the version 10.1.59 is the version
+         without them (the fix of each GSA is in the line 10.1.56 to 10.1.59; the feature chooses the
+         version without it, REQ-008). -->
+    <tomcat-embed.version>10.1.59</tomcat-embed.version>
+    <!-- The log4j2 (the artifacts of the starter log4j2 that the starter brings in, at the version 2.24.3).
+         The declaration direct gives the version 2.25.5: the OSV data has findings (Medium) for the 2.24.3,
+         and the version 2.25.5 is the version without them (the same reasoning, REQ-008). The four
+         artifacts must be the same version (the line of log4j2). -->
+    <log4j2.version>2.25.5</log4j2.version>
+    <opentelemetry.version>1.68.0</opentelemetry.version>
+    <!-- The core plugin maven-resources-plugin (the version that the pinned Maven 3.10.0 binds, see the license
+         table of the plan): it filters the template src/main/resources/build-info.properties (the header comment). -->
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <!-- The values of the build for the operation GET /info (Task 200.120, the header comment). The version is the
+         constant of the project (0.1.0, the version of the contract), and not a value of git. The commit has the
+         default unknown, and each just recipe that starts Maven replaces it with git rev-parse HEAD. -->
+    <build.info.version>0.1.0</build.info.version>
+    <build.info.commit>unknown</build.info.commit>
     <!-- The test tools (feat-7-verification-architecture-tools, Phase 110). Each version is the one of
          tools/versions.env (just check-pins compares them). The scope of every test tool is test. -->
     <junit.version>5.14.4</junit.version>
@@ -158,9 +235,6 @@
           Spring Modulith is the 1.4.x line and not the 2.x line (the 2.x line needs the Spring Framework 7 line,
           the module has 6.2.19; see the header comment). -->
     <spring-modulith.version>1.4.14</spring-modulith.version>
-    <!-- The Spring Boot jar that the code of Spring Modulith 1.4.14 needs for the module detection (see the
-         header comment). The 3.5.x line is the one of the Spring Framework 6.2.x line of the module. -->
-    <spring-boot.version>3.5.16</spring-boot.version>
     <archunit.version>1.5.1</archunit.version>
     <structurizr.version>6.2.4</structurizr.version>
     <!-- The coverage (feat-7-verification-architecture-tools, Phase 140). The version is the one of
@@ -207,6 +281,106 @@
       <artifactId>tomcat-annotations-api</artifactId>
       <version>${tomcat-annotations-api.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <!-- The web service of the walking skeleton (feat-9-walking-skeleton, Task 200.110, the header comment gives
+         the exclusions): the embedded Tomcat, the Jackson and spring-webmvc. The version is named, no BOM. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>${spring-boot.version}</version>
+      <exclusions>
+        <!-- The logging starter brings logback (EPL-2.0 OR LGPL-2.1): not in the permitted list. The
+             implementation is the starter log4j2 below (the owner's decision, the plan records it). -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+        <!-- The finding F1 of feat-6 (the owner, 2026-11-04): the module must not have jakarta.annotation-api. -->
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- The logging implementation in place of logback (the header comment): the artifacts log4j-slf4j2-impl,
+         log4j-core, log4j-jul and log4j-api, each Apache-2.0. The exclusions are the two of the starter web. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-log4j2</artifactId>
+      <version>${spring-boot.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- The slf4j API (the header comment): the bridge log4j-slf4j2-impl of the starter log4j2 needs the 2.x
+         line of the API. Without the declaration direct, the resolution of Maven gives the 1.7.36 of the test
+         tool testcontainers (the nearest dependency wins, the depth 2 against the depth 3), and the bridge
+         finds no provider of the 2.x line. The version is the one that the bridge names (the POM of
+         log4j-slf4j2-impl 2.24.3 names 2.0.16). -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.16</version>
+    </dependency>
+    <!-- The embedded Tomcat at the version without the finding of the OSV data (the property and the comment
+         above, REQ-008): the three artifacts of the starter-tomcat, the version direct. -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-el</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-websocket</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <!-- The log4j2 at the version without the finding of the OSV data (the property and the comment above,
+         REQ-008): the four artifacts of the starter log4j2, the version direct, the same version for each. -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jul</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <!-- OpenTelemetry (feat-9-walking-skeleton, Task 200.110, DEC e3eadec0-a6ea-4efe-8e6d-fd19287122fa): the SDK
+         of the signal trace (the one server span per request, the header comment). Each artifact is Apache-2.0. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+      <version>${opentelemetry.version}</version>
+    </dependency>
+    <!-- The exporter OTLP/HTTP (the artifact is the HTTP exporter of the 1.x line, the sender okhttp, and not the
+         gRPC tree; the header comment gives the behavior with and without the endpoint of the environment). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+      <version>${opentelemetry.version}</version>
     </dependency>
     <!-- The test tools (the scope test keeps them out of the SBOM, see the header comment). -->
     <!-- JUnit 5 (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9). The 5.x line: jqwik needs the
@@ -260,15 +434,14 @@
       <version>${spring-modulith.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- The jar that the module detection of Spring Modulith 1.4.14 calls in each start (the class
-         ConfigDataEnvironmentPostProcessor; see the header comment). Its dependencies are spring-core and
-         spring-context 6.2.19, the versions of the module. -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot</artifactId>
-      <version>${spring-boot.version}</version>
-      <scope>test</scope>
-    </dependency>
+    <!-- The jar org.springframework.boot:spring-boot that the module detection of Spring Modulith 1.4.14 calls
+         in each start (the class ConfigDataEnvironmentPostProcessor; see the header comment) is in the module
+         since the walking skeleton (feat-9-walking-skeleton, Phase 200) in the scope compile through the
+         starter spring-boot-starter-web (the version spring-boot.version, the same as before in the scope
+         test). The declaration of the scope test is gone: a declaration direct of the scope test would win the
+         resolution of the scope over the dependency of the starter (the nearest dependency wins), and the main
+         code would not compile (the class SpringApplication of the jar). The jar stays in the SBOM (the
+         service ships it), and it is on the test classpath for the module detection. -->
     <!-- ArchUnit (Apache-2.0, the bundled OW2 ASM is BSD-3-Clause): the layer rule (R2) and the package
          dependencies of the comparison with the model. -->
     <dependency>
@@ -284,17 +457,72 @@
       <scope>test</scope>
     </dependency>
     <!-- structurizr-client (Apache-2.0): the reader of the workspace of model/ (the JSON reader and the model
-         classes). The comparison test of the recipe architecture-model (Task 130.120). -->
+          classes). The comparison test of the recipe architecture-model (Task 130.120). -->
     <dependency>
       <groupId>com.structurizr</groupId>
       <artifactId>structurizr-client</artifactId>
       <version>${structurizr.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- The test tools of the walking skeleton (feat-9-walking-skeleton, Phase 200; the scope test keeps them out
+          of the SBOM, as for the tools above). -->
+    <!-- spring-test (Apache-2.0): the MockMvc of the unit tests (the standalone setup, and not a context of
+          Spring Boot). The version is the one of the module (spring.version, the same as the starters). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>${spring.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- spring-boot-test (Apache-2.0): the annotation @SpringBootTest of the integration tests (the app starts
+          on a random port). The version is the one of the starters (spring-boot.version). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-test</artifactId>
+      <version>${spring-boot.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- json-path (Apache-2.0): the assertions on the JSON of the responses of the unit tests (the library of the
+          method jsonPath of MockMvc, that the artifact spring-test references at run time). -->
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>2.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- opentelemetry-sdk-testing (Apache-2.0): the in-memory exporter of the unit test of the filter (one server
+          span per request, the kind SERVER and the name of the operation). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <version>${opentelemetry.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
+    <!-- The resources of the module (feat-9-walking-skeleton, Task 200.120): the list of the model (and not a
+         configuration of the plugin, that the parameter resources of the mojo resources of
+         maven-resources-plugin 3.5.0 reads as read-only), with the filtering of the execution default-resources
+         on: the file src/main/resources/build-info.properties is filtered into target/classes/build-info.properties
+         with the two properties build.info.version and build.info.commit (the header comment). A value of the
+         property that the build does not replace stays the default of the pom (the version 0.1.0, the commit
+         unknown). The list of the test resources (the default src/test/resources) is not changed. -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
+      <!-- The core plugin for the resources (feat-9-walking-skeleton, Task 200.120). The version is the one that
+           the pinned Maven 3.10.0 binds (the license table of the plan); the configuration is the list of the
+           resources of the model above (the parameter is read-only in the version 3.5.0). -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven-resources-plugin.version}</version>
+      </plugin>
       <!-- The test runner (feat-7-verification-architecture-tools, Phase 110). The version is the one of
            tools/versions.env (MAVEN_SUREFIRE_PLUGIN_VERSION). The default includes of surefire (Test*, *Test,
            *Tests, *TestCase) keep the cases that are not successful (the classes without a suffix, see the header)

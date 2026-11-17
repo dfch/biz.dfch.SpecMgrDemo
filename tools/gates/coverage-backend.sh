@@ -48,6 +48,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 jacoco_version="$(version_of JACOCO_VERSION)"
@@ -62,7 +64,7 @@ echo "== the report (JaCoCo)"
 set +e
 run_output="$(./mvnw --batch-mode --no-transfer-progress \
     "org.jacoco:jacoco-maven-plugin:${jacoco_version}:prepare-agent" test \
-    "org.jacoco:jacoco-maven-plugin:${jacoco_version}:report" -Dcodegen.skip=true 2>&1)"
+    "org.jacoco:jacoco-maven-plugin:${jacoco_version}:report" -Dcodegen.skip=true "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
 run_code=$?
 set -e
 if [[ ${run_code} -ne 0 ]]; then
