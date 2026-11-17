@@ -4,7 +4,7 @@ created: '2026-11-17T11:26:49.961+01:00'
 id: e85e9685-0787-4dff-9ee5-9d46670e9ee4
 status: draft
 type: dec
-updated: '2026-11-17T11:39:40.473+01:00'
+updated: '2026-11-17T21:17:51.358+01:00'
 version: 1.0.0
 ---
 
@@ -18,7 +18,7 @@ The comparison of the model with the code is closed world, and the runner of the
 
 - Goal: keep one source of truth for each fact (GOL 9ffb930c-44e8-4d0e-b4fd-f94c7162a894). The exceptions of the closed world live in the model, and not in the test code.
 - The mapping of an element to the code does not depend on the name of the element.
-- The conventions must fit the components of feat-9-walking-skeleton (the status service, the adapter, the persistence) when that feature merges (the owner decision of 2026-11-17 defers the addition of those components to Phase 120 of feat-50-structurizr-model-rules).
+- The conventions must fit the components of feat-9-walking-skeleton when that feature merges (the component `app` of the backend, and the units `client`, `i18n`, `telemetry` and `ui` of the frontend; the owner decision of 2026-11-17 defers the addition of those components to Phase 120 of feat-50-structurizr-model-rules).
 - The two sides of the comparison (the backend and the frontend) read the same form of the value.
 
 ## Considered Options
@@ -35,7 +35,7 @@ The model uses the conventions of this decision. The mapping of an element to th
 
 - The reader of the frontend (`frontend/architecture/compare.mjs`) and the runner of the rules read the new properties, and they allow the new keys of the JSON that the generation gives (the top-level `properties`, the element key `perspectives`; Phase 130, Task 130.130 of feat-50-structurizr-model-rules).
 - The gate for the traceability reads `specmgr-refs` (Phase 150, Task 150.100). The old property `specmgr-req` keeps working for one release (Phase 150, Task 150.110), and DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 is updated in Phase 150, Task 150.120.
-- The components of feat-9-walking-skeleton take the mapping `code.*` when that feature merges (Phase 120 of feat-50-structurizr-model-rules, deferred by the owner decision of 2026-11-17). The conventions of this decision are usable for those components (the status service, the adapter, the persistence) without a change.
+- The components of feat-9-walking-skeleton take the mapping `code.*` when that feature merges (Phase 120 of feat-50-structurizr-model-rules, deferred by the owner decision of 2026-11-17). The conventions of this decision are usable for those components (the component `app` of the backend, and the units `client`, `i18n`, `telemetry` and `ui` of the frontend) without a change (the fit is recorded in Phase 120, Task 120.100, of feat-50-structurizr-model-rules).
 - The element without a mapping is not compared with the code, and the code that no element maps and that no exception names stops the comparison (the closed world, the limit of one source of truth).
 
 ### Confirmation
@@ -143,6 +143,10 @@ The tools of the two sides do not behave the same. ArchUnit examines the bytecod
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-17 20:05:00.000Z - The fit to the components of feat-9 (Phase 120 of feat-50-structurizr-model-rules)
+
+Phase 120 (Task 120.100) checks the conventions against the plan of feat-9-walking-skeleton (the status `review`; the code of the feature is done on the branch `feat-9`). This draft named the components as "the status service, the adapter, the persistence"; the plan of feat-9 names the actual structure: the product code of the backend is one top-level package `biz.dfch.specmgrdemo.app` (the component `app`), and the product code of the frontend is the four units `client`, `i18n`, `telemetry` and `ui` (and the entry point `src/main.tsx` lies in the unit `root`). The forms of this decision cover that structure without a change: the form of one entry and the form of several entries of `code.package` and of `code.path` (the unit `root` takes the form of several entries for the two files that lie in `frontend/src`), the package with the prefix `@` in `code.allowedExternal` (the one entry `@opentelemetry` allows the imports whose name starts with the entry and the character `/`), the direction of the arrow (the relation `app -> api`, where the controllers implement the generated interfaces, is the case of the interface that this decision names), and the Information view for the data-ownership case (the data of the contract is owned by the components `types` and `zod`, and the unit that uses the data, `client`, depends on the owners). The Decision Drivers and the Consequences name the actual components now (this correction). The addition of the components to the model stays deferred (Task 120.110, the owner decision of 2026-11-17); the record of the fit, and the content for the follow-up, are in the plan of feat-50.
 
 ### 2026-11-17 11:35:00.000Z - Draft written
 
