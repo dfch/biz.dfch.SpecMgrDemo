@@ -9,14 +9,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 
 /**
  * The integration test of the error response of the operation GET /status (feat-9-walking-skeleton, Phase 200,
  * Task 200.110; REQ 1ca335d7-969a-443e-9392-165fdeea99a0: "If the system cannot give its state, it sends an
- * error response"). The service starts with the property app.state-checker fail (the seam of the
+ * error response"). The service starts with the property app.state-checker fail (the class RunningService, the seam of the
  * StatusConfiguration, the check FailingStateChecker), and the operation gives the error response: the media
  * type application/problem+json, the code service_unavailable of the list ErrorCode of the contract, the status
  * 503, and the trace identifier of the request in the member traceId (the one server span per request of the
@@ -24,21 +24,24 @@ import org.springframework.boot.test.web.server.LocalServerPort;
  * The operation GET /info is no part of the failure of the check, and it gives its response 200. The OTEL_*
  * variables have the empty value (the test is deterministic, and the feature gives no collector).
  */
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-      "app.state-checker=fail",
-      "OTEL_EXPORTER_OTLP_ENDPOINT=",
-      "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=",
-      "OTEL_EXPORTER_OTLP_HEADERS=",
-      "OTEL_EXPORTER_OTLP_TRACES_HEADERS="
-    })
 class StatusErrorIT {
 
   private static final Pattern TRACE_ID = Pattern.compile("^[0-9a-f]{32}$");
 
-  @LocalServerPort
-  private int port;
+  private static RunningService service;
+
+  private static int port;
+
+  @BeforeAll
+  static void startTheService() {
+    service = RunningService.start("--app.state-checker=fail");
+    port = service.port();
+  }
+
+  @AfterAll
+  static void stopTheService() {
+    service.close();
+  }
 
   @Test
   void theOperationSendsTheErrorResponseIfTheSystemCannotGiveItsState() throws Exception {
@@ -70,7 +73,7 @@ class StatusErrorIT {
    * @return the response
    * @throws Exception if the request fails
    */
-  private HttpResponse<String> get(String path) throws Exception {
+  private static HttpResponse<String> get(String path) throws Exception {
     HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build();
     return client.send(request, HttpResponse.BodyHandlers.ofString());

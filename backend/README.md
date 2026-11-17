@@ -32,7 +32,7 @@ The recipes compare the sha256 of the jar of the plug-in before they start it (`
 | `skipDefaultInterface` | `true` | The plan: no method in the interface that the generator gives without the option |
 | `hideGenerationTimestamp` | `true` | The plan: no time in the files. Two starts are the same (REQ-011) |
 | `generateSupportingFiles` (plug-in option) | `false` | The plan: no `pom.xml`, no `OpenApiGeneratorApplication` and no other file of the generator |
-| `useSpringBoot3` | `true` | 7.27.0 gives this value when the option is not set (written out): Jakarta EE 10, package `jakarta.*` |
+| `useSpringBoot4` | `true` | The runtime is Spring Boot 4.0.9 with Spring Framework 7.0.10 (the rework of feat-9-walking-skeleton, 2026-11-17; the option was `useSpringBoot3` before). Jakarta EE 11, package `jakarta.*`. The generated files are the same as with `useSpringBoot3` (the interfaces and the model) |
 | `annotationLibrary`, `documentationProvider` | `none` | Set by the agent: the generated code has no annotation of swagger, and the module has no `swagger-annotations-jakarta` |
 | `openApiNullable` | `false` | Set by the agent: the generated code has no `JsonNullable`, and the module has no `jackson-databind-nullable` |
 | `generateJsonIncludeAnnotations`, `generateJsonSetterNullsAnnotations` | `false` | 7.27.0 gives these values when the options are not set (written out). The generator writes a warning for an option that is not set |
@@ -46,11 +46,11 @@ The module has no BOM. `spring-boot-dependencies` and a Spring Boot starter are 
 
 | Library | Version | The module has it for |
 |---|---|---|
-| `org.springframework:spring-web` | 6.2.19 | `ResponseEntity` and the annotations of Spring Web (the `MVC` part; gives `spring-beans`, `spring-core`, `spring-jcl` and `micrometer-observation`) |
-| `org.springframework:spring-context` | 6.2.19 | `@Validated` (gives `spring-aop` and `spring-expression`) |
-| `jakarta.validation:jakarta.validation-api` | 3.0.2 | Jakarta Bean Validation (the API only, no program that does the check) |
+| `org.springframework:spring-web` | 7.0.10 | `ResponseEntity` and the annotations of Spring Web (the `MVC` part; gives `spring-beans`, `spring-core`, `commons-logging` and `micrometer-observation`) |
+| `org.springframework:spring-context` | 7.0.10 | `@Validated` (gives `spring-aop` and `spring-expression`) |
+| `jakarta.validation:jakarta.validation-api` | 3.1.1 | Jakarta Bean Validation (the API only, no program that does the check) |
 | `com.fasterxml.jackson.core:jackson-annotations` | 2.21 | `@JsonProperty` and `@JsonValue` of the model classes |
-| `org.apache.tomcat:tomcat-annotations-api` | 10.1.61 | `jakarta.annotation.Generated` |
+| `org.apache.tomcat:tomcat-annotations-api` | 11.0.29 | `jakarta.annotation.Generated` (Jakarta Annotations 3.0; the scope `provided`) |
 
 `./mvnw dependency:tree` must not show `jakarta.annotation-api`. The two jars have the same package, and they must not be on the same class path.
 
@@ -65,8 +65,8 @@ The test tools are in the `pom.xml` in the scope `test` (the property of each on
 | `org.postgresql:postgresql` | 42.7.14 | The JDBC driver of the container (test scope only) |
 | `net.jqwik:jqwik` | 1.10.2 | The property tests (the JUnit Platform engine next to the JUnit engine) |
 | `org.apache.maven.plugins:maven-surefire-plugin` | 3.6.1 | The test runner of the Maven build (runs the engines of the JUnit Platform) |
-| `org.springframework.modulith:spring-modulith-core` | 1.4.14 | The module structure (R1, the recipe `architecture-backend`). The 1.4.x line and not the 2.x line: the core of the 2.x line has the dependencies spring-core and spring-context 7.0.9, and the module has the Spring Framework 6.2.19 line (the plan records the decision) |
-| `org.springframework.boot:spring-boot` | 3.5.16 | A dependency of the code of Spring Modulith 1.4.14 that the POM of the artifact does not declare (the module detection calls the class ConfigDataEnvironmentPostProcessor of this jar in each start). The 3.5.x line of the Spring Framework 6.2.x line; its dependencies are spring-core and spring-context 6.2.19, the versions of the module. The module has no class of Spring Boot, and no context starts |
+| `org.springframework.modulith:spring-modulith-core` | 2.0.9 | The module structure (R1, the recipe `architecture-backend`). The 2.0.x line is the line of Spring Boot 4.0.x (the core has the dependencies spring-core and spring-context 7.0.9, and the module has the Spring Framework 7.0.10; the plan records the decision) |
+| `org.springframework.boot:spring-boot` | 4.0.9 | The jar is in the scope compile through the starter `spring-boot-starter-web` (the version of the property `spring-boot.version`, the same as `SPRING_BOOT_VERSION` of `tools/versions.env`); the `pom.xml` has no declaration of the jar |
 | `com.tngtech.archunit:archunit`, `com.tngtech.archunit:archunit-junit5` | 1.5.1 | The layer rule (R2, the recipe `architecture-backend`), and the source of the package dependencies of the comparison with the model (the recipe `architecture-model`) |
 | `com.structurizr:structurizr-client` | 6.2.4 | The reader of the workspace of `model/` (the JSON reader and the model classes; the recipe `architecture-model`). The artifact with the reader of the 6.x line (the POM `com.structurizr:structurizr` has no jar) |
 

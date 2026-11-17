@@ -196,8 +196,9 @@ The test tools of the Maven module (feat-7-verification-architecture-tools, Phas
 REQ-002, REQ-003, ACC-011): JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik,
 the test runner maven-surefire-plugin, the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin
 dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools Spring Modulith (the
-artifact org.springframework.modulith:spring-modulith-core and the jar org.springframework.boot:spring-boot that the
-code of Spring Modulith 1.4.14 needs for the module detection), ArchUnit (the artifacts com.tngtech.archunit:archunit
+artifact org.springframework.modulith:spring-modulith-core, and the jar org.springframework.boot:spring-boot if a pom.xml
+has it as a test dependency; backend/pom.xml has no such dependency since the walking skeleton, because the jar comes with
+the starter in the scope compile), ArchUnit (the artifacts com.tngtech.archunit:archunit
 and com.tngtech.archunit:archunit-junit5), the reader of the workspace structurizr-client
 (com.structurizr:structurizr-client) and the coverage tool JaCoCo (the plugin org.jacoco:jacoco-maven-plugin,
 Phase 140). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>

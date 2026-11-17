@@ -9,37 +9,40 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 
 /**
  * The integration test of the service that starts (feat-9-walking-skeleton, Phase 200, Task 200.110): the
- * app of the walking skeleton starts on a random port (the embedded Tomcat of spring-boot-starter-web), and
- * the service gives the two operations of the contract. The test names the OTEL_* variables with an empty
- * value (the property has priority over the environment variable, and the empty value is the same as a
- * missing value): the service runs with no endpoint of the exporter, and the test is deterministic in the CI
+ * app of the walking skeleton starts on a random port (the embedded Tomcat of spring-boot-starter-web, the
+ * class RunningService), and the service gives the two operations of the contract. The test names the
+ * OTEL_* variables with an empty value (the argument has priority over the environment variable, and the empty
+ * value is the same as a missing value): the service runs with no endpoint of the exporter, and the test is deterministic in the CI
  * (the feature gives no collector, DEC e3eadec0-a6ea-4efe-8e6d-fd19287122fa). The test reads the value of the
  * build from the resource of the classpath (the filtered file of the build), and it asserts that the response
  * of the operation GET /info is the value of the build (the version and the commit come from the build, and
  * not from a fixed text, the task 200.120).
  */
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-      "OTEL_EXPORTER_OTLP_ENDPOINT=",
-      "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=",
-      "OTEL_EXPORTER_OTLP_HEADERS=",
-      "OTEL_EXPORTER_OTLP_TRACES_HEADERS="
-    })
 class ServiceIT {
 
-  @LocalServerPort
-  private int port;
+  private static RunningService service;
 
-  @Autowired
-  private BuildInfoProvider buildInfoProvider;
+  private static int port;
+
+  private static BuildInfoProvider buildInfoProvider;
+
+  @BeforeAll
+  static void startTheService() {
+    service = RunningService.start();
+    port = service.port();
+    buildInfoProvider = service.bean(BuildInfoProvider.class);
+  }
+
+  @AfterAll
+  static void stopTheService() {
+    service.close();
+  }
 
   @Test
   void theServiceGivesTheStateOfTheSystem() throws Exception {
@@ -88,7 +91,7 @@ class ServiceIT {
    * @return the response
    * @throws Exception if the request fails
    */
-  private HttpResponse<String> get(String path) throws Exception {
+  private static HttpResponse<String> get(String path) throws Exception {
     HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build();
     return client.send(request, HttpResponse.BodyHandlers.ofString());

@@ -6,17 +6,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import biz.dfch.specmgrdemo.model.Status;
 import biz.dfch.specmgrdemo.model.Status.StateEnum;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.TraceFlags;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The unit test of the operation GET /status (feat-9-walking-skeleton, Phase 200, Task 200.110; REQ
@@ -81,18 +81,16 @@ class StatusApiTest {
   /**
    * Make the MockMvc with the controller of the check and the handler of the error (the setup of the
    * standalone, and not a context of Spring Boot). The converter of the JSON is the one of the service (the
-   * default of Spring Boot, write-dates-as-timestamps false, so the time of the check is the format
-   * date-time of the contract, and not a number).
+   * Jackson 3 of Spring Boot 4: the support of java.time is in the core, and write-dates-as-timestamps is off, so
+   * the time of the check is the format date-time of the contract, and not a number).
    *
    * @param stateChecker the check of the state
    * @return the MockMvc
    */
   private static MockMvc setup(StateChecker stateChecker) {
-    MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-    converter
-        .getObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    JacksonJsonHttpMessageConverter converter =
+        new JacksonJsonHttpMessageConverter(
+            JsonMapper.builder().disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build());
     return MockMvcBuilders.standaloneSetup(new StatusController(stateChecker))
         .setControllerAdvice(new ProblemAdvice())
         .setMessageConverters(converter)
