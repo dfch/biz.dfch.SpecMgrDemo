@@ -1,0 +1,57 @@
+@startuml Choose the Language
+
+actor User
+actor Browser
+participant Frontend
+
+note left of User
+  User has a web browser and the address of the page.
+  Frontend has a full catalog of text for English and for German.
+end note
+
+User -> Frontend: User opens the page of the application.
+Browser -> Frontend: Browser sends the list of the preferred languages to Frontend.
+Frontend -> Frontend: Frontend selects the first language of the list that has a catalog.
+alt The list has no language that has a catalog
+Frontend -> Frontend: Frontend selects English.
+note right
+  Continue to step 3.
+end note
+end
+alt The first language of the list has a region, for example de-CH
+Frontend -> Frontend: Frontend uses the first part of the language tag (de) and selects the catalog of this language.
+note right
+  Continue to step 3.
+end note
+end
+Frontend -> User: Frontend shows User the page with all text in the selected language and with the choice of the language.
+note right
+  The button of the selected language shows that it is selected. The name on each button is in its own language: English and Deutsch. The attribute lang of the page and the title of the page have the selected language.
+end note
+User -> Frontend: User selects the other language with its button.
+note right
+  Step 4: User can select
+  The button English
+  The button Deutsch
+end note
+Frontend -> User: Frontend shows User all text of the page in the other language.
+note right
+  The text changes immediately. The browser does not get the page again and Frontend does not send a new request to Backend. The values that Backend gave stay the same. Only the text and the format of the time of the check change. The attribute lang of the page and the title of the page change too.
+end note
+alt A section of the page shows an error
+Frontend -> User: Frontend shows User the text for the error code in the other language.
+note right
+  The trace identifier stays the same. Frontend does not send a new request to Backend.
+end note
+end
+User -> User: User reads the page in the other language.
+
+note left of User
+  All text of the page is in the language that User selected.
+  The button of the selected language shows that it is selected.
+  The time of the check has the format of the selected language.
+end note
+note left of User
+  The page is in English, which is the language for each case that has no catalog.
+end note
+@enduml

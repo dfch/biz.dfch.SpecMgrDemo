@@ -1,0 +1,25 @@
+@startuml UC Package
+left to right direction
+
+usecase "Open the Page" as uc1 <<summary>>
+usecase "View the System Status" as uc2 <<user goal>>
+usecase "View the Version and the License Notice" as uc3 <<user goal>>
+usecase "Choose the Language" as uc4 <<user goal>>
+actor User
+actor Browser
+actor Backend
+
+User --> uc1
+Browser --> uc1
+Backend --> uc1
+User --> uc2
+Backend --> uc2
+User --> uc3
+Backend --> uc3
+User --> uc4
+Browser --> uc4
+uc1 ..> uc2 : <<include>> View the System Status
+uc1 ..> uc3 : <<include>> View the Version and the License Notice
+uc1 ..> uc4 : <<include>> Choose the Language
+
+@enduml

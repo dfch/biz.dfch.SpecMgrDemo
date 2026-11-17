@@ -1,0 +1,57 @@
+@startuml View the Version and the License Notice
+
+actor User
+actor Backend
+participant Frontend
+
+note left of User
+  Backend is in operation, or it gives an error response.
+  User has a web browser and the address of the page.
+end note
+
+User -> Frontend: User opens the page of the application in the browser.
+Frontend -> User: Frontend shows User the waiting message for the information of the service.
+Frontend -> Backend: Frontend sends the request GET /info to Backend.
+Backend -> Frontend: Backend sends the response with the version, the commit, the copyright holder, the address of the repository and the license to Frontend.
+alt Backend sends an error response
+Backend -> Frontend: Backend sends the error response with the error code and the trace identifier to Frontend.
+Frontend -> User: Frontend shows User the heading that the information is not available, the text for the error code, and the trace identifier.
+note right
+  The text is in the language of the page. Frontend does not show the members title and detail of the error response.
+end note
+end
+alt Backend gives no response
+Frontend -> User: Frontend shows User the heading that the information is not available and the text that the service gives no response.
+note right
+  There is no trace identifier in this case.
+end note
+end
+alt Backend sends a response that Frontend cannot read
+Frontend -> User: Frontend shows User the heading that the information is not available and the text that the response of the service is not valid.
+note right
+  There is no trace identifier in this case.
+end note
+end
+Frontend -> User: Frontend shows User the notice of the license at the bottom of the page, in the language of the page.
+note right
+  Step 4: Frontend shows the notice as
+  English: Copyright 2026 Ronald Rink, https://github.com/dfch/biz.dfch.SpecMgrDemo. Licensed under AGPL-3.0-only.
+  German: Copyright 2026 Ronald Rink, https://github.com/dfch/biz.dfch.SpecMgrDemo. Lizenziert unter AGPL-3.0-only.
+end note
+Frontend -> User: Frontend shows User the version and the commit of the build, in the language of the page.
+note right
+  Step 5: Frontend shows the version as
+  English: Version {version}, commit {commit}
+  German: Version {version}, Commit {commit}
+end note
+User -> User: User reads the notice of the license, the version and the commit.
+
+note left of User
+  The page shows the notice of the license (the copyright holder, the address of the repository and the license).
+  The page shows the version and the commit of the build.
+end note
+note left of User
+  The page shows the heading that the information is not available, and the text for the cause.
+  The page shows no notice, no version and no commit.
+end note
+@enduml

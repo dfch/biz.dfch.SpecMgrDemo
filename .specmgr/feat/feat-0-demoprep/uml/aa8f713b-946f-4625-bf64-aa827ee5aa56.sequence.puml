@@ -1,0 +1,53 @@
+@startuml View the System Status
+
+actor User
+actor Backend
+participant Frontend
+
+note left of User
+  Backend is in operation, or it gives an error response.
+  User has a web browser and the address of the page.
+end note
+
+User -> Frontend: User opens the page of the application in the browser.
+Frontend -> User: Frontend shows User the waiting message for the status.
+Frontend -> Backend: Frontend sends the request GET /status to Backend.
+Backend -> Frontend: Backend sends the response with the state and the time of the check to Frontend.
+alt Backend sends an error response
+Backend -> Frontend: Backend sends the error response with the error code and the trace identifier to Frontend.
+Frontend -> User: Frontend shows User the heading that the information is not available, the text for the error code, and the trace identifier.
+note right
+  The text is in the language of the page. Frontend does not show the members title and detail of the error response.
+end note
+end
+alt Backend gives no response
+Frontend -> User: Frontend shows User the heading that the information is not available and the text that the service gives no response.
+note right
+  There is no trace identifier in this case.
+end note
+end
+alt Backend sends a response that Frontend cannot read
+Frontend -> User: Frontend shows User the heading that the information is not available and the text that the response of the service is not valid.
+note right
+  There is no trace identifier in this case.
+end note
+end
+Frontend -> User: Frontend shows User the text for the state and the time of the check, in the language of the page.
+note right
+  Step 4: Frontend shows the state as
+  English: The system is up.
+  English: The system is degraded.
+  German: Das System läuft.
+  German: Das System ist eingeschränkt.
+end note
+User -> User: User reads the state of the system.
+
+note left of User
+  The page shows the state of the system (up or degraded).
+  The page shows the time of the check.
+end note
+note left of User
+  The page shows the heading that the information is not available, and the text for the cause.
+  The page shows no state and no time of the check.
+end note
+@enduml

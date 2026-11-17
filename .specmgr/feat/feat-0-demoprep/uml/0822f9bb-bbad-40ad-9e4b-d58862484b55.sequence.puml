@@ -1,0 +1,61 @@
+@startuml Open the Page
+
+actor User
+actor Browser
+actor Backend
+participant Frontend
+
+note left of User
+  User has a web browser and the address of the page.
+  Frontend has a full catalog of text for English and for German.
+end note
+
+User -> Frontend: User opens the page of the application.
+Browser -> Frontend: Browser sends the list of the preferred languages to Frontend.
+Frontend -> User: Frontend selects the language of the page and shows User the page with the choice of the language.
+note right
+  This is the use case Choose the Language, steps 2 and 3.
+end note
+group parallel: View the System Status
+Frontend -> Backend: Frontend sends the request GET /status to Backend.
+note right
+  This is the use case View the System Status. Frontend sends the request GET /info (step 4) at the same time. Each section of the page waits for its own response.
+end note
+Backend -> Frontend: Backend sends the state of the system and the time of the check to Frontend.
+alt Backend sends an error response for the status, or it gives no response
+Frontend -> User: Frontend shows User the error text in the section of the status.
+note right
+  Continue to step 6.
+end note
+end
+else parallel: View the Version and the License Notice
+Frontend -> Backend: Frontend sends the request GET /info to Backend.
+note right
+  This is the use case View the Version and the License Notice.
+end note
+Backend -> Frontend: Backend sends the version, the commit, the copyright holder, the address of the repository and the license to Frontend.
+note right
+  The sequence of the two responses can be different. The sections of the page do not wait for each other.
+end note
+alt Backend sends an error response for the information, or it gives no response
+Frontend -> User: Frontend shows User the error text in the section of the notice.
+note right
+  Continue to step 7.
+end note
+end
+end
+Frontend -> User: Frontend shows User the state, the time of the check, the notice of the license, the version and the commit, in the language of the page.
+User -> User: User reads the page.
+User -> Frontend: User selects the other language with its button.
+Frontend -> User: Frontend shows User all text of the page in the other language.
+
+note left of User
+  The page shows the state of the system and the time of the check.
+  The page shows the notice of the license, the version and the commit.
+  All text of the page is in the language of User.
+end note
+note left of User
+  Each section that did not get its information shows the heading that the information is not available, and the text for the cause.
+  The other sections of the page are not changed by this failure.
+end note
+@enduml

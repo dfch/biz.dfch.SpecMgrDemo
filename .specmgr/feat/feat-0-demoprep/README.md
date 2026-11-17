@@ -1,9 +1,10 @@
 ---
+classification: null
 created: '2026-11-17T07:24:57.788+01:00'
 id: feat-0-demoprep
 status: progress
 type: feat
-updated: '2026-11-17T07:45:00.000+01:00'
+updated: '2026-11-17T10:04:28.929+01:00'
 version: 1.0.0
 ---
 
@@ -28,6 +29,9 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - REQ-005: The feature has screenshots of the user interface, of the API documentation and of the model, as files in the folder of the feature.
 - REQ-006: The feature has a short presentation in Markdown (6 slides, English) with the strong points, the differences to other specification frameworks, and the weak points, and the PDF made from it.
 - REQ-007: The feature has two Playwright tests that open the page of the app and read the version number from it and write it to the console: one that an agent runs with the Playwright MCP, and one head-less test with no agent. Both are in the demo and on a slide.
+- REQ-008: The feature has specmgr documents that describe the demo from the view of the user: one summary UC and three user goal UCs (the status, the version and the license notice, the language), and four REQs of the stakeholder level (`iso29148:strs`, status `draft`) for the same behavior of the user interface.
+- REQ-009: The feature has one VCR for each of the four new REQs and one VCR for each of the four new UCs. Each VCR has criteria with a DTAIS method, and it names the existing test, the demo script or the new test that is necessary.
+- REQ-010: The feature has PlantUML sequence diagrams of the four UCs and the package diagram of the UCs in the folder `uml/`, with the SVG images, and a script that makes the images.
 
 ### Acceptance Criteria
 
@@ -43,12 +47,17 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] ACC-010: `bin/170-110-00-agent-prompt.md` has the prompt for an agent with the Playwright MCP. The agent opens the page, reads the version and prints it. The result is the same as in ACC-009 (REQ-007).
 - [x] ACC-011: `PRESENTATION.md` and `PRESENTATION.pdf` have a slide for the two tests, and `DEMO.md` has the commands (REQ-007).
 
+- [x] ACC-012: The four REQs, the four UCs and the eight VCRs of REQ-008 and REQ-009 pass `specmgr lint` (the gate `tools/gates/validate-docs.sh` with the files added), and `tools/gates/traceability.sh .` gives no error (REQ-008, REQ-009).
+- [x] ACC-013: Each UC has the REQs and the VCR as references, each new REQ has its VCR and its UCs as references, and each VCR names, for each criterion, the test, the script or the demo steps (REQ-009).
+- [x] ACC-014: `bin/190-100-00-render-uml.sh` makes an SVG for each `.puml` file in `uml/`, and each sequence diagram has no `UNATTRIBUTED` marker and passes `validate_plantuml` with the URL source (REQ-010).
+
 ### Scope
 
 #### Included
 
 - The DSL model, the exports, the generated rules, the scripts, the images, the presentation and the guide to the demo, all in the folder of this feature.
 - The list of the strong points (in the presentation).
+- The new specmgr documents in `docs/req/`, `docs/uc/` and `docs/vcr/` (REQ-008, REQ-009) and the UML files in `uml/` (REQ-010). The documents are the only files of this feature outside of its folder, because specmgr keeps them in `docs/`.
 
 #### Explicitly Out Of Scope
 
@@ -133,11 +142,23 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 - [x] Task 170.120: Add a slide to `PRESENTATION.md` (a backup slide is acceptable), the commands to `DEMO.md`, and make `PRESENTATION.pdf` again.
 - [x] Task 170.130: Run `just validate` and `just commit-check`, and commit.
 
+#### Phase 180: Use Cases, Requirements and Verification Case Records
+
+- [x] Task 180.100: Write the four REQs of the user interface (the status, the version and the license notice, the error, the languages) in `docs/req/`.
+- [x] Task 180.110: Write the four UCs (the summary UC "Open the Page" and the three user goal UCs) in `docs/uc/`, with the references to the REQs.
+- [x] Task 180.120: Write the eight VCRs (one for each REQ and one for each UC) in `docs/vcr/`, and add the references of the VCRs to the REQs and the UCs.
+- [x] Task 180.130: Run `tools/gates/validate-docs.sh` (with the files added) and `tools/gates/traceability.sh .`, and check the text with the STE100 tools.
+
+#### Phase 190: UML Diagrams
+
+- [x] Task 190.100: Make `bin/190-100-00-render-uml.sh` (with `bin/190-100-01-encode.py`): the SVG of each `.puml` file in `uml/`.
+- [x] Task 190.110: Make the four sequence diagrams (from `get_uc_sequence_skeleton`, with the attribution done by hand) and the package diagram in `uml/`, and validate them.
+
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-17**: All phases (100 to 170) are done and all acceptance criteria are met. `PRESENTATION.pdf` has 10 slides (one backup slide for the two Playwright tests). The branch `feat-0-demoprep` is pushed to `origin` (see the entry of the push in the Updates).
+**As of 2026-11-17**: All phases (100 to 190) are done and all acceptance criteria are met. Phases 180 and 190 are not committed yet. `PRESENTATION.pdf` has 10 slides (one backup slide for the two Playwright tests). The branch `feat-0-demoprep` is pushed to `origin` (see the entry of the push in the Updates).
 
 ### Blockers
 
@@ -146,6 +167,45 @@ The scripts in `bin/` are the commands of the demo. Their names follow the form 
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-17 09:20:00.000Z - Phases 180 and 190: UCs, REQs, VCRs and UML diagrams
+
+Done: 4 REQs, 4 UCs, 8 VCRs (all with the status `draft`, as the retro-active description of the demo) and the UML diagrams. The owner did not ask for a SYSRS entry or a slide, so none is made. No test code is changed.
+
+| Level | Title | Id |
+|---|---|---|
+| UC (summary) | Open the Page | `0822f9bb-bbad-40ad-9e4b-d58862484b55` |
+| UC | View the System Status | `aa8f713b-946f-4625-bf64-aa827ee5aa56` |
+| UC | View the Version and the License Notice | `0dbd4917-2a33-4b9f-8180-8ecac6a74f4c` |
+| UC | Choose the Language | `3ecb44fa-73d5-4985-9444-bfb444c321b3` |
+| REQ (`iso29148:strs`) | The User Interface Shows the System Status | `4ed458ff-49c5-452a-a545-0fb8805f872d` |
+| REQ | The User Interface Shows the Version and the License Notice | `168114dd-d00f-41f9-bb32-9cfa0b362afe` |
+| REQ | The User Interface Shows an Error in the Language of the User | `848be85d-ba2c-44ec-b2d2-66fb0e6c84ef` |
+| REQ | The User Interface Is in English and in German | `52f9b02a-69e1-40db-af6e-ad3fb67987bc` |
+
+The VCR of each REQ and of each UC is in `docs/vcr/` (the titles start with `Verification of ...`, and each REQ and UC has the reference to its VCR).
+
+The UML files are in `uml/`: `<uc id>.sequence.puml` and `.svg` for each UC, and `package.puml` and `.svg`. The command is `bin/190-100-00-render-uml.sh` (the PlantUML server of the container `plantuml-server` at `http://127.0.0.1:8080`, or the variable `PLANTUML_BASE`).
+
+Real results of the checks in this session:
+- `specmgr lint` (`tools/gates/validate-docs.sh origin/dev`, with the new files added with `git add -N` and then reset): `linted=24 failed=0`.
+- `tools/gates/traceability.sh .`: `RESULT: PASS (2 warning(s))`, with 6 REQ and 10 VCR documents. The two warnings are the two old approved REQs, whose VCRs are not in the name of a test (they were there before). The new REQs are `draft`, so the gate does not examine them.
+- `validate_plantuml` (the URL source) gave `structure_ok=true`, `valid=true`, `rendered=true` for the four sequence diagrams (before the change of the wording, see below). After the change of the wording the PlantUML jar of the container `plantuml-cli` (`--check-syntax`) gave exit code 0 for the four diagrams and the package diagram, and the script made the SVG for each. The diagrams have no `UNATTRIBUTED` marker.
+- STE100: an agent examined the 16 documents with the `asdste100` tools. It found words that are not approved (for example `ask`, `load`, `fail`, `confirm`, `cover`, `exactly`, `order`, `reach`) and sentences that are too long. They are corrected with a script over the files (the `updated` field of the documents is not changed by the script). The text is not examined a second time.
+
+Gaps that the VCRs show (the test does not exist yet, so the VCRs stay `draft`):
+- An error of `GET /info` does not change the status section (VCR `fdddfec7`, AC-004).
+- The user interface does not show `title` and `detail` of an error response (VCR `d99b707f`, AC-005).
+- The change of the language sends no new request (VCR `ce246106`, AC-005).
+- An error text changes the language with the button (VCR `fc71e18f`, AC-004).
+- Smaller gaps: the network error for `GET /info`, and the German text for the state `degraded` on the page.
+
+Notes and mistakes:
+- The tool `create_*` of the specmgr MCP wrote into this work tree (the problem of the handover is gone).
+- The structure check of `validate_plantuml` does not know the fragment `par`. The diagram of the summary UC uses `group` with `else` for the two requests at the same time. The server draws it as two branches.
+- The first draft of the UC "Choose the Language" had an empty section `Related Use Cases` and an introduction paragraph in an extension. The schema does not accept them. They are removed.
+- `just` is not installed in the shell of this session, so the gate scripts in `tools/gates/` were started directly.
+- Nothing is committed.
 
 #### 2026-11-17 09:15:00.000Z - Prompts in DEMO.md, push, notes for another system
 
