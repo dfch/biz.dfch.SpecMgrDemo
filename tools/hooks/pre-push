@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# feat-48-pre-commit-hooks, Task 120.100 (REQ-006, DEC cc4449cd-78fb-452a-904f-7efda89cf004)
+#
+# Git hook: pre-push. It runs before a push and re-runs the six fast gates
+# against the base of the justfile (origin/GITHUB_BASE_REF, or origin/dev if
+# GITHUB_BASE_REF is not set), so that a commit made with --no-verify is
+# stopped before it reaches the base. It stops the push on the first failing
+# gate.
+#
+# It is a thin shell: it calls the just recipes only (the one entry point,
+# feat-5 REQ-002, REQ-009) and has no gate logic of its own, except the
+# opt-out check. The six fast gates, in the order of REQ-003: commit-check,
+# validate, lint, check-pins, check-workflows, check-sudo. The stdin of git
+# (the refs being pushed) is not read, and the base logic stays in the justfile.
+#
+# Bypass: git push --no-verify. The environment marker SKIP_HOOKS_FOR_BULK
+# (set and non-empty) makes this hook skip all gates and exit 0 (Task 120.110,
+# DEC cc4449cd-78fb-452a-904f-7efda89cf004, the bulk commits of the coding
+# agent only). The details are documented in the handbook (Phase 130).
+
+set -euo pipefail
+
+if [[ -n "${SKIP_HOOKS_FOR_BULK:-}" ]]; then
+    echo "[pre-push] SKIP: SKIP_HOOKS_FOR_BULK is set (non-empty); this hook skips all gates and exits 0." >&2
+    echo "  bulk commits of the coding agent (DEC cc4449cd), not for a normal commit, pre-push re-checks the base" >&2
+    exit 0
+fi
+
+if ! command -v just >/dev/null 2>&1; then
+    echo "[pre-push] ERROR: just is not on PATH. The hooks need the pinned version of just (see just verify-tools)." >&2
+    exit 1
+fi
+
+just commit-check
+just validate
+just lint
+just check-pins
+just check-workflows
+just check-sudo

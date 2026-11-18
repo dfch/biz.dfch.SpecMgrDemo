@@ -9,10 +9,18 @@
 # gates, in the order of REQ-003: commit-check, validate, lint, check-pins,
 # check-workflows, check-sudo. No slow or network gate runs here (REQ-004).
 #
-# Bypass: git commit --no-verify. The details are documented in the handbook
-# (Phase 130).
+# Bypass: git commit --no-verify. The environment marker SKIP_HOOKS_FOR_BULK
+# (set and non-empty) makes this hook skip all gates and exit 0 (Task 120.110,
+# DEC cc4449cd-78fb-452a-904f-7efda89cf004, the bulk commits of the coding
+# agent only). The details are documented in the handbook (Phase 130).
 
 set -euo pipefail
+
+if [[ -n "${SKIP_HOOKS_FOR_BULK:-}" ]]; then
+    echo "[pre-commit] SKIP: SKIP_HOOKS_FOR_BULK is set (non-empty); this hook skips all gates and exits 0." >&2
+    echo "  bulk commits of the coding agent (DEC cc4449cd), not for a normal commit, pre-push re-checks the base" >&2
+    exit 0
+fi
 
 if ! command -v just >/dev/null 2>&1; then
     echo "[pre-commit] ERROR: just is not on PATH. The hooks need the pinned version of just (see just verify-tools)." >&2
