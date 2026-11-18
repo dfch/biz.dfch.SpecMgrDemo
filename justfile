@@ -92,7 +92,7 @@ test-breaking-changes-gate:
 generate:
     @{{ just_executable() }} _gate generate.sh 120.120 backend frontend
 
-# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, and tsc --noEmit --strict). The generation is part of the Maven build (ACC-005).
+# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, tsc --noEmit --strict, and the build of the browser bundle with vite build into a temporary folder). The generation is part of the Maven build (ACC-005).
 compile:
     @{{ just_executable() }} _gate compile.sh 120.120 backend frontend
 

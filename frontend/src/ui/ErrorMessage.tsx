@@ -14,6 +14,8 @@ export function ErrorMessage({ error }: { readonly error: unknown }) {
     traceId = error.traceId
   } else if (error instanceof ApiError && error.kind === 'network') {
     text = t('error.network')
+  } else if (error instanceof ApiError && error.kind === 'timeout') {
+    text = t('error.timeout')
   } else {
     text = t('error.invalid')
   }

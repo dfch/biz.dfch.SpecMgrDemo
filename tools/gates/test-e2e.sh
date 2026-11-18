@@ -33,10 +33,13 @@
 # violations.
 #
 # Part 1 has the end-to-end test of the walking skeleton too (feat-9-walking-skeleton, Phase 400, Task 400.110,
-# REQ-005): the file e2e/service.spec.ts opens the page of the REAL service, the backend of the build and the
-# development server of Vite of the frontend. The second webServer of playwright.config.ts starts both with the
+# REQ-005): the file e2e/service.spec.ts opens the page of the REAL service, the backend of the build and the BUILT
+# bundle of the frontend (`vite build` into a temporary folder, served by `vite preview`, which sends /status and
+# /info to the backend; review N6b). The second webServer of playwright.config.ts starts both with the
 # script e2e/service.mjs (random ports, no collector: the variables OTEL_* of the backend and VITE_OTEL_* of the
-# frontend are empty). The backend starts with `./mvnw test -Dtest=ServiceForE2e` in backend/ (the class
+# frontend are empty, and the script removes the temporary folder and stops both processes). The spec has the
+# accessibility check of the real page with axe-core too, in English and in German (not only the fixtures), and a
+# test that the page is the bundle of the build. The backend starts with `./mvnw test -Dtest=ServiceForE2e` in backend/ (the class
 # ServiceForE2e of the tests starts the app with the class RunningService, no new tool: the module has no
 # executable jar), so the part 1 needs JDK 21 and the network for the first run (Maven Central) as the recipes of
 # the backend have. The script gives the property build.info.commit (the function backend_maven_args of _lib.sh)
@@ -119,6 +122,15 @@ else
         passed=$((passed + 1))
     else
         echo "FAIL the run has not the three end-to-end tests of the real service"
+        failed=$((failed + 1))
+    fi
+    if [[ "${run_output}" == *"the service gives the built bundle of the frontend"* \
+        && "${run_output}" == *"the real page has no accessibility violations in English"* \
+        && "${run_output}" == *"the real page has no accessibility violations in German"* ]]; then
+        echo "ok   the run has the test of the built bundle and the axe-core check of the real page (English and German)"
+        passed=$((passed + 1))
+    else
+        echo "FAIL the run has not the test of the built bundle and the two axe-core checks of the real page"
         failed=$((failed + 1))
     fi
     if [[ "${run_output}" == *"the good page has no violations"* && "${run_output}" == *"the bad page reports the violations"* ]]; then

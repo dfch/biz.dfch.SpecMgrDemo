@@ -23,6 +23,7 @@ export const de: Catalog = {
     heading: 'Die Information ist nicht verfügbar.',
     traceId: 'Trace-Kennung: {{traceId}}',
     network: 'Der Dienst ist nicht erreichbar.',
+    timeout: 'Der Dienst hat nicht rechtzeitig geantwortet.',
     invalid: 'Der Dienst hat eine Antwort gegeben, die die Anwendung nicht versteht.',
     code: {
       not_found: 'Die Information wurde nicht gefunden.',

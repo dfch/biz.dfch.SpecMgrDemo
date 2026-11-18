@@ -2,7 +2,9 @@
 // Playwright starts it (the second webServer of playwright.config.ts), waits for the line that it prints on its
 // standard output, and stops it after the run (the whole process group).
 //
-// The service is the real one: the backend of the build and the development server of Vite of the frontend.
+// The service is the real one: the backend of the build and the BUILT bundle of the frontend (`vite build` into a
+// temporary folder, served by the preview server of Vite, `vite preview`). So the page that the tests open is the
+// page of the build, and not the page of the development server (review N6a and N6b of feat-9).
 //
 // 1. The backend. The script starts `./mvnw test -Dtest=ServiceForE2e` in the folder backend/ (the class
 //    ServiceForE2e of the tests of the backend starts the app with the class RunningService: the embedded Tomcat
@@ -13,11 +15,13 @@
 //    The extra arguments of Maven are in the variable E2E_MAVEN_ARGS (the recipe test-e2e gives the property
 //    build.info.commit with the sha of HEAD, the function backend_maven_args of tools/gates/_lib.sh, so the
 //    commit of GET /info is the commit of the work tree).
-// 2. The frontend. The script starts the development server of Vite (the API of the package vite, the
-//    vite.config.ts of the module) on a random port of the loopback address. The configuration sends /status and
-//    /info to the backend (the variable SPECMGRDEMO_BACKEND_URL, which the script sets from the line of step 1), so the
-//    browser sees one origin and the page uses relative URLs. The variables VITE_* of the telemetry of the browser
-//    are empty (no endpoint of the exporter: the processor of the spans does nothing, no collector).
+// 2. The frontend. The script builds the bundle with the API of the package vite (`build`, the vite.config.ts of
+//    the module) into a temporary folder, and starts the preview server of Vite (`preview`) on a random port of the
+//    loopback address. The configuration (`preview.proxy`) sends /status and /info to the backend (the variable
+//    SPECMGRDEMO_BACKEND_URL, which the script sets from the line of step 1), so the browser sees one origin and the page
+//    uses relative URLs. The variables VITE_* of the telemetry of the browser are empty when the bundle is built
+//    (the values are in the bundle: no endpoint of the exporter, so the processor of the spans does nothing, no
+//    collector). The script removes the temporary folder when it stops.
 //
 // The ports are random (no fixed port, so no run can meet a process that holds the port), and the script prints
 // `E2E_SERVICE_URL=http://127.0.0.1:<port>` of the frontend when both parts run. The config of Playwright reads the
@@ -28,8 +32,10 @@
 // there, the script prints the output of Maven and ends with the exit code 1.
 import { spawn } from 'node:child_process'
 import { createServer as createNetServer } from 'node:net'
-import { resolve } from 'node:path'
-import { createServer } from 'vite'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { build, preview } from 'vite'
 
 const frontendDir = resolve(import.meta.dirname, '..')
 const backendDir = resolve(frontendDir, '..', 'backend')
@@ -37,7 +43,8 @@ const extraArguments = (process.env.E2E_MAVEN_ARGS ?? '').split(/\s+/).filter(ar
 
 // A free port of the loopback address: the operating system gives one (the port 0), and the script closes the
 // socket and gives the port to Vite (with `strictPort`, so Vite stops if another process took the port in the
-// meantime, and does not use another one in silence). Vite reads the option `port` 0 as no port (the default 5173).
+// meantime, and does not use another one in silence). Vite reads the option `port` 0 as no port (the default 4173
+// of the preview server).
 function freePort() {
   return new Promise((resolvePort, rejectPort) => {
     const socket = createNetServer()
@@ -55,7 +62,8 @@ const maven = spawn(
   { cwd: backendDir, stdio: ['ignore', 'pipe', 'pipe'] },
 )
 
-let viteServer
+let previewServer
+let bundleDir
 let stopping = false
 
 async function stop(code) {
@@ -64,7 +72,10 @@ async function stop(code) {
   }
   stopping = true
   maven.kill('SIGTERM')
-  await viteServer?.close()
+  await previewServer?.close()
+  if (bundleDir !== undefined) {
+    await rm(bundleDir, { recursive: true, force: true })
+  }
   process.exit(code)
 }
 
@@ -97,15 +108,19 @@ try {
   ]) {
     process.env[name] = ''
   }
-  viteServer = await createServer({
+  bundleDir = await mkdtemp(join(tmpdir(), 'specmgrdemo-e2e-bundle-'))
+  const buildOptions = { outDir: bundleDir, emptyOutDir: true }
+  await build({ root: frontendDir, logLevel: 'warn', build: buildOptions })
+  // The preview server listens when `preview` returns.
+  previewServer = await preview({
     root: frontendDir,
     logLevel: 'warn',
-    server: { host: '127.0.0.1', port: await freePort(), strictPort: true },
+    build: buildOptions,
+    preview: { host: '127.0.0.1', port: await freePort(), strictPort: true },
   })
-  await viteServer.listen()
-  const address = viteServer.httpServer?.address()
+  const address = previewServer.httpServer.address()
   if (address === null || address === undefined || typeof address === 'string') {
-    throw new Error('The development server of Vite has no port')
+    throw new Error('The preview server of Vite has no port')
   }
   console.log(`E2E_SERVICE_URL=http://127.0.0.1:${address.port}`)
 } catch (error) {

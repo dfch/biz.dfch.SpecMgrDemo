@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { de } from '../i18n/de'
 import { en } from '../i18n/en'
-import { createI18n, detectLanguage, languages } from '../i18n/i18n'
+import { createI18n, detectLanguage, languages, type Language } from '../i18n/i18n'
 import { errorCodeSchema } from '../generated/zod/errorCodeSchema'
 
 // Unit tests of the i18n (feat-9-walking-skeleton, Phase 300, Task 300.120, ACC-004, DEC
@@ -62,6 +62,28 @@ describe('the catalogs of the i18n', () => {
 
   it('have the two languages EN and DE', () => {
     expect([...languages]).toEqual(['en', 'de'])
+  })
+})
+
+describe('the instance of i18next', () => {
+  it('does not escape the values (the address of the repository stays as it is)', () => {
+    const raw = { copyright: 'A & B <c> "d"', repository: 'https://example.invalid/a?b=1&c=2', license: "it's" }
+    expect(createI18n('en').t('info.notice', raw)).toBe(`${raw.copyright}, ${raw.repository}. Licensed under ${raw.license}.`)
+  })
+
+  it('has the text at once (the catalogs are in the bundle) and takes EN for a language that has no catalog', () => {
+    const instance = createI18n('de')
+    expect(instance.isInitialized).toBe(true)
+    expect(instance.language).toBe('de')
+    expect(createI18n('fr' as Language).t('status.up')).toBe('The system is up.')
+  })
+
+  it('makes an instance that has no state in common with another instance', () => {
+    const english = createI18n('en')
+    const german = createI18n('de')
+    expect(english.t('status.up')).toBe('The system is up.')
+    expect(german.t('status.up')).toBe('Das System läuft.')
+    expect(english.t('status.up')).toBe('The system is up.')
   })
 })
 

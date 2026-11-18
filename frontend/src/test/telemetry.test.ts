@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { SpanStatusCode } from '@opentelemetry/api'
-import { InMemorySpanExporter } from '@opentelemetry/sdk-trace-web'
+import { InMemorySpanExporter, type ReadableSpan, type SpanExporter } from '@opentelemetry/sdk-trace-web'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultServiceName, readTelemetryConfig } from '../telemetry/config'
 import { createTelemetry } from '../telemetry/telemetry'
@@ -19,6 +19,10 @@ afterEach(() => {
 const okFetcher = async () => new Response('{}', { status: 200 })
 
 describe('the configuration of the OpenTelemetry', () => {
+  it('has the name specmgrdemo-frontend by default', () => {
+    expect(defaultServiceName).toBe('specmgrdemo-frontend')
+  })
+
   it('has no endpoint and the default name of the service if the environment has no variable', () => {
     expect(readTelemetryConfig({})).toEqual({ endpoint: undefined, serviceName: defaultServiceName })
   })
@@ -94,6 +98,36 @@ describe('the export of the spans', () => {
     expect(first?.attributes['http.response.status_code']).toBe(503)
     expect(second?.status.code).toBe(SpanStatusCode.ERROR)
     expect(second?.status.message).toBe('TypeError')
+  })
+
+  it('marks a response with the status 400 as an error, and a response with the status 399 not', async () => {
+    const exporter = new InMemorySpanExporter()
+    const telemetry = createTelemetry({ endpoint: undefined, serviceName: 'test-frontend' }, exporter)
+    await telemetry.traceFetch(async () => new Response('{}', { status: 400 }))('/status')
+    await telemetry.traceFetch(async () => new Response(null, { status: 304 }))('/status')
+    await telemetry.forceFlush()
+    const [bad, notModified] = exporter.getFinishedSpans()
+    expect(bad?.status.code).toBe(SpanStatusCode.ERROR)
+    expect(notModified?.status.code).toBe(SpanStatusCode.UNSET)
+  })
+
+  it('names the tracer, and the shutdown sends the spans that are not sent yet', async () => {
+    // The in-memory exporter clears its spans when it is shut down, so this exporter keeps what it gets.
+    const exported: ReadableSpan[] = []
+    const exporter: SpanExporter = {
+      export: (spans, done) => {
+        exported.push(...spans)
+        done({ code: 0 }) // 0 is ExportResultCode.SUCCESS (the package @opentelemetry/core is no direct dependency)
+      },
+      shutdown: async () => undefined,
+    }
+    const telemetry = createTelemetry({ endpoint: undefined, serviceName: 'test-frontend' }, exporter)
+    await telemetry.traceFetch(okFetcher)('/status')
+    expect(exported).toHaveLength(0) // the batch processor waits for its delay
+
+    await telemetry.shutdown()
+
+    expect(exported.map((span) => span.instrumentationScope.name)).toEqual(['biz.dfch.specmgrdemo.frontend'])
   })
 
   it('posts the span to the address of the configuration with the exporter OTLP/HTTP', async () => {

@@ -24,6 +24,7 @@ export const en = {
     heading: 'The information is not available.',
     traceId: 'Trace identifier: {{traceId}}',
     network: 'The service cannot be reached.',
+    timeout: 'The service did not answer in time.',
     invalid: 'The service gave an answer that the application does not understand.',
     code: {
       not_found: 'The information was not found.',

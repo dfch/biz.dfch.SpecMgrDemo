@@ -66,6 +66,17 @@ async function show(api: ApiClient, language: Language): Promise<void> {
 const text = (selector: string): string | undefined => container.querySelector(selector)?.textContent ?? undefined
 
 describe('the user interface', () => {
+  it('has the landmarks header, main and footer as siblings (none is inside main)', async () => {
+    await show(fakeApi(), 'en')
+    const page = container.querySelector('.page')
+    expect(page).not.toBeNull()
+    expect(Array.from(page?.children ?? []).map((element) => element.tagName)).toEqual(['HEADER', 'MAIN', 'FOOTER'])
+    expect(container.querySelectorAll('main').length).toBe(1)
+    expect(container.querySelector('main header, main footer')).toBeNull()
+    expect(container.querySelector('main h2')?.textContent).toBe('System status')
+    expect(container.querySelector('header h1')?.textContent).toBe('SpecMgr Demo')
+  })
+
   it('shows the loading text before the answers arrive', async () => {
     const never = new Promise<never>(() => undefined)
     await show(fakeApi({ getStatus: () => never, getInfo: () => never }), 'en')
@@ -151,6 +162,17 @@ describe('the user interface', () => {
     expect(alerts[0]).toContain('The service cannot be reached.')
     expect(alerts[1]).toContain('The service gave an answer that the application does not understand.')
     expect(container.textContent).not.toContain('Trace identifier')
+  })
+
+  it('shows the text for a request that has no answer in time, in EN and in DE', async () => {
+    const timeout = () => Promise.reject(new ApiError('timeout', 'no answer in time'))
+    await show(fakeApi({ getStatus: timeout }), 'en')
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('The service did not answer in time.')
+    expect(container.textContent).not.toContain('The service cannot be reached.')
+
+    await act(async () => root.render(<div />))
+    await show(fakeApi({ getStatus: timeout }), 'de')
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Der Dienst hat nicht rechtzeitig geantwortet.')
   })
 
   it('shows no notice of the license, and an error text, if GET /info gives an error', async () => {

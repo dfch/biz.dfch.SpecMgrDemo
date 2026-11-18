@@ -10,7 +10,7 @@ import { defineConfig } from '@playwright/test'
 // playwright.config.negative.ts and stops for it.
 //
 // The second webServer is the real service of the walking skeleton (feat-9-walking-skeleton, Phase 400, Task
-// 400.110): the backend of the build and the development server of Vite (e2e/service.mjs). The ports are random.
+// 400.110): the backend of the build and the BUILT bundle of the frontend, served by the preview server of Vite (e2e/service.mjs). The ports are random.
 // The script prints the line `E2E_SERVICE_URL=<address of the frontend>`, Playwright waits for the line (the option
 // `wait.stdout`) and stores the named group in the environment variable E2E_SERVICE_URL, and the spec
 // e2e/service.spec.ts reads the address from it. The start runs Maven (./mvnw of backend/, JDK 21), so the first
