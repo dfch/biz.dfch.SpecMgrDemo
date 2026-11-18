@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test'
+import { serviceUrlWait } from './e2e/lines.mjs'
 
 // The end-to-end tests with the accessibility check of axe-core (feat-7-verification-architecture-tools,
 // Task 110.120, REQ-007). The tests run headless (no display, also in CI) against the HTML fixtures in
@@ -13,7 +14,9 @@ import { defineConfig } from '@playwright/test'
 // 400.110): the backend of the build and the BUILT bundle of the frontend, served by the preview server of Vite (e2e/service.mjs). The ports are random.
 // The script prints the line `E2E_SERVICE_URL=<address of the frontend>`, Playwright waits for the line (the option
 // `wait.stdout`) and stores the named group in the environment variable E2E_SERVICE_URL, and the spec
-// e2e/service.spec.ts reads the address from it. The start runs Maven (./mvnw of backend/, JDK 21), so the first
+// e2e/service.spec.ts reads the address from it. Playwright matches the option `wait.stdout` on the whole output that
+// it has collected (not line by line), and a chunk can end inside the port, so the pattern (serviceUrlWait of
+// e2e/lines.mjs) needs the line break after the port (a lookahead); the check e2e/lines.check.mjs tests it. The start runs Maven (./mvnw of backend/, JDK 21), so the first
 // start needs the time of a build (the timeout is the long one).
 export default defineConfig({
   testDir: 'e2e',
@@ -38,7 +41,7 @@ export default defineConfig({
     },
     {
       command: 'node e2e/service.mjs',
-      wait: { stdout: /E2E_SERVICE_URL=(?<E2E_SERVICE_URL>http:\/\/127\.0\.0\.1:\d+)/ },
+      wait: { stdout: serviceUrlWait },
       reuseExistingServer: false,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
       timeout: 300000,

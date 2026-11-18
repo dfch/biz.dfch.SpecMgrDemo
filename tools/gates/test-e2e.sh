@@ -47,6 +47,12 @@
 # name `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the user interface shows the notice of the license` is the
 # criterion AC-002 of the verification case record of the operation GET /info.
 #
+# Before part 1 the script runs the check of the patterns that read a printed line of a child process
+# (`node --test e2e/lines.check.mjs`, the patterns of e2e/lines.mjs: the line of the backend in the output of Maven and
+# the line `wait.stdout` of Playwright). The check feeds the patterns with the output cut at every place, also inside the
+# port, and a pattern must not give a part of the port (CI run 44296180544 of feat-9: the port 3 instead of 35127,
+# ECONNREFUSED of the preview proxy, 5 failed tests). It is no test of Playwright (the name has no part `.spec.`).
+#
 # The script needs Node and pnpm (install_frontend in _lib.sh installs the module from the lock file
 # with `pnpm install --frozen-lockfile --ignore-scripts`, and stops if an installed package has
 # another version than the key of tools/versions.env) and the network for the first run (the npm
@@ -94,6 +100,21 @@ if [[ ${run_code} -ne 0 ]]; then
 else
     echo "ok   the chromium browser is in the user cache of the home (the install is idempotent)"
     passed=$((passed + 1))
+fi
+
+echo
+echo "== the patterns that read a printed line of a child process (the output cut inside the port)"
+set +e
+run_output="$(node --test e2e/lines.check.mjs 2>&1)"
+run_code=$?
+set -e
+if [[ ${run_code} -eq 0 ]]; then
+    echo "ok   the patterns of e2e/lines.mjs accept a line only when its line break has arrived (the output cut at every place)"
+    passed=$((passed + 1))
+else
+    echo "FAIL the check e2e/lines.check.mjs is not green (exit code ${run_code})"
+    printf '%s\n' "${run_output}" | tail -n 30 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
 fi
 
 echo

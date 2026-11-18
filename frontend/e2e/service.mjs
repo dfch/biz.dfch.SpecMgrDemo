@@ -25,7 +25,8 @@
 //
 // The ports are random (no fixed port, so no run can meet a process that holds the port), and the script prints
 // `E2E_SERVICE_URL=http://127.0.0.1:<port>` of the frontend when both parts run. The config of Playwright reads the
-// line (the option `wait.stdout`), and the tests read the address from the environment variable E2E_SERVICE_URL.
+// line (the option `wait.stdout`, the pattern serviceUrlWait of lines.mjs, which needs the line break after the line),
+// and the tests read the address from the environment variable E2E_SERVICE_URL.
 //
 // The stop: Playwright stops the process group of the script (the child processes of Maven stay in it, so they
 // stop with it), and the script stops its two parts on SIGINT and SIGTERM too. If Maven ends before the line is
@@ -36,6 +37,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { build, preview } from 'vite'
+import { backendUrl as findBackendUrl } from './lines.mjs'
 
 const frontendDir = resolve(import.meta.dirname, '..')
 const backendDir = resolve(frontendDir, '..', 'backend')
@@ -83,17 +85,24 @@ process.on('SIGINT', () => void stop(0))
 process.on('SIGTERM', () => void stop(0))
 
 // The output of Maven (the standard output and the error output) is kept, and it is printed if the start fails.
+// The line of the backend is read from the standard output only, in a buffer of its own: a chunk of the error output
+// between two chunks of the standard output must not cut the line. The line counts only when the line break after it
+// has arrived (the pattern of lines.mjs): a chunk can end in the middle of the port, and the part of the port is not
+// the port (CI run 44296180544: the port 3 instead of 35127, ECONNREFUSED of the preview proxy).
 let output = ''
 const backendUrl = new Promise((resolveUrl, rejectUrl) => {
-  const read = chunk => {
+  let standardOutput = ''
+  maven.stdout.on('data', chunk => {
     output += chunk.toString()
-    const match = /^E2E_BACKEND_URL=(http:\/\/127\.0\.0\.1:\d+)\s*$/m.exec(output)
-    if (match) {
-      resolveUrl(match[1])
+    standardOutput += chunk.toString()
+    const url = findBackendUrl(standardOutput)
+    if (url !== undefined) {
+      resolveUrl(url)
     }
-  }
-  maven.stdout.on('data', read)
-  maven.stderr.on('data', read)
+  })
+  maven.stderr.on('data', chunk => {
+    output += chunk.toString()
+  })
   maven.on('error', rejectUrl)
   maven.on('exit', code => rejectUrl(new Error(`Maven ended with the exit code ${code} before the backend was ready`)))
 })
