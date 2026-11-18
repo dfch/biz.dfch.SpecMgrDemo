@@ -201,7 +201,9 @@ the test runner maven-surefire-plugin, the mutation tool PIT (the plugin org.pit
 dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools Spring Modulith (the
 artifact org.springframework.modulith:spring-modulith-core, and the jar org.springframework.boot:spring-boot if a pom.xml
 has it as a test dependency; backend/pom.xml has no such dependency since the walking skeleton, because the jar comes with
-the starter in the scope compile), ArchUnit (the artifacts com.tngtech.archunit:archunit
+the starter in the scope compile: SPRING_BOOT_VERSION is tied to the property `spring-boot.version` of the pom.xml and to
+the version of the starters org.springframework.boot:spring-boot-starter-web and spring-boot-starter-log4j2, which are in
+the scope compile and have no scope check), the core plugin maven-resources-plugin (MAVEN_RESOURCES_PLUGIN_VERSION), ArchUnit (the artifacts com.tngtech.archunit:archunit
 and com.tngtech.archunit:archunit-junit5), the reader of the workspace structurizr-client
 (com.structurizr:structurizr-client) and the coverage tool JaCoCo (the plugin org.jacoco:jacoco-maven-plugin,
 Phase 140). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
@@ -388,9 +390,24 @@ MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
 )
 MAVEN_TEST_PLUGINS: tuple[tuple[str, str, str], ...] = (
     ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION"),
+    # The core plugin of the resources (feat-9-walking-skeleton, Task 200.120): the version that the pinned Maven
+    # binds, as for the plugin surefire; no checksum (the Maven Wrapper checks the Maven binary).
+    ("org.apache.maven.plugins", "maven-resources-plugin", "MAVEN_RESOURCES_PLUGIN_VERSION"),
     ("org.pitest", "pitest-maven", "PIT_VERSION"),
     ("org.jacoco", "jacoco-maven-plugin", "JACOCO_VERSION"),
 )
+# The dependencies of the module in the scope compile (the starters of Spring Boot, feat-9-walking-skeleton, Phase 200): the
+# version must be the one of tools/versions.env, but the scope is not `test` (the starters ship with the service, and
+# the check of the scope above does not apply). The jar org.springframework.boot:spring-boot comes through the
+# starter and has no declaration in the pom.xml, so the starters and the property below are the tie of
+# SPRING_BOOT_VERSION.
+MAVEN_COMPILE_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
+    ("org.springframework.boot", "spring-boot-starter-web", "SPRING_BOOT_VERSION"),
+    ("org.springframework.boot", "spring-boot-starter-log4j2", "SPRING_BOOT_VERSION"),
+)
+# The properties of a pom.xml that have the version of a pin, as (property, version key). A pom.xml that has the
+# property must have the value of tools/versions.env (a pom.xml without the property is no problem).
+MAVEN_VERSION_PROPERTIES: tuple[tuple[str, str], ...] = (("spring-boot.version", "SPRING_BOOT_VERSION"),)
 
 
 class FrontendPackage(NamedTuple):
@@ -1133,7 +1150,12 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
     """
     label = "Maven test pins"
     problems: list[str] = []
-    for _group, _artifact, key in (*MAVEN_TEST_DEPENDENCIES, *MAVEN_TEST_PLUGINS):
+    for key in sorted(
+        {
+            *(k for _g, _a, k in (*MAVEN_TEST_DEPENDENCIES, *MAVEN_COMPILE_DEPENDENCIES, *MAVEN_TEST_PLUGINS)),
+            *(k for _p, k in MAVEN_VERSION_PROPERTIES),
+        }
+    ):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
         elif not EXACT_VERSION.fullmatch(versions[key]):
@@ -1156,7 +1178,7 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
             if properties_node is not None
             else {}
         )
-        for group, artifact, key in MAVEN_TEST_DEPENDENCIES:
+        for group, artifact, key in (*MAVEN_TEST_DEPENDENCIES, *MAVEN_COMPILE_DEPENDENCIES):
             for dependency in project.iter(f"{POM_NAMESPACE}dependency"):
                 if (
                     dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
@@ -1232,6 +1254,16 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
                     )
                 else:
                     checked.append(f"{pom}: the plugin {artifact} {version}")
+        for property_name, key in MAVEN_VERSION_PROPERTIES:
+            if property_name in properties:
+                found = properties[property_name].strip()
+                if found != versions[key]:
+                    problems.append(
+                        f"{label}: {pom} has the property {property_name} {found}, "
+                        f"but {key} in tools/versions.env is {versions[key]}"
+                    )
+                else:
+                    checked.append(f"{pom}: the property {property_name} {found}")
     note = (
         f"{label}: {', '.join(checked)}, the versions of tools/versions.env"
         if checked

@@ -22,6 +22,10 @@ The decision:
   - A finding that is Critical or High stops the gate in each case, also if the baseline has a line for it (the baseline
     must have no line of these levels: a line that has such a finding is an error of the feature, and the gate says so).
   - A finding that is not in the baseline is a new finding, and it stops the gate (each level).
+  - OSV: the baseline line matches a finding if the identifier of the line is ANY identifier of the group of the finding
+    (the group has the identifier of the advisory and the aliases of OSV-Scanner, for example a GHSA and a CVE) and the
+    package and the version are the same. The form of the line stays strict (one identifier, one package, one version).
+    A line is old (stale) only if no group matches it.
   - A line of the baseline that has no finding any more is a warning (the baseline can be made smaller). It does not stop.
   - A finding of the baseline that is not Critical or High passes.
 
@@ -41,9 +45,12 @@ The level of a finding (the mapping of each tool):
 Exit codes:
   0  the gate passes (no new finding, no finding that is Critical or High; stale lines are warnings)
   1  the gate stops (a new finding, or a finding that is Critical or High)
-  2  an input that cannot be used: a baseline file or a report file that is missing or cannot be read, a line of the
-     baseline with a wrong form or a line twice, or a report with another form. The caller treats it as a failure of
-     the tool (it stops, as the failure of the tool).
+  2  an input that cannot be used: a baseline file or a report file that is missing or cannot be read (also bytes that
+     are not UTF-8), a line of the baseline with a wrong form or a line twice, a report with another form (also a node
+     of another JSON type than the script expects), or an OSV package that has a vulnerability that no group names (the
+     gate would not see it). The caller treats it as a failure of the tool (it stops, as the failure of the tool).
+  3  a failure of this script (a bug): the script never ends with a traceback and exit code 1, because the caller
+     would read the code 1 as "a new finding". The caller treats it as a failure of the tool too.
 
 The script uses the standard library only (the environment of the gate has no package for it). It prints the findings
 with the level, the identifier, the package or the file, and the state (baseline or NEW), and it prints no text of the
@@ -85,6 +92,7 @@ GITLEAKS_LEVEL = UNRATED
 EXIT_PASS = 0
 EXIT_STOP = 1
 EXIT_INPUT = 2
+EXIT_INTERNAL = 3
 
 
 class InputError(Exception):
@@ -96,6 +104,12 @@ class Finding:
     key: str
     level: str
     detail: str
+    # The other baseline lines that match the finding (OSV: one line for each other identifier of the group).
+    aliases: tuple[str, ...] = ()
+
+    def lines(self) -> tuple[str, ...]:
+        """Each baseline line that matches this finding (the key and the aliases)."""
+        return (self.key, *self.aliases)
 
 
 def level_of_score(score: float) -> str:
@@ -132,9 +146,13 @@ def read_json(path: Path) -> object:
         raise InputError(
             f"the report file cannot be read: {path} ({error.strerror})"
         ) from error
+    except ValueError as error:  # UnicodeDecodeError: bytes that are not UTF-8
+        raise InputError(
+            f"the report file is not text in UTF-8: {path} ({type(error).__name__})"
+        ) from error
     try:
         return json.loads(text)
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         raise InputError(f"the report file is not JSON: {path} ({error})") from error
 
 
@@ -156,16 +174,35 @@ def findings_osv(data: object, path: Path) -> list[Finding]:
                     f"{path}: a package of the report of OSV-Scanner has no name or no version"
                 )
             labels = {}
+            vulnerability_ids: set[str] = set()
             for vulnerability in package.get("vulnerabilities", []):
+                if not isinstance(vulnerability.get("id"), str) or not vulnerability["id"]:
+                    raise InputError(
+                        f"{path}: a vulnerability of {name}@{version} has no identifier"
+                    )
+                vulnerability_ids.add(vulnerability["id"])
                 label = (vulnerability.get("database_specific") or {}).get("severity")
-                if label is not None and "id" in vulnerability:
+                if label is not None:
                     labels[vulnerability["id"]] = label
+            covered: set[str] = set()
             for group in package.get("groups", []):
                 ids = group.get("ids") or []
                 if not ids or not all(isinstance(item, str) and item for item in ids):
                     raise InputError(
                         f"{path}: a group of {name}@{version} has no identifier"
                     )
+                covered.update(ids)
+                aliases = group.get("aliases") or []
+                covered.update(item for item in aliases if isinstance(item, str))
+            # Fail closed: a vulnerability that no group names would have no finding, and the gate would pass.
+            uncovered = sorted(vulnerability_ids - covered)
+            if uncovered:
+                raise InputError(
+                    f"{path}: {name}@{version} has {len(uncovered)} vulnerabilit(ies) that no group names "
+                    f"({', '.join(uncovered)}); the gate would not see them"
+                )
+            for group in package.get("groups", []):
+                ids = group["ids"]
                 identifier = sorted(ids)[0]
                 level, detail = UNKNOWN, "no score"
                 try:
@@ -178,9 +215,10 @@ def findings_osv(data: object, path: Path) -> list[Finding]:
                     if item in labels:
                         level = higher(level, level_of_label(labels[item]))
                 key = f"{identifier} {name}@{version}"
+                aliases = tuple(f"{item} {name}@{version}" for item in sorted(set(ids)) if item != identifier)
                 previous = findings.get(key)
                 if previous is None or RANK[level] > RANK[previous.level]:
-                    findings[key] = Finding(key, level, detail)
+                    findings[key] = Finding(key, level, detail, aliases)
     return list(findings.values())
 
 
@@ -295,6 +333,10 @@ def read_baseline(tool: str, path: Path) -> list[tuple[int, str]]:
         raise InputError(
             f"the baseline file cannot be read: {path} ({error.strerror})"
         ) from error
+    except ValueError as error:  # UnicodeDecodeError: bytes that are not UTF-8
+        raise InputError(
+            f"the baseline file is not text in UTF-8: {path} ({type(error).__name__})"
+        ) from error
     lines: list[tuple[int, str]] = []
     seen: dict[str, int] = {}
     form = LINE_FORMS[tool]
@@ -334,7 +376,15 @@ def decide(tool: str, baseline_path: Path, report_paths: list[Path]) -> int:
     baseline_keys = {line for _, line in baseline}
     merged: dict[str, Finding] = {}
     for report_path in report_paths:
-        for finding in READERS[tool](read_json(report_path), report_path):
+        data = read_json(report_path)
+        try:
+            reported = READERS[tool](data, report_path)
+        except (AttributeError, TypeError, ValueError, KeyError, IndexError) as error:
+            # A node of another JSON type than the reader expects (for example a string for a package).
+            raise InputError(
+                f"{report_path}: the report of {label} has a form that the gate cannot read ({type(error).__name__})"
+            ) from error
+        for finding in reported:
             previous = merged.get(finding.key)
             if previous is None or RANK[finding.level] > RANK[previous.level]:
                 merged[finding.key] = finding
@@ -343,14 +393,19 @@ def decide(tool: str, baseline_path: Path, report_paths: list[Path]) -> int:
     print(
         f"SUMMARY: {label}: {summary(findings)}; baseline {baseline_path.name}: {len(baseline)} line(s)"
     )
+
+    def in_baseline(item: Finding) -> bool:
+        return any(line in baseline_keys for line in item.lines())
+
+    matching = {line for item in findings for line in item.lines()}
     for finding in findings:
-        state = "baseline" if finding.key in baseline_keys else "NEW"
+        state = "baseline" if in_baseline(finding) else "NEW"
         print(f"  {finding.level:<13} {state:<8} {finding.key} ({finding.detail})")
 
-    new = [item for item in findings if item.key not in baseline_keys]
+    new = [item for item in findings if not in_baseline(item)]
     blocking = [item for item in findings if item.level in BLOCKING]
-    bad_lines = [item for item in blocking if item.key in baseline_keys]
-    stale = [line for _, line in baseline if line not in merged]
+    bad_lines = [item for item in blocking if in_baseline(item)]
+    stale = [line for _, line in baseline if line not in matching]
 
     for line in stale:
         print(
@@ -399,6 +454,9 @@ def main(argv: list[str]) -> int:
     except InputError as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return EXIT_INPUT
+    except Exception as error:  # noqa: BLE001 - a bug must never end as exit code 1 (a traceback), see EXIT_INTERNAL
+        print(f"INTERNAL ERROR of the level gate: {type(error).__name__}: {error}", file=sys.stderr)
+        return EXIT_INTERNAL
 
 
 if __name__ == "__main__":

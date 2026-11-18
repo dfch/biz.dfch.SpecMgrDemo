@@ -170,7 +170,7 @@ with the baseline file and the report of the tool in a machine-readable form (OS
 | A finding that is **Critical or High** | 1, in each case |
 | A finding that is Critical or High **and has a line in the baseline** | 1: the baseline must have no line of these levels, so the message says "ERROR OF THE FEATURE" |
 | The tool did not run to the end (`run_security_tool`, a failure of the tool) | 1 |
-| The baseline or the report cannot be used (a file that is missing or not JSON, a line with a wrong form, a line twice, a report with another form) | 1 (it is a failure, and not a pass) |
+| The baseline or the report cannot be used (a file that is missing, not UTF-8 or not JSON, a line with a wrong form, a line twice, a report with another form or with a node of another JSON type, an OSV package that has a vulnerability that no group names) | 1 (it is a failure, and not a pass). The script itself ends with exit code 2 for it (and with exit code 3 for a bug of the script, never with a traceback and exit code 1); `security_level_gate` says "FAILURE OF THE LEVEL GATE", and it never says "THRESHOLD STOP" (the finding) for a code that is not 1 |
 
 **The level of a finding** (the mapping, the same text is at the top of `tools/gates/security_threshold.py`):
 
@@ -179,6 +179,33 @@ with the baseline file and the report of the tool in a machine-readable form (OS
 | OSV-Scanner | The CVSS score of the group of the finding (`max_severity`, the value that the table of OSV-Scanner shows): 9.0 or more is Critical, 7.0 to 8.9 is High, 4.0 to 6.9 is Medium, below 4.0 is Low. If the record has no score, the label of the database is used (CRITICAL, HIGH, MODERATE, LOW). If both are there, the higher level is used. A finding with neither is Unknown (it is no stop by its level, and a new one stops as a new finding) |
 | zizmor | The severity of the audit: High, Medium, Low, Informational. zizmor has no level Critical. High stops in each case. A finding that zizmor suppresses (its own `ignored` mark) is no finding |
 | gitleaks | None: gitleaks gives no severity. The level is Unrated, and the baseline is the only rule (a secret that is not in the baseline stops). The allowlist of `gitleaks.toml` is the place for a false positive, and the baseline file is expected to stay empty. The decision is in the plan of feat-9 (Decisions Made); the constant `GITLEAKS_LEVEL` in `security_threshold.py` is the one place to change it (with the value Critical, each secret would stop in each case, and the baseline of gitleaks could have no line) |
+
+**The match of an OSV line.** An OSV group has the identifier of the advisory and its aliases (for example a GHSA and a CVE). A
+baseline line `<identifier> <package>@<version>` matches a finding if the identifier is **any** identifier of the group of the
+finding and the package and the version are the same. The form of the line stays strict (one identifier, one package, one
+version). The report of the gate shows the first identifier of the group in the sorted order (for the group `GHSA-a` and
+`CVE-1` it is `CVE-1`), but a line with `GHSA-a` matches too. A line is old (a warning) only if no group matches it. The gate
+also stops (exit code 2) for a package that has a vulnerability that no group of the report names: such a vulnerability would
+have no finding, and the gate would pass without it.
+
+**A gate that reads an online database depends on the time.** The vulnerability data of OSV-Scanner is online
+(`api.osv.dev`). A new advisory for a package of the baseline, or for any other package of the SBOM, turns `vuln-scan` red
+without a change of the code (a new finding that is not in the baseline, or a finding that is now Critical or High). The fix
+is a new version of the package, or a decision of the owner for a baseline line (never for Critical or High). This is probably
+why `vuln-scan` is not a required check of the ruleset of `dev`.
+
+**The open decisions and the limits of the baseline (the owner decides).**
+
+- **gitleaks, `GITLEAKS_LEVEL`.** A secret on a baseline line passes. REQ-006 says that a finding that is Critical or High stops in
+  each case. gitleaks gives no severity, so the level is Unrated and the baseline is the only rule. The owner decides
+  `GITLEAKS_LEVEL` (`security_threshold.py`): with the value Critical, each secret would stop in each case. The behavior is not
+  changed here.
+- **zizmor, the key of a finding.** The key is `<audit> <file> <place>`, so several findings of one audit at one place of one
+  file are one line of the baseline (`security_threshold.py`, the function `findings_zizmor`: the finding with the highest
+  level stands for the line).
+- **zizmor, the suppression.** A finding that zizmor marks `ignored` (the inline ignore comment in a workflow, or the
+  configuration of zizmor) is no finding for the gate. This is a way to suppress a finding without a baseline line. CODEOWNERS
+  covers `/.github/workflows/` and `/tools/`, so the owner reviews each such change; that is the mitigation.
 
 **How to change a baseline.** A new finding of a dependency or of a workflow is a defect of the pull request: fix it (a version
 without the finding, or a change of the workflow). A finding that the owner accepts for a reason that the plan names goes into
@@ -197,8 +224,9 @@ or High** (the option B of the plan of feat-9, REQ-007) is the rule `code_scanni
 scope). The setting is the work of the owner (the exact steps are in `branch-protection.md` in the folder of
 feat-5-foundation-monorepo-ci). The agent checked the mechanism with read calls only (`gh api` GET, 2026-11-17): the default
 setup is `configured`, the analyses of the tool `CodeQL` exist for `refs/heads/dev` and for `refs/pull/<n>/head` with 0
-results, there is no open alert, and the rulesets of `dev` and `main` have no rule `code_scanning` yet. The rule becomes active
-when the owner applies the steps.
+results, and there is no open alert. The check `CodeQL` runs on the pull requests, but no rule requires it. **CodeQL is active
+(default setup), but the blocking rule `code_scanning` (alerts threshold: high_or_higher) is not in the rulesets yet.** The rule
+becomes active when the owner applies the steps (ACC-008 of feat-9 waits for this).
 
 ## Files
 

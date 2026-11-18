@@ -134,8 +134,10 @@ run_security_tool() {
 #                               baseline is a warning)
 #   exit code 1                 the gate stops: a new finding, or a finding that is Critical or High (a baseline that has
 #                               a line of such a finding is an error of the feature)
-#   each other exit code        an input that cannot be used (a baseline or a report that is missing or cannot be
+#   exit code 2                 an input that cannot be used (a baseline or a report that is missing or cannot be
 #                               read, a line with a wrong form): it is a failure of the tool, and the gate stops
+#   each other exit code        a failure of the script (exit code 3 for a bug, or a signal or a crash of Python): it
+#                               is NOT a finding (the exit code 1 is the finding), and the gate stops with its own message
 # It returns 0 for a pass and 1 for each stop. The caller runs this function only if run_security_tool did not
 # end with a failure of the tool, and the caller ends with exit code 1 after it returns 1.
 security_level_gate() {
@@ -157,8 +159,12 @@ security_level_gate() {
             echo "[$(basename "${0}")] THRESHOLD STOP: ${label} has a new finding (it is not in the baseline ${baseline}), or a finding that is Critical or High. See the lines above." >&2
             return 1
             ;;
-        *)
+        2)
             echo "[$(basename "${0}")] FAILURE OF THE LEVEL GATE: the baseline ${baseline} or the report of ${label} cannot be used (exit code ${code}). This is not a pass, so the gate stops." >&2
+            return 1
+            ;;
+        *)
+            echo "[$(basename "${0}")] FAILURE OF THE LEVEL GATE: the level gate script ended with the unexpected exit code ${code} (a failure of the script, not a finding and not an unusable input; the lines above may have the reason). This is not a pass, so the gate stops." >&2
             return 1
             ;;
     esac

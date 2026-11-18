@@ -1586,14 +1586,16 @@ section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-veri
 # structurizr-client (feat-7-verification-architecture-tools, Phase 130), and the coverage tool
 # JaCoCo (the plugin jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the
 # properties of backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION,
-# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION,
+# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, MAVEN_RESOURCES_PLUGIN_VERSION, PIT_VERSION,
 # PIT_JUNIT5_PLUGIN_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION,
 # STRUCTURIZR_VERSION and JACOCO_VERSION of versions.env. The messages start with `Maven test
 # pins:`. Each tool has a version key, and each case changes one place only. The jar spring-boot
-# has no case of the one place only in the loop below (the pom has no dependency spring-boot any
-# more): the key SPRING_BOOT_VERSION has the case of the form (below), and the tie of the version
-# is in the pom (the starter has the property spring-boot.version, the same value; the comment of
-# the pom records it).
+# has no dependency in the pom any more (it comes through the starter): the key SPRING_BOOT_VERSION
+# is tied to the property spring-boot.version and to the version of the starters
+# spring-boot-starter-web and spring-boot-starter-log4j2 (the review finding S4a of feat-9: the
+# tie must not be lost), and it has the cases of the one place only in the loop below, and the
+# cases of the property and of the starters (after the loop). The plugin maven-resources-plugin has
+# the key MAVEN_RESOURCES_PLUGIN_VERSION (the review finding S4b).
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1644,10 +1646,14 @@ expect 0 "Maven test pins: Maven test pins: backend/pom.xml" "the real backend/p
 # uses for the version (the three modules of Testcontainers have the property testcontainers.version).
 # The artifact spring-boot has no entry in the list (the section header, above): the pom has no
 # dependency org.springframework.boot:spring-boot any more (the scope compile through the starter,
-# since the walking skeleton, feat-9-walking-skeleton, Phase 200).
+# since the walking skeleton, feat-9-walking-skeleton, Phase 200). The starter spring-boot-starter-web
+# is its entry (the version of the property spring-boot.version).
 for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontainers|TESTCONTAINERS_VERSION|testcontainers.version|dependency" \
     "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
     "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
+    "maven-resources-plugin|MAVEN_RESOURCES_PLUGIN_VERSION|maven-resources-plugin.version|plugin" \
+    "spring-boot-starter-web|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
+    "spring-boot-starter-log4j2|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
     "pitest-maven|PIT_VERSION|pitest.version|plugin" \
     "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency" \
     "spring-modulith-core|SPRING_MODULITH_VERSION|spring-modulith.version|dependency" \
@@ -1665,6 +1671,19 @@ for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontain
         "${artifact}, one place only: pom.xml has another version (the property)" \
         "s#<${property}>${version}<#<${property}>${new_test_version}<#"
 done
+# SPRING_BOOT_VERSION (the review finding S4a): the property spring-boot.version of the pom.xml, alone. The
+# starters have a literal version that is the right one, so only the property is another value.
+spring_boot_version="$(version_of SPRING_BOOT_VERSION)"
+test_pom_case sbproperty 1 "has the property spring-boot.version ${new_test_version}, but SPRING_BOOT_VERSION in tools/versions.env is ${spring_boot_version}" \
+    "SPRING_BOOT_VERSION, one place only: the property spring-boot.version of pom.xml has another value (the starters have the right literal version)" \
+    "s#<spring-boot.version>${spring_boot_version}<#<spring-boot.version>${new_test_version}<#;s#<version>\${spring-boot.version}</version>#<version>${spring_boot_version}</version>#"
+# A starter with a literal version of another value (the property is right)
+test_pom_case sbstarter 1 "has the dependency spring-boot-starter-web ${new_test_version}, but SPRING_BOOT_VERSION in tools/versions.env is ${spring_boot_version}" \
+    "SPRING_BOOT_VERSION, one place only: the starter spring-boot-starter-web has another literal version (the property is right)" \
+    "/<artifactId>spring-boot-starter-web<\/artifactId>/,/<\/dependency>/ s#<version>\${spring-boot.version}</version>#<version>${new_test_version}</version>#"
+# A pom.xml that has no property spring-boot.version and no starter is no problem
+test_pom_case sbnone 0 "RESULT: PASS" "SPRING_BOOT_VERSION: a pom.xml without the property and without the starters passes" \
+    "s#<spring-boot.version>#<other-boot.version>#;s#</spring-boot.version>#</other-boot.version>#;s#<artifactId>spring-boot-starter-web</artifactId>#<artifactId>other-starter-web</artifactId>#;s#<artifactId>spring-boot-starter-log4j2</artifactId>#<artifactId>other-starter-log4j2</artifactId>#"
 # The version in other forms (the property of JUnit is the example)
 test_pom_case literalok 0 "RESULT: PASS" "junit-jupiter: the version is written in the dependency (the same value)" \
     "s#<version>\${junit.version}</version>#<version>${junit_version}</version>#"
@@ -1699,16 +1718,18 @@ sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>
     -e 's#<groupId>org.pitest</groupId>#<groupId>other.pitest</groupId>#g' \
     -e 's#<groupId>org.springframework.modulith</groupId>#<groupId>other.modulith</groupId>#' \
     -e 's#<groupId>org.springframework.boot</groupId>#<groupId>other.boot</groupId>#' \
+    -e 's#<spring-boot.version>#<other-boot.version>#' -e 's#</spring-boot.version>#</other-boot.version>#' \
     -e 's#<groupId>com.tngtech.archunit</groupId>#<groupId>other.archunit</groupId>#g' \
     -e 's#<groupId>com.structurizr</groupId>#<groupId>other.structurizr</groupId>#' \
     -e 's#<groupId>org.jacoco</groupId>#<groupId>other.jacoco</groupId>#' \
-    -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' "${dir}/backend/pom.xml"
+    -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' \
+    -e 's#<artifactId>maven-resources-plugin</artifactId>#<artifactId>other-resources-plugin</artifactId>#' "${dir}/backend/pom.xml"
 expect 0 "Maven test pins: no pom.xml has a test tool" "a pom.xml with no test tool passes (the generator plugin check and the others still run)" run_test_pins "${dir}"
 # A pom.xml that is not XML
 dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
 expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
 # The form of the values in versions.env, and a key that is not there
-for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION \
+for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION MAVEN_RESOURCES_PLUGIN_VERSION \
     PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION SPRING_MODULITH_VERSION SPRING_BOOT_VERSION ARCHUNIT_VERSION STRUCTURIZR_VERSION \
     JACOCO_VERSION; do
     for range in "^$(version_of "${key}")" "latest"; do

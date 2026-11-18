@@ -1074,7 +1074,7 @@ expect 1 "GHSA-aaaa-bbbb-cccc pkg@1.0.0 (CVSS 5.0)" "level gate (OSV): a record 
     threshold osv "${bl_empty}" "$(osv_report "${work}/osv-5-high.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 5.0 HIGH)")"
 expect 1 "STOP: a finding that is High stops in each case: GHSA-aaaa-bbbb-cccc pkg@1.0.0" "level gate (OSV): the label HIGH with the score 5.0 stops in each case" \
     threshold osv "${bl_empty}" "${work}/osv-5-high.json"
-expect 0 "Medium        baseline GHSA-aaaa-bbbb-cccc pkg@1.0.0" "level gate (OSV): a record with the score 9.0 and the label MODERATE is Critical, but a record with no score and the label MODERATE is Medium (see the next case)" \
+expect 0 "Medium        baseline GHSA-aaaa-bbbb-cccc pkg@1.0.0" "level gate (OSV): a record with no score and the label MODERATE is Medium (the label is the level if there is no score)" \
     threshold osv "$(mk_baseline lg-osv-moderate "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "$(osv_report "${work}/osv-moderate.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 "" MODERATE)")"
 expect 1 "Critical" "level gate (OSV): a record with the score 9.0 and the label MODERATE is Critical (the score is the higher level)" \
     threshold osv "${bl_empty}" "$(osv_report "${work}/osv-9-moderate.json" "$(osv_pkg GHSA-aaaa-bbbb-cccc pkg 1.0.0 9.0 MODERATE)")"
@@ -1112,6 +1112,98 @@ printf '{"results":[{"packages":[{"package":{"name":"pkg"},"groups":[]}]}]}\n' >
 expect 2 "has no name or no version" "level gate (OSV): a package with no version is exit code 2" threshold osv "${bl_empty}" "${work}/osv-nover.json"
 printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1"},"groups":[{"ids":[]}]}]}]}\n' >"${work}/osv-noid.json"
 expect 2 "has no identifier" "level gate (OSV): a group with no identifier is exit code 2" threshold osv "${bl_empty}" "${work}/osv-noid.json"
+
+# The review finding N1: a vulnerability of a package that no group names must not pass as "0 findings" (the report
+# `groups` is the list of the findings of the gate). The cross-check stops with exit code 2 (an unusable input).
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[],"vulnerabilities":[{"id":"GHSA-aaaa-bbbb-cccc","database_specific":{"severity":"CRITICAL"}}]}]}]}\n' >"${work}/osv-nogroup.json"
+expect 2 "has 1 vulnerabilit(ies) that no group names (GHSA-aaaa-bbbb-cccc)" "level gate (OSV): a package with a Critical vulnerability and \"groups\": [] is exit code 2, and not \"0 finding(s)\" (N1)" \
+    threshold osv "${bl_empty}" "${work}/osv-nogroup.json"
+expect_not 2 "RESULT: PASS" "level gate (OSV): the report with a vulnerability that no group names has no pass verdict (N1)" \
+    threshold osv "${bl_empty}" "${work}/osv-nogroup.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc"],"max_severity":"5.0"}],"vulnerabilities":[{"id":"GHSA-aaaa-bbbb-cccc"},{"id":"GHSA-zzzz-yyyy-xxxx"}]}]}]}\n' >"${work}/osv-onegroup.json"
+expect 2 "that no group names (GHSA-zzzz-yyyy-xxxx)" "level gate (OSV): one vulnerability that is in no group, next to one that is in a group, is exit code 2 (N1)" \
+    threshold osv "$(mk_baseline lg-osv-onegroup "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-onegroup.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc"],"aliases":["CVE-2026-1"],"max_severity":"5.0"}],"vulnerabilities":[{"id":"CVE-2026-1"}]}]}]}\n' >"${work}/osv-alias-covered.json"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): a vulnerability that a group names as an alias is covered (no exit code 2)" \
+    threshold osv "$(mk_baseline lg-osv-alias-covered "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-alias-covered.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc"],"max_severity":"5.0"}]}]}]}\n' >"${work}/osv-novulns.json"
+expect 0 "RESULT: PASS. 1 finding(s)" "level gate (OSV): a package with groups and with no key \`vulnerabilities\` is no problem" \
+    threshold osv "$(mk_baseline lg-osv-novulns "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-novulns.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc"]}],"vulnerabilities":[{"summary":"no id"}]}]}]}\n' >"${work}/osv-vuln-noid.json"
+expect 2 "a vulnerability of pkg@1.0.0 has no identifier" "level gate (OSV): a vulnerability with no identifier is exit code 2" threshold osv "${bl_empty}" "${work}/osv-vuln-noid.json"
+
+# The review finding N3: the baseline line matches a finding if it has ANY identifier of the group (the key of the report is
+# the first identifier in the sorted order, so the group [GHSA-aaaa-bbbb-cccc, CVE-2026-1] has the key CVE-2026-1).
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc","CVE-2026-1"],"max_severity":"5.0"}],"vulnerabilities":[{"id":"GHSA-aaaa-bbbb-cccc"}]}]}]}\n' >"${work}/osv-multi.json"
+expect 0 "baseline CVE-2026-1 pkg@1.0.0" "level gate (OSV): the report shows the key of the first identifier in the sorted order (CVE-2026-1) (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-first "CVE-2026-1 pkg@1.0.0")" "${work}/osv-multi.json"
+expect_not 0 "WARNING" "level gate (OSV): a baseline line with the first identifier of the group matches (no old line) (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-first2 "CVE-2026-1 pkg@1.0.0")" "${work}/osv-multi.json"
+expect 0 "baseline CVE-2026-1 pkg@1.0.0" "level gate (OSV): a baseline line with the other identifier (the GHSA that is not the first in the sorted order) matches the finding (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-other "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-multi.json"
+expect_not 0 "WARNING" "level gate (OSV): the line with the other identifier is no old line, and there is no NEW finding (N3)" \
+    threshold osv "${bl_dir}/lg-osv-multi-other.txt" "${work}/osv-multi.json"
+expect 0 "RESULT: PASS. 1 finding(s), all in the baseline, none Critical or High; 0 old baseline line(s)." "level gate (OSV): the two lines of the two identifiers of one group are one finding, and none is old (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-both "CVE-2026-1 pkg@1.0.0" "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-multi.json"
+expect 1 "STOP: a new finding that is not in the baseline (Medium): CVE-2026-1 pkg@1.0.0" "level gate (OSV): a line with an identifier that is not in the group is no match: the finding is new (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-nomatch "GHSA-zzzz-yyyy-xxxx pkg@1.0.0")" "${work}/osv-multi.json"
+expect 1 "WARNING: the baseline line has no finding any more, so the baseline can be made smaller: GHSA-zzzz-yyyy-xxxx pkg@1.0.0" "level gate (OSV): a line that no group matches is an old line (N3)" \
+    threshold osv "${bl_dir}/lg-osv-multi-nomatch.txt" "${work}/osv-multi.json"
+expect 1 "STOP: a new finding that is not in the baseline (Medium): CVE-2026-1 pkg@1.0.0" "level gate (OSV): a line with an identifier of the group but another version of the package is no match (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-version "GHSA-aaaa-bbbb-cccc pkg@2.0.0")" "${work}/osv-multi.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-aaaa-bbbb-cccc","CVE-2026-1"],"max_severity":"9.1"}],"vulnerabilities":[{"id":"GHSA-aaaa-bbbb-cccc"}]}]}]}\n' >"${work}/osv-multi-critical.json"
+expect 1 "ERROR OF THE FEATURE: the baseline has a line for a finding that is Critical" "level gate (OSV): a Critical finding with a line of the other identifier in the baseline stops, and the baseline is an error of the feature (N3)" \
+    threshold osv "$(mk_baseline lg-osv-multi-critical "GHSA-aaaa-bbbb-cccc pkg@1.0.0")" "${work}/osv-multi-critical.json"
+
+# The review finding N2: a Python crash must be exit code 2 (an input that cannot be used), never exit code 1 with a
+# traceback (the shell would call it "a new finding"). Bytes that are not UTF-8, and the JSON nodes of another type.
+printf '\xff\xfe\n' >"${work}/bytes-ff-fe.bin"
+echo '[]' >"${work}/gl-report-early.json"
+expect 2 "the baseline file is not text in UTF-8" "level gate: a baseline file with the bytes 0xFF 0xFE is exit code 2 (N2)" \
+    threshold osv "${work}/bytes-ff-fe.bin" "${osv_empty}"
+expect_not 2 "Traceback" "level gate: a baseline file that is not UTF-8 gives no traceback (N2)" threshold osv "${work}/bytes-ff-fe.bin" "${osv_empty}"
+expect 2 "the baseline file is not text in UTF-8" "level gate (gitleaks): a baseline file with the bytes 0xFF 0xFE is exit code 2 (N2)" \
+    threshold gitleaks "${work}/bytes-ff-fe.bin" "${work}/gl-report-early.json"
+expect 2 "the report file is not text in UTF-8" "level gate: a report file with the bytes 0xFF 0xFE is exit code 2 (N2)" \
+    threshold osv "${bl_empty}" "${work}/bytes-ff-fe.bin"
+expect_not 2 "Traceback" "level gate: a report file that is not UTF-8 gives no traceback (N2)" threshold osv "${bl_empty}" "${work}/bytes-ff-fe.bin"
+printf '{"results":[{"packages":["x"]}]}\n' >"${work}/osv-node-string.json"
+expect 2 "the report of OSV-Scanner has a form that the gate cannot read" "level gate (OSV): a package that is a string in place of an object is exit code 2 (N2)" \
+    threshold osv "${bl_empty}" "${work}/osv-node-string.json"
+expect_not 2 "Traceback" "level gate (OSV): a package that is a string gives no traceback (N2)" threshold osv "${bl_empty}" "${work}/osv-node-string.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1"},"groups":["x"]}]}]}\n' >"${work}/osv-group-string.json"
+expect 2 "has a form that the gate cannot read" "level gate (OSV): a group that is a string is exit code 2 (N2)" threshold osv "${bl_empty}" "${work}/osv-group-string.json"
+printf '{"results":[{"packages":[{"package":{"name":"pkg","version":"1"},"groups":[{"ids":["a"]}],"vulnerabilities":"x"}]}]}\n' >"${work}/osv-vulns-string.json"
+expect 2 "has a form that the gate cannot read" "level gate (OSV): \`vulnerabilities\` that is a string is exit code 2 (N2)" threshold osv "${bl_empty}" "${work}/osv-vulns-string.json"
+printf '[{"ident":"artipacked","locations":["x"]}]\n' >"${work}/zz-loc-string.json"
+expect 2 "has a form that the gate cannot read" "level gate (zizmor): a location that is a string is exit code 2 (N2)" threshold zizmor "${bl_empty}" "${work}/zz-loc-string.json"
+printf '[{"ident":"artipacked","determinations":"x","locations":[{"symbolic":{"key":{"Local":{"verbatim_path":"f.yml"}},"kind":"Primary"}}]}]\n' >"${work}/zz-det-string.json"
+expect 2 "has a form that the gate cannot read" "level gate (zizmor): \`determinations\` that is a string is exit code 2 (N2)" threshold zizmor "${bl_empty}" "${work}/zz-det-string.json"
+"${GATE_PYTHON}" -c 'print("[" * 100000)' >"${work}/json-deep.json"
+expect 2 "the report file is not JSON" "level gate: a JSON that is nested too deep is exit code 2, and not a crash (N2)" threshold osv "${bl_empty}" "${work}/json-deep.json"
+# A bug of the script itself ends with exit code 3 (never 1): the reader of OSV is replaced by a function that fails.
+internal_error() { "${GATE_PYTHON}" -c "
+import sys
+sys.path.insert(0, '${GATES_DIR}')
+import security_threshold as t
+t.READERS['osv'] = lambda *a: 1 / 0
+sys.exit(t.main(['x', 'osv', '${bl_empty}', '${osv_empty}']))
+"; }
+expect 3 "INTERNAL ERROR of the level gate: ZeroDivisionError" "level gate: a bug of the script (an exception that is not an input error) is exit code 3, with no traceback (N2)" internal_error
+expect_not 3 "Traceback" "level gate: the exit code 3 has no traceback (N2)" internal_error
+# The shell function: exit code 1 is the finding, exit code 2 an unusable input, any other code is a failure of the script.
+fake_py() { # fake_py <name> <exit code> : a script that ends with the exit code (it is the GATE_PYTHON of the function)
+    printf '#!/usr/bin/env bash\nexit %s\n' "$2" >"${work}/$1" && chmod +x "${work}/$1" && echo "${work}/$1"
+}
+level_gate_with() { ( GATE_PYTHON="$1"; security_level_gate "tool" osv "${bl_empty}" "${osv_empty}" ); }
+for code_case in "0|THRESHOLD PASS|0" "1|THRESHOLD STOP|1" "2|the baseline ${bl_empty} or the report of tool cannot be used (exit code 2)|1" \
+    "3|unexpected exit code 3|1" "7|unexpected exit code 7|1" "137|unexpected exit code 137|1"; do
+    IFS='|' read -r fake_code fake_text fake_result <<<"${code_case}"
+    expect "${fake_result}" "${fake_text}" "level gate (shell): the exit code ${fake_code} of the script is read as '${fake_text}' (N2)" \
+        level_gate_with "$(fake_py "fake-py-${fake_code}" "${fake_code}")"
+done
+expect_not 1 "THRESHOLD STOP" "level gate (shell): an unexpected exit code of the script is not a finding (the text of the finding is not in the message) (N2)" \
+    level_gate_with "$(fake_py fake-py-7 7)"
 
 # zizmor: the severity, ignored findings, the place of the finding
 zz_item() { # zz_item <audit> <severity> <file> <route JSON array> [<ignored: true|false>]
@@ -1190,9 +1282,9 @@ done
 data_lines() { grep -v '^[[:space:]]*\(#\|$\)' "$1" || true; }
 osv_data="$(data_lines "${real_security_dir}/osv-baseline.txt")"
 zz_data="$(data_lines "${real_security_dir}/zizmor-baseline.txt")"
-check "the baseline of OSV-Scanner has the 5 findings of the frontend (minimatch 10.2.6 and qs 6.15.1) and no other line" \
-    test "$(wc -l <<<"${osv_data}")" -eq 5 -a "$(grep -cx 'GHSA-g3hv-75wg-m249 minimatch@10.2.6' <<<"${osv_data}")" -eq 1 -a "$(grep -cx 'GHSA-[a-z0-9-]* qs@6.15.1' <<<"${osv_data}")" -eq 4
-check "the baseline of gitleaks has no line (the state of the feature: no secret)" test -z "$(data_lines "${real_security_dir}/gitleaks-baseline.txt")"
+# The test asserts the form and the parseability of the baseline files only (the review finding S5): the content (the
+# number of the lines, the packages) is the decision of the owner and of the repository, so deleting an old line or adding
+# a line that the owner accepts must not stop this test. The level gate itself (above) has the rule for the levels.
 check "no baseline file has a text of a record: each line of osv-baseline.txt is '<identifier> <package>@<version>' and each line of zizmor-baseline.txt has three words" \
     test -z "$(grep -v '^[A-Za-z0-9._-]* [^ ]*@[^ @]*$' <<<"${osv_data}")" -a -z "$(grep -v '^[a-z0-9-]* [^ ]* [^ ]*$' <<<"${zz_data}")"
 check "CODEOWNERS covers the baseline files (the folder /tools/)" grep -Eq '^/tools/[[:space:]]+@dfch' "${REPO_ROOT}/.github/CODEOWNERS"

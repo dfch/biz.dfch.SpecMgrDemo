@@ -119,7 +119,8 @@ machine of a developer (REQ-002 and REQ-009 of feat-5-foundation-monorepo-ci). T
 93a6d588-e002-4daf-9a47-45e2d77786e9 (the section of CodeQL), and the setting is a report with no threshold since feat-8 (REQ-006 of
 feat-8). The scan is not a check of the table above. If the owner wants CodeQL to stop a pull request, that is the
 rule `code_scanning` of the ruleset (alert thresholds of the tool `CodeQL`) and not a job: the steps for it are in "The
-threshold of feat-9" below (step 2), and the owner decides (the rule is not set; read on 2026-11-17).
+threshold of feat-9" below (step 2), and the owner decides. CodeQL is active (default setup), but the blocking rule
+`code_scanning` (alerts threshold: high_or_higher) is not in the rulesets yet (read on 2026-11-17).
 The state on 2026-11-15: the default setup is `configured` and the first scan of `dev` has 0 alerts (the plan of feat-8,
 the subsection Baseline).
 
@@ -180,7 +181,7 @@ gh api --method PUT "repos/${REPO}/rulesets/26481206" --input ruleset-26481206.j
 ```
 
 To check the result: `gh api repos/dfch/biz.dfch.SpecMgrDemo/rulesets/26472506 --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks | map(.context)'`
-(and the same for `26481206`). The same in the web page: Settings, Rules, Rulesets, `dev` (and `main`), the rule "Require
+(and the same for `26481206` after the later step). The same in the web page: Settings, Rules, Rulesets, `dev` (and `main`), the rule "Require
 status checks to pass", "Add checks", and search for each name. Then change the column "Set" of the table above to Yes with the
 date (the agent can do this after you tell it the result).
 
@@ -266,15 +267,19 @@ a baseline are in `tools/security/README.md`.
 | Ruleset `main` (id 26481206) | `active`, 23 required checks (the checks of feat-5, feat-6 and feat-7). None of the four checks of feat-8. No rule `code_scanning` |
 | CodeQL | `gh api repos/dfch/biz.dfch.SpecMgrDemo/code-scanning/default-setup`: `state` is `configured` (languages actions, java-kotlin, javascript-typescript, python, query suite `default`). The analyses of the tool `CodeQL` exist for `refs/heads/dev` and for `refs/pull/<n>/head` (0 results each). The repository is public, and it has 0 code scanning alerts (all states) |
 
-### Step 1: add `vuln-scan` to the required checks (and, for `main`, the three others)
+### Step 1: add `vuln-scan` to the required checks of `dev` now (the four checks of `main` come with the first release)
 
 The jobs are blocking gates now, so the question of the feat-8 steps ("Step 1: decide which of the four jobs are required
 checks") is answered for three of them on `dev`. What is open: `vuln-scan` on `dev` (it uses the network: the download of
 OSV-Scanner from GitHub and the query to `api.osv.dev`, so a time without service of these makes the check red until a re-run is
 green, as the feat-8 steps say), and the four checks on `main`. The agent suggests: add `vuln-scan` to `dev` (the gate has a
-baseline now, so a red check is a real finding or a real failure), and add all four checks to `main` after the first release
-brings `ci.yml` with the four jobs to `main` (the order of "Steps for the owner for the gates of feat-8" applies). It is a
-decision of the owner.
+baseline now, so a red check is a real finding or a real failure), and add all four checks to `main` **only when the first
+release is made**, because that release brings `ci.yml` with the four jobs to `main` (the order of "Steps for the owner for the
+gates of feat-8" applies: before that, each pull request to `main` waits for a check that never runs). So the commands below
+are for `dev` now, and the part for `main` is the later step, in the same block, and it is turned off. It is a decision of the
+owner. Note on `vuln-scan` on `dev`: the gate reads an online database, so a new advisory for a package of the baseline or for
+another package turns the check red without a change of the code (see `tools/security/README.md`); this is probably why
+`vuln-scan` is not a required check on `dev` now.
 
 ```bash
 REPO=dfch/biz.dfch.SpecMgrDemo
@@ -282,7 +287,12 @@ REPO=dfch/biz.dfch.SpecMgrDemo
 ADD_DEV='["vuln-scan"]'
 ADD_MAIN='["traceability","vuln-scan","secret-scan","workflow-scan"]'
 
-for PAIR in "26472506:${ADD_DEV}" "26481206:${ADD_MAIN}"; do
+# NOW: the ruleset of dev only.
+PAIRS=("26472506:${ADD_DEV}")
+# LATER, WHEN THE FIRST RELEASE IS MADE (not now): the owner turns the next line on, and the ruleset of main gets the four checks.
+# PAIRS+=("26481206:${ADD_MAIN}")
+
+for PAIR in "${PAIRS[@]}"; do
   ID="${PAIR%%:*}"; ADD="${PAIR#*:}"
   gh api "repos/${REPO}/rulesets/${ID}" \
     | jq --argjson add "${ADD}" '{name, target, enforcement, conditions, bypass_actors,
@@ -291,10 +301,12 @@ for PAIR in "26472506:${ADD_DEV}" "26481206:${ADD_MAIN}"; do
           else . end))}' > "ruleset-${ID}.json"
 done
 
-# Look at both files first (27 required checks for dev, 27 for main), and then send them:
-jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks | map(.context)' ruleset-26472506.json ruleset-26481206.json
+# Look at the file first (27 required checks for dev; with the later step 27 for main too), and then send it:
+jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks | map(.context)' ruleset-26472506.json
 gh api --method PUT "repos/${REPO}/rulesets/26472506" --input ruleset-26472506.json
-gh api --method PUT "repos/${REPO}/rulesets/26481206" --input ruleset-26481206.json
+# LATER, WITH THE FIRST RELEASE (the same for main):
+# jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks | map(.context)' ruleset-26481206.json
+# gh api --method PUT "repos/${REPO}/rulesets/26481206" --input ruleset-26481206.json
 ```
 
 To check the result: `gh api repos/dfch/biz.dfch.SpecMgrDemo/rulesets/26472506 --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks | map(.context)'`
@@ -351,7 +363,8 @@ send the file of the ruleset with the rule `code_scanning` removed. The agent ca
 
 When the owner has done the steps, tell the agent the result, and the agent changes the column "Set" of the tables above (the
 date and the ruleset) and the table at the end of this document. The plan of feat-9 records the decision for CodeQL (ACC-008)
-in the task 500.130: the native mechanism exists (read on 2026-11-17), and it is active only after step 2.
+in the task 500.130: the native mechanism exists (read on 2026-11-17). CodeQL is active (default setup), but the blocking rule
+`code_scanning` (alerts threshold: high_or_higher) is not in the rulesets yet; it is there only after step 2.
 
 ## Steps in the web page
 

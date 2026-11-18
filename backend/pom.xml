@@ -194,7 +194,8 @@
          line, the version 4.0.9 (the rework of 2026-11-17: the line 3.5.x has the Spring Framework 6.2.19, and
          the artifact spring-webmvc 6.2.19 has two findings that are Critical without a fix in the 6.2.x line; the
          Spring Boot 4.0.9 has the Spring Framework 7.0.10, the version without a finding of the OSV data). The
-         version is the same as the pin SPRING_BOOT_VERSION of tools/versions.env, and the Spring Framework
+         version is the same as the pin SPRING_BOOT_VERSION of tools/versions.env (just check-pins compares the
+         property and the two starters with it), and the Spring Framework
          version of the property spring.version (7.0.10) is the one that the starter names. -->
     <spring-boot.version>4.0.9</spring-boot.version>
     <!-- The embedded Tomcat (the artifacts of the starter-tomcat-runtime that the starter web brings in, at the
@@ -209,7 +210,8 @@
     <log4j2.version>2.25.5</log4j2.version>
     <opentelemetry.version>1.68.0</opentelemetry.version>
     <!-- The core plugin maven-resources-plugin (the version that the pinned Maven 3.10.0 binds, see the license
-         table of the plan): it filters the template src/main/resources/build-info.properties (the header comment). -->
+         table of the plan): it filters the template src/main/resources/build-info.properties (the header comment).
+         tools/versions.env has the same version (MAVEN_RESOURCES_PLUGIN_VERSION, just check-pins compares it). -->
     <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
     <!-- The values of the build for the operation GET /info (Task 200.120, the header comment). The version is the
          constant of the project (0.1.0, the version of the contract), and not a value of git. The commit has the
