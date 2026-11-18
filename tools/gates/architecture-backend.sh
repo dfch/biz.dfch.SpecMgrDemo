@@ -1,41 +1,62 @@
 #!/usr/bin/env bash
-# feat-50-structurizr-model-rules, Task 130.110 (REQ-004, ACC-005)
+# feat-50-structurizr-model-rules, Task 140.100 (REQ-007, ACC-006)
 #
 # The rules the model gives (the container backend, derived from model/workspace.json at test time,
 # with ArchUnit; the recipe architecture-backend; the canonical form is the section "The rules the
-# model gives" of model/README.md, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4). This recipe replaces
-# the run of the hard-coded rules R1 and R2 of feat-7-verification-architecture-tools (the classes
-# ModuleStructureTest, LayerRuleTest and BrokenLayerRule, removed in Task 130.140 of feat-50): the
-# rules now come from the model (one source of truth, GOL 9ffb930c-44e8-4d0e-b4fd-f94c7162a894),
-# and the same rules run from the model in both languages (the frontend side is the recipe
-# architecture-frontend, the script frontend/architecture/runner.mjs).
+# model gives" of model/README.md, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4). The rules come from
+# the model (one source of truth, GOL 9ffb930c-44e8-4d0e-b4fd-f94c7162a894), and the same rules
+# run from the model in both languages (the frontend side is the recipe architecture-frontend,
+# the script frontend/architecture/runner.mjs).
 #
 # Usage: architecture-backend.sh <backend dir>
 #
-# The run (the JUnit class ModelRuleRunnerTest, the suffix Test so the normal run of surefire
-# starts it too, the recipe test-unit-backend): the class reads the workspace (the file
-# model/workspace.json of the repository; the property model.workspace.path gives another file, the
-# same interface as ModelComparisonTest), derives the rule set of the container backend (the shared
-# class ModelRules, the same derivation as the comparison), and builds the ArchUnit rules at test
-# time: one dynamic test per derived rule. The derived rules (the groups 1 and 2 of the canonical
-# section): the forbidden dependencies (every ordered pair of distinct mapped components that has
-# no relation in the model; today: exactly one pair, the component model must not depend on the
-# component api, the direction of the code is api -> model) and the cycle rule (the slices of the
-# mapped components, one slice per component, the most specific entry of code.package, are free of
-# cycles). The classes: the base package of the container's code.root, the test classes excluded by
-# the import option DoNotIncludeTests (the same option as the comparison). A violation that
-# ArchUnit reports names the dependency (the report of the run). The run is green on the committed
-# code (ACC-002 and ACC-005: the derived rules hold), and the summary of surefire has no failure
-# and no error.
+# Part 1, the case that is successful (ACC-002 and ACC-005: the derived rules hold): the JUnit
+# class ModelRuleRunnerTest (the suffix Test, so the normal run of surefire starts it too, the
+# recipe test-unit-backend) reads the workspace (the file model/workspace.json of the repository;
+# the property model.workspace.path gives another file, the same interface as ModelComparisonTest),
+# derives the rule set of the container backend (the shared class ModelRules, the same derivation
+# as the comparison), and builds the ArchUnit rules at test time: one dynamic test per derived
+# rule. The derived rules (the groups 1 and 2 of the canonical section): the forbidden
+# dependencies (every ordered pair of distinct mapped components that has no relation in the
+# model; today: exactly one pair, the component model must not depend on the component api, the
+# direction of the code is api -> model) and the cycle rule (the slices of the mapped components,
+# one slice per component, the most specific entry of code.package, are free of cycles). The
+# classes: the base package of the container's code.root, the test classes excluded by the import
+# option DoNotIncludeTests (the same option as the comparison). A violation that ArchUnit reports
+# names the dependency (the report of the run). The run is green (exit code 0), the summary of
+# surefire has no failure and no error, and the report of the run names the derived rule count.
 #
-# The case that is not successful of each rule category (ACC-006, the Broken* pattern) comes back
-# in Phase 140 of feat-50-structurizr-model-rules: the recipe runs the broken case separately,
-# stops for it, and names the violation (the form of the part 2 and 3 of this recipe before the
-# change of feat-50).
+# Part 2, the case that is not successful of the forbidden dependencies (ACC-006, the Broken*
+# pattern): the class BrokenModelRule (no suffix Test, so the default run of part 1 does not start
+# it, and the committed run is green) derives the same way: it reads the workspace, takes the
+# relations of the model between the mapped components of the container backend (today exactly
+# one: api -> model), and builds for each of them the ArchUnit rule that FORBIDS it (the
+# component api must not depend on the component model). The code has the direction of the
+# modelled relation (the generated interface StatusApi references the classes of the model), so
+# the rule is violated deterministically, and ArchUnit names the violating dependency in the
+# report (the method getStatus() of the interface StatusApi, with the return type of the model
+# class Status). The script runs the class with -Dtest=BrokenModelRule and stops for it: the run
+# is red (exit code not 0), the report names the violation, and the script gives exit code 0.
 #
-# The script needs JDK 21 (the Maven Wrapper of the module) and the network for the first run
-# (Maven Central). It does not change the repository (the build is in target/, it is in
-# .gitignore). It stops (exit code 1) if the run does not give the expected result.
+# Part 3, the case that is not successful of the cycle rule (ACC-006, the Broken* pattern): the
+# committed code has no cycle of the mapped components (the cycle rule of part 1 is green), so a
+# separate artifact cannot show it; the script demonstrates the cycle in a temporary copy of the
+# repository (copy_work_tree in _lib.sh, the same pattern as the recipe architecture-model; the
+# repository is never changed). The copy has one scratch class in the normal source root
+# (src/main/java - and not in src/generated, the folder that the generator execution of a build
+# without the skip flag would wipe) in the package biz.dfch.specmgrdemo.model (the component
+# model) that references the interface biz.dfch.specmgrdemo.api.StatusApi (the component api):
+# with the direction api -> model of the committed code (the generated interface references the
+# classes of the model), it makes the dependency cycle api <-> model of the mapped components.
+# The script runs the runner class in the copy (-Dtest=ModelRuleRunnerTest, the generation is
+# skipped) and stops for it: the run is red (exit code not 0), and the report of the cycle rule
+# names the slices of the cycle (the lines after "Cycle detected": the names of the slices api
+# and model, and not the order of them).
+#
+# The script needs JDK 21 (the Maven Wrapper of the module), git and tar (the temporary copy of
+# part 3) and the network for the first run (Maven Central). It does not change the repository
+# (the build is in target/, it is in .gitignore, and the copy of part 3 is in a temporary
+# folder). It stops (exit code 1) if one part does not give the expected result.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
@@ -46,6 +67,9 @@ backend_dir="$1"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
 cd "${backend_dir}"
+
+work="$(mktemp -d)"
+trap 'rm -rf "${work}"' EXIT
 
 passed=0
 failed=0
@@ -63,7 +87,7 @@ mvn_run() {
     set -e
 }
 
-echo "== the rules the model gives (the container backend, derived at test time, ArchUnit)"
+echo "== part 1: the run of the derived rules (the case that is successful)"
 mvn_run test -Dcodegen.skip=true -Dtest=ModelRuleRunnerTest
 if [[ ${run_code} -ne 0 ]]; then
     echo "FAIL the run of the derived rules is not green (exit code ${run_code})"
@@ -90,6 +114,70 @@ else
         printf '%s\n' "${run_output}" | grep -E "Tests run|the model gives" | head -n 5 | sed -e 's/^/     | /'
         failed=$((failed + 1))
     fi
+fi
+
+echo
+echo "== part 2: the case that is not successful of the forbidden dependencies (the class BrokenModelRule, ACC-006)"
+mvn_run test -Dcodegen.skip=true -Dtest=BrokenModelRule
+if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenModelRule"* && "${run_output}" == *"Architecture Violation"* \
+    && "${run_output}" == *"biz.dfch.specmgrdemo.api.StatusApi.getStatus()"* && "${run_output}" == *"biz.dfch.specmgrdemo.model.Status"* ]]; then
+    echo "ok   the run stops for the violated rule, and ArchUnit names the violating dependency"
+    passed=$((passed + 1))
+    # The report of the run (the line of the violated rule and the dependency that ArchUnit names).
+    printf '%s\n' "${run_output}" | grep -E "Architecture Violation|Method <|depending on" | head -n 3 | sed -e 's/^/     | /'
+else
+    echo "FAIL the run of BrokenModelRule gives exit code ${run_code}, and the output has not the violated rule:"
+    printf '%s\n' "${run_output}" | grep -E "Tests run|Architecture Violation|depending" | head -n 5 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+
+echo
+echo "== part 3: the case that is not successful of the cycle rule (ACC-006, a temporary copy of the repository)"
+copy_work_tree "${work}/cycle"
+scratch_dir="${work}/cycle/backend/src/main/java/biz/dfch/specmgrdemo/model"
+mkdir -p "${scratch_dir}"
+cat >"${scratch_dir}/ZCycle.java" <<'EOF'
+package biz.dfch.specmgrdemo.model;
+
+import biz.dfch.specmgrdemo.api.StatusApi;
+
+/**
+ * Scratch class of the case that is not successful of the recipe architecture-backend
+ * (feat-50-structurizr-model-rules, Task 140.100, ACC-006): the class lies in the package
+ * biz.dfch.specmgrdemo.model (the component model) and references the interface
+ * biz.dfch.specmgrdemo.api.StatusApi (the component api), the direction model -> api of the
+ * code. With the direction api -> model of the committed code (the generated interface
+ * StatusApi references the class Status of the package model), it makes the dependency cycle
+ * api <-> model of the mapped components of the container backend. The class exists in the
+ * temporary copy only; the repository is never changed.
+ */
+public final class ZCycle {
+
+  private ZCycle() {
+  }
+
+  public StatusApi statusApi() {
+    return null;
+  }
+}
+EOF
+set +e
+run_output="$(cd "${work}/cycle/backend" && ./mvnw --batch-mode --no-transfer-progress test -Dcodegen.skip=true \
+    -Dtest=ModelRuleRunnerTest 2>&1)"
+run_code=$?
+set -e
+# The cycle block of the report (the lines from "Cycle detected" to the first line of the
+# dependencies of a slice): the names of the slices of the cycle, without the order.
+cycle_block="$(printf '%s\n' "${run_output}" | sed -n '/Cycle detected/,/Dependencies of Slice/p')"
+if [[ ${run_code} -ne 0 && "${run_output}" == *"free of cycles"* && -n "${cycle_block}" \
+    && "${cycle_block}" == *"Slice api"* && "${cycle_block}" == *"Slice model"* ]]; then
+    echo "ok   the run of the copy stops for the cycle, and the report names the slices api and model"
+    passed=$((passed + 1))
+    printf '%s\n' "${cycle_block}" | head -n 4 | sed -e 's/^\[ERROR\] *//' | sed -e 's/^/     | /'
+else
+    echo "FAIL the run of the copy gives exit code ${run_code}, and the output has not the cycle of the slices api and model:"
+    printf '%s\n' "${run_output}" | grep -E "Tests run|Cycle detected|free of cycles" | head -n 5 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
 fi
 
 echo

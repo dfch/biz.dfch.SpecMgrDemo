@@ -14,7 +14,10 @@
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
 # architecture-frontend and architecture-model), 130.110 to 130.130 are the tasks of
 # feat-50-structurizr-model-rules (the rule set and the runner: the same three recipes, rewritten to run
-# the rules derived from the model), and 140.110 is the task of
+# the rules derived from the model), 140.100 and 140.110 are the tasks of
+# feat-50-structurizr-model-rules (the tests of the tests: the same two recipes architecture-backend and
+# architecture-frontend, rewritten to the three-part form with the cases that are not successful of each
+# rule category, the Broken* pattern), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
 # coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
 # traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
@@ -156,13 +159,13 @@ mutation-backend:
 mutation-frontend:
     @{{ just_executable() }} _gate mutation-frontend.sh 120.110 frontend
 
-# Test: the rules the model gives (the container backend, derived from model/workspace.json at test time, with ArchUnit; one dynamic test per derived rule: the forbidden dependencies and the cycle rule, the rule set in model/README.md): the run is green on the committed code; the cases that are not successful (the Broken* pattern, ACC-006) come back in Phase 140 (feat-50-structurizr-model-rules, Task 130.110).
+# Test: the rules the model gives (the container backend, derived from model/workspace.json at test time, with ArchUnit; one dynamic test per derived rule: the forbidden dependencies and the cycle rule, the rule set in model/README.md): part 1 the run is green on the committed code; part 2 the case that is not successful of the forbidden dependencies (the class BrokenModelRule: the modelled relation api -> model forbidden, the violation named); part 3 the case that is not successful of the cycle rule (a temporary copy of the repository: the scratch class makes the cycle api <-> model, the slices named) (feat-50-structurizr-model-rules, Task 140.100; the runner of Task 130.110).
 architecture-backend:
-    @{{ just_executable() }} _gate architecture-backend.sh 130.110 backend
+    @{{ just_executable() }} _gate architecture-backend.sh 140.100 backend
 
-# Test: the rules the model gives (the container frontend, derived from model/workspace.json at run time, with ArchUniTS; one check per derived rule: the forbidden dependencies, 10 today, and the cycle rule, the rule set in model/README.md): the run is green on the committed code; the cases that are not successful (the Broken* pattern, ACC-006) come back in Phase 140 (feat-50-structurizr-model-rules, Task 130.120).
+# Test: the rules the model gives (the container frontend, derived from model/workspace.json at run time, with ArchUniTS; one check per derived rule: the forbidden dependencies, 10 today, and the cycle rule, the rule set in model/README.md): part 1 the run is green on the committed code; part 2 the case that is not successful of the forbidden dependencies (the script runner.broken.mjs: the modelled relations test -> zod and test -> root forbidden, the imports named); part 3 the case that is not successful of the cycle rule (a temporary copy of the repository: the two scratch files make the cycle types <-> test, the edges named) (feat-50-structurizr-model-rules, Task 140.110; the runner of Task 130.120).
 architecture-frontend:
-    @{{ just_executable() }} _gate architecture-frontend.sh 130.120 frontend
+    @{{ just_executable() }} _gate architecture-frontend.sh 140.110 frontend
 
 # Test: the test that compares the Structurizr workspace with the packages and the dependencies of the code (the mapping code.* of the elements, not the name; the rule set in model/README.md): the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package or a unit without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-50-structurizr-model-rules, Task 130.130; feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
