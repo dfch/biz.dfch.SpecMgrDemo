@@ -48,6 +48,11 @@ validate:
 commit-check:
     @{{ just_executable() }} _gate commit-check.sh 130.120 "{{ base }}"
 
+# Check the subject line of the commit in progress with the same rule as the `commit-check` gate (Conventional Commits with the feature number as scope). The commit-msg hook in tools/hooks calls this recipe; the rule is in the gate script, not in the hook (feat-48-pre-commit-hooks, Task 110.110). The subject has spaces and brackets, so it is quoted and not part of the unquoted variadic of the private recipe _gate.
+commit-message-check subject:
+    @[[ -x "tools/gates/commit-check.sh" ]] || { echo "NOT IMPLEMENTED: tools/gates/commit-check.sh does not exist. The task 130.120 of feat-5-foundation-monorepo-ci writes it." >&2; exit 1; }
+    @exec "tools/gates/commit-check.sh" --message "{{ subject }}"
+
 # Make the SBOM files (CycloneDX) for the backend and the frontend.
 sbom:
     @{{ just_executable() }} _gate sbom.sh 130.130 "{{ sbom_dir }}"

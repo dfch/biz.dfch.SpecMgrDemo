@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# feat-48-pre-commit-hooks, Task 110.100 (REQ-003, REQ-004)
+#
+# Git hook: pre-commit. It runs before a commit and stops the commit on the
+# first failing gate.
+#
+# It is a thin shell: it calls the just recipes only (the one entry point,
+# feat-5 REQ-002, REQ-009) and has no gate logic of its own. The six fast
+# gates, in the order of REQ-003: commit-check, validate, lint, check-pins,
+# check-workflows, check-sudo. No slow or network gate runs here (REQ-004).
+#
+# Bypass: git commit --no-verify. The details are documented in the handbook
+# (Phase 130).
+
+set -euo pipefail
+
+if ! command -v just >/dev/null 2>&1; then
+    echo "[pre-commit] ERROR: just is not on PATH. The hooks need the pinned version of just (see just verify-tools)." >&2
+    exit 1
+fi
+
+just commit-check
+just validate
+just lint
+just check-pins
+just check-workflows
+just check-sudo
