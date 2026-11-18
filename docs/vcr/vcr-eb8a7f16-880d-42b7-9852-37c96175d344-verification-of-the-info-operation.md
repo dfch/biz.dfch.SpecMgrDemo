@@ -1,9 +1,10 @@
 ---
+classification: null
 created: '2026-11-15T21:50:00.000+01:00'
 id: eb8a7f16-880d-42b7-9852-37c96175d344
 status: draft
 type: vcr
-updated: '2026-11-15T21:50:00.000+01:00'
+updated: '2026-11-18T12:07:01.375+01:00'
 version: 1.0.0
 ---
 
@@ -45,11 +46,15 @@ The end-to-end test has the name `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the u
 
 ## More Information
 
-The tests are written in feat-9-walking-skeleton (the task 400.110 of the plan). Until the tests exist, the verification is not done. The status of this record is `draft`.
+The tests are written in feat-9-walking-skeleton (the task 400.110 of the plan), and they exist: AC-001 is the test `ServiceIT` (the package `biz.dfch.specmgrdemo.app` of the backend, it starts the real service with the class `RunningService`, and it runs in `just test-integration-backend`) and AC-002 is the end-to-end test in `frontend/e2e/service.spec.ts` (Playwright, it runs in `just test-e2e` against the real service and the built frontend). Each has the name that this record states, and they pass. The status of this record is `draft`. The owner decides the status (the record is not set to another status by the work of the feature).
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 12:07:00.000+01:00 - The tests exist
+
+The sentence "Until the tests exist, the verification is not done" of More Information is replaced: the tests exist (`ServiceIT` for AC-001, and `frontend/e2e/service.spec.ts` for AC-002, both with the name that this record states; the pull request #53 of feat-9-walking-skeleton is open and its CI is green). Since the review fix N6b (2026-11-18) the end-to-end test of AC-002 runs against the built bundle of the frontend that `vite preview` serves (the step 1 of AC-002, "the backend and the frontend of the build", holds to the letter). The status stays `draft`: the owner decides the status. The statements of the verification case record are not changed.
 
 ### 2026-11-15 21:50:00.000+01:00 - Draft written
 
