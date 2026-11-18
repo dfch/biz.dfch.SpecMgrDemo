@@ -12,7 +12,9 @@
 # 120.100 and 120.110 are the tasks of feat-7-verification-architecture-tools (the mutation tests, the recipes
 # mutation-backend and mutation-frontend), 130.100 to 130.120 are the tasks of
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
-# architecture-frontend and architecture-model), and 140.110 is the task of
+# architecture-frontend and architecture-model), 130.110 to 130.130 are the tasks of
+# feat-50-structurizr-model-rules (the rule set and the runner: the same three recipes, rewritten to run
+# the rules derived from the model), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
 # coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
 # traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
@@ -154,17 +156,17 @@ mutation-backend:
 mutation-frontend:
     @{{ just_executable() }} _gate mutation-frontend.sh 120.110 frontend
 
-# Test: the architecture tests of the Maven module with Spring Modulith (R1, the module structure) and ArchUnit (R2, the layer rule): the run is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.100).
+# Test: the rules the model gives (the container backend, derived from model/workspace.json at test time, with ArchUnit; one dynamic test per derived rule: the forbidden dependencies and the cycle rule, the rule set in model/README.md): the run is green on the committed code; the cases that are not successful (the Broken* pattern, ACC-006) come back in Phase 140 (feat-50-structurizr-model-rules, Task 130.110).
 architecture-backend:
-    @{{ just_executable() }} _gate architecture-backend.sh 130.100 backend
+    @{{ just_executable() }} _gate architecture-backend.sh 130.110 backend
 
-# Test: the architecture tests of the pnpm module with ArchUniTS (the layers and the imports of the frontend): the run of the rules is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.110).
+# Test: the rules the model gives (the container frontend, derived from model/workspace.json at run time, with ArchUniTS; one check per derived rule: the forbidden dependencies, 10 today, and the cycle rule, the rule set in model/README.md): the run is green on the committed code; the cases that are not successful (the Broken* pattern, ACC-006) come back in Phase 140 (feat-50-structurizr-model-rules, Task 130.120).
 architecture-frontend:
-    @{{ just_executable() }} _gate architecture-frontend.sh 130.110 frontend
+    @{{ just_executable() }} _gate architecture-frontend.sh 130.120 frontend
 
-# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
+# Test: the test that compares the Structurizr workspace with the packages and the dependencies of the code (the mapping code.* of the elements, not the name; the rule set in model/README.md): the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package or a unit without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-50-structurizr-model-rules, Task 130.130; feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
-    @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
+    @{{ just_executable() }} _gate architecture-model.sh 130.130 backend frontend
 
 # Make model/workspace.json again from model/workspace.dsl with the pinned container structurizr/structurizr (the step names the digest STRUCTURIZR_IMAGE_DIGEST of tools/versions.env, and not the tag). Two runs make no change (feat-50-structurizr-model-rules, Task 110.110; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
 generate-model:

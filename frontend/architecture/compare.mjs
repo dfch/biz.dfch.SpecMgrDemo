@@ -1,57 +1,69 @@
 #!/usr/bin/env node
 /**
- * The frontend side of the test that compares the Structurizr workspace with the modules and the
- * packages of the code (feat-7-verification-architecture-tools, Task 130.120, REQ-004, ACC-003;
- * DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73: "A test reads the workspace and compares the components
- * with the modules and the packages"). The backend side is the JUnit class
- * biz.dfch.specmgrdemo.architecture.ModelComparisonTest (the recipe architecture-model).
+ * The frontend side of the test that compares the Structurizr workspace with the code (feat-7-
+ * verification-architecture-tools, Task 130.120, REQ-004, ACC-003; refactored onto the rule set the
+ * model gives in feat-50-structurizr-model-rules, Task 130.130, REQ-005; the canonical form is the
+ * section "The rules the model gives" of model/README.md; DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4,
+ * that replaces the name rule of DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73). The backend side is the
+ * JUnit class biz.dfch.specmgrdemo.architecture.ModelComparisonTest (the recipe architecture-model).
  *
  * Usage: node compare.mjs [<frontend dir>] [<workspace file>]
  *   <frontend dir>    the folder of the pnpm module (default: the parent of this script's folder)
  *   <workspace file>  the file of the workspace (default: <frontend dir>/../model/workspace.json)
  *
- * The units of the frontend (the rule of thumb of Task 130.110, the same for the recipe
- * architecture-frontend): a unit is a folder that contains TypeScript source - the top-level
- * folders of frontend/src (today: test), the folders of frontend/src/generated that contain
- * TypeScript source (today: types and zod; the generator makes two independent artifacts, so the
- * folders of the generated code are the units and not the folder generated), and the TypeScript
- * files that lie directly in frontend/src form the unit root (today: mutation-example.ts). The
- * name of a unit is the identifier of its component in the model (the rule of DEC 9edc1071).
+ * The comparison is mapping-based (and not name-based): the components of the container frontend are
+ * read by their entries of the property code.path (the list form of the DEC: a folder entry with the
+ * folder suffix, the files of the folder at each depth; a file entry, the path without the suffix),
+ * and the code is the source: the TypeScript files discovered from the files of the module (the rule
+ * of thumb stays the discovery - it is the source of truth for what code exists; a file without a
+ * component stops the comparison). The discovery: the top-level folders of frontend/src (today:
+ * test), the folders of frontend/src/generated that contain TypeScript source (today: types and
+ * zod; the generator makes two independent artifacts, so the folders of the generated code are the
+ * units and not the folder generated), and the TypeScript files that lie directly in frontend/src
+ * form the unit root (today: mutation-example.ts). The name of the rule of thumb (the unit) is in
+ * the message that the recipe asserts. A file is owned by the component of the most specific entry
+ * (the file entry that is the file itself, or the folder entry with the longest prefix).
  *
- * The imports of each file are read with the compiler of the pinned package typescript (the devDependency
- * of the module): the import declarations and the export-from declarations. A specifier that starts
- * with ./ or ../ is internal (it resolves to a file of the units), and the other specifiers are
- * external (a package, for example zod, vitest and fast-check; they are no unit dependencies). A
- * construct that this script does not understand (a syntax error, a dynamic import(), a require(),
- * an import=, an internal specifier that resolves to no file) stops the script (exit code 2), and
- * a file that the rule of thumb has no unit for stops the script too.
+ * The imports of each file are read with the compiler of the pinned package typescript (the
+ * devDependency of the module): the import declarations, the export-from declarations, and the
+ * dynamic forms (the construct import() and the construct require(), the fix of Task 130.130 of
+ * feat-50-structurizr-model-rules: with the pinned typescript 5.9.3, the construct import() was
+ * silently ignored before the fix, and the header of the old script claimed that it stops the run -
+ * the defect of the spike of Phase 100). A dynamic form is read with the same resolution as the
+ * static forms: an internal specifier (./ or ../) resolves to a file of the units (the construct
+ * that resolves to no file stops the script, exit code 2), and an external specifier is an import
+ * to a package (the check of code.allowedExternal below). A specifier that this script does not
+ * understand (a syntax error, an import=, a dynamic form with a specifier that is not a string)
+ * stops the script (exit code 2).
  *
- * The workspace file is read strictly: the form is the one that the exporter of the pinned
- * container structurizr/structurizr makes from model/workspace.dsl (DEC b6e8808f-86b4-41a4-92f2-33d38869beed;
- * see model/README.md). The keys that the exporter adds to the form of the hand-maintained file are
- * accepted here (feat-50-structurizr-model-rules, Phase 110): the top-level key `properties` (a map of
- * texts, Task 110.100), the element key `perspectives` (an array of the objects with the text keys
- * name, description and value, Task 110.130), and the model key `deploymentNodes` (an array of the
- * deployment nodes, Task 110.130). The content of the top-level key `views` is not inspected. Each
- * other key that this script does not understand stops the script (exit code 2).
+ * The workspace file is read strictly, and the rule set is derived, through the shared module
+ * workspace.mjs (the same module that the runner runner.mjs uses, so the two cannot drift apart;
+ * the backend side has the shared class ModelRules, the same design).
  *
- * The assertions (the two conditions of ACC-003, and the other direction, recorded in the plan):
- *   - every unit has a component in the model (the components of the container frontend);
- *   - every unit dependency is in the model (the dependencies between the components of the
- *     container frontend; the dependency of the container frontend on the container backend is no
- *     unit dependency, and this side does not compare it);
- *   - the other direction: no component in the model without a unit, and no dependency in the
- *     model without the unit dependency of the code.
+ * The assertions (the groups 3 and 4 of the canonical section, the closed set and the exceptions):
+ *   - every file of the code is owned by exactly one component (the file that no component owns
+ *     stops the run, and the message names the unit of the rule of thumb; the file that two
+ *     components own is the ambiguous mapping, and the message names the two components);
+ *   - every internal dependency between owned files maps to a pair of components that has a
+ *     relation in the model (the message names the dependency);
+ *   - the other direction: no component in the model without a file in the code, and no relation in
+ *     the model without the dependency of the code;
+ *   - every import to an external package is allowed if and only if it matches an entry of the
+ *     source component's code.allowedExternal (the form of the DEC: the name of the package is the
+ *     entry, or starts with the entry and the character /; the message names the import and the
+ *     missing entry). The container-level relations (for example frontend to backend) are not
+ *     compared with the code (the first limit of the closed world, DEC e85e9685).
  *
  * Exit code 0: the workspace matches the code (the committed run is green). Exit code 1: the
- * comparison is not successful (the message names the unit or the dependency). Exit code 2: an
- * error of the input (a file that the script cannot read or understand).
+ * comparison is not successful (the message names the file, the unit or the dependency). Exit code
+ * 2: an error of the input (a file that the script cannot read or understand).
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
+import { allowedExternalMatch, deriveFrontend, ownersOf, readWorkspace, stop } from './workspace.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const frontendDir = resolve(process.argv[2] ?? join(here, '..'))
@@ -59,13 +71,6 @@ const workspacePath = resolve(process.argv[3] ?? join(frontendDir, '..', 'model'
 const srcDir = join(frontendDir, 'src')
 
 const toPosix = (path) => path.split(sep).join('/')
-
-/** Stop with the message and the exit code 2 (an error of the input, and not a drift). */
-function stop(message) {
-  console.error(`FAIL ${message}`)
-  console.error('     the script stops for the input of the comparison (exit code 2)')
-  process.exit(2)
-}
 
 /** The TypeScript files of the folder (recursively), as paths relative to the frontend folder. */
 function listTsFiles(dir, base) {
@@ -82,8 +87,11 @@ function listTsFiles(dir, base) {
 }
 
 /**
- * Discover the units of the frontend (the rule of thumb, see the header). Return the map of the
- * units (the name of the unit to the files of the unit, relative to the frontend folder).
+ * Discover the files of the code and the units of the rule of thumb (see the header). Return the
+ * map of the units (the name of the unit to the files of the unit, relative to the frontend folder).
+ * The discovery stays file-based (the source of truth for what code exists); the mapping of the
+ * model (the property code.path) gives the ownership, and the rule of thumb gives the name of the
+ * unit in the message.
  */
 function discoverUnits() {
   if (!existsSync(srcDir) || !statSync(srcDir).isDirectory()) {
@@ -125,9 +133,11 @@ function discoverUnits() {
 }
 
 /**
- * Read the imports of the files (the import declarations and the export-from declarations, with
- * the compiler of the pinned package typescript). Return the internal dependencies (the source
- * file to the target file, both relative to the frontend folder). A construct that the script
+ * Read the imports of the files with the compiler of the pinned package typescript: the import
+ * declarations, the export-from declarations, and the dynamic forms (import() and require(), the
+ * same resolution as the static forms, the fix of Task 130.130). Return the object with the
+ * internal dependencies (the source file to the target file, both relative to the frontend folder)
+ * and the external imports (the file and the specifier of the package). A construct that the script
  * does not understand stops the script.
  */
 function readImports(units) {
@@ -138,7 +148,8 @@ function readImports(units) {
   const absFiles = files.map((file) => resolve(frontendDir, file))
 
   const program = ts.createProgram(absFiles, { noEmit: true, allowJs: false, skipLibCheck: true })
-  const dependencies = []
+  const internal = []
+  const external = []
 
   const resolveInternal = (fromFile, specifier) => {
     // fromFile is relative to the frontend folder: the resolution is against the frontend folder,
@@ -155,6 +166,14 @@ function readImports(units) {
       }
     }
     stop(`the internal import ${specifier} of the file ${fromFile} does not resolve to a TypeScript source of the units of the frontend`)
+  }
+
+  const recordSpecifier = (fromFile, specifier) => {
+    if (specifier.startsWith('./') || specifier.startsWith('../')) {
+      internal.push([fromFile, resolveInternal(fromFile, specifier)])
+    } else {
+      external.push({ file: fromFile, specifier })
+    }
   }
 
   for (const absolute of absFiles) {
@@ -174,24 +193,26 @@ function readImports(units) {
         if (!ts.isStringLiteral(node.moduleSpecifier)) {
           stop(`the import of the file ${fromFile} has a specifier that is not a string. The comparison does not understand it`)
         }
-        const specifier = node.moduleSpecifier.text
-        if (specifier.startsWith('./') || specifier.startsWith('../')) {
-          dependencies.push([fromFile, resolveInternal(fromFile, specifier)])
-        }
+        recordSpecifier(fromFile, node.moduleSpecifier.text)
       } else if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) {
         if (!ts.isStringLiteral(node.moduleSpecifier)) {
           stop(`the export-from of the file ${fromFile} has a specifier that is not a string. The comparison does not understand it`)
         }
-        const specifier = node.moduleSpecifier.text
-        if (specifier.startsWith('./') || specifier.startsWith('../')) {
-          dependencies.push([fromFile, resolveInternal(fromFile, specifier)])
-        }
+        recordSpecifier(fromFile, node.moduleSpecifier.text)
       } else if (
         ts.isCallExpression(node) &&
-        ts.isIdentifier(node.expression) &&
-        (node.expression.text === 'import' || node.expression.text === 'require')
+        ((ts.isIdentifier(node.expression) && node.expression.text === 'require') ||
+          node.expression.kind === ts.SyntaxKind.ImportKeyword)
       ) {
-        stop(`the file ${fromFile} uses a dynamic import() or require(). The comparison does not understand it. Add the construct to the plan and to the script`)
+        // The dynamic forms (import() and require()): the same resolution as the static forms
+        // (the fix of Task 130.130 of feat-50-structurizr-model-rules, the defect of the spike of
+        // Phase 100: with the pinned typescript 5.9.3, the construct import() is a token, and not
+        // an identifier, and the old check tested for an identifier only).
+        const argument = node.arguments[0]
+        if (argument === undefined || !ts.isStringLiteral(argument)) {
+          stop(`the dynamic import of the file ${fromFile} has a specifier that is not a string. The comparison does not understand it`)
+        }
+        recordSpecifier(fromFile, argument.text)
       } else if (ts.isImportEqualsDeclaration(node)) {
         stop(`the file ${fromFile} uses an import= declaration. The comparison does not understand it. Add the construct to the plan and to the script`)
       }
@@ -199,234 +220,90 @@ function readImports(units) {
     }
     visit(sourceFile)
   }
-  return dependencies
+  return { internal, external }
 }
 
-/** The unit of the file (the map of the units), or stop if the file is not in a unit. */
-function unitOfFile(units, file) {
-  for (const [unit, fileSet] of units) {
-    if (fileSet.includes(file)) {
-      return unit
-    }
-  }
-  stop(`the file ${file} is not in a unit of the frontend (the rule of thumb)`)
-}
+// The rule set the model gives for the container frontend (the shared module workspace.mjs, the
+// same derivation that the runner runner.mjs uses).
+const derived = deriveFrontend(readWorkspace(workspacePath))
 
-// Read the workspace strictly (the form is the one of the writer of structurizr-java).
-let workspaceText
-try {
-  workspaceText = readFileSync(workspacePath, 'utf8')
-} catch (error) {
-  stop(`the workspace does not exist or cannot be read: ${workspacePath} (${error.message})`)
-}
-let workspace
-try {
-  workspace = JSON.parse(workspaceText)
-} catch (error) {
-  stop(`the workspace is not JSON: ${workspacePath} (${error.message})`)
-}
-
-const knownTopLevelKeys = new Set(['configuration', 'description', 'documentation', 'id', 'model', 'name', 'properties', 'views'])
-if (typeof workspace !== 'object' || workspace === null || Array.isArray(workspace)) {
-  stop('the workspace is not an object')
-}
-for (const key of Object.keys(workspace)) {
-  if (!knownTopLevelKeys.has(key)) {
-    stop(`the workspace has the top-level key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
-  }
-}
-// The top-level `properties` (the exporter writes the base64 text of the source DSL under the key
-// `structurizr.dsl`, and the counts of the inspection under the keys `structurizr.inspection.*`,
-// feat-50-structurizr-model-rules, Task 110.100): a map of texts, like the `properties` of an element.
-if (Object.hasOwn(workspace, 'properties')) {
-  const topProperties = workspace.properties
-  if (
-    typeof topProperties !== 'object' ||
-    topProperties === null ||
-    Array.isArray(topProperties) ||
-    !Object.values(topProperties).every((value) => typeof value === 'string')
-  ) {
-    stop('the workspace has the top-level key properties, and its value is not a map of texts')
-  }
-}
-if (typeof workspace.name !== 'string') {
-  stop('the workspace has no name (a string)')
-}
-if (typeof workspace.model !== 'object' || workspace.model === null) {
-  stop('the workspace has no model (an object)')
-}
-for (const key of Object.keys(workspace.model)) {
-  if (key !== 'softwareSystems' && key !== 'deploymentNodes') {
-    stop(
-      `the model of the workspace has the key ${key}, which the comparison does not understand (it has the software systems and the deployment nodes only)`,
-    )
-  }
-}
-const systems = workspace.model.softwareSystems
-if (!Array.isArray(systems) || systems.length !== 1) {
-  stop(`the model of the workspace has ${Array.isArray(systems) ? systems.length : 'no'} software system(s). The comparison has one`)
-}
-// The model key `deploymentNodes` (the deployment unit of the model for the view of the deployment
-// viewpoint, feat-50-structurizr-model-rules, Task 110.130): an array of the deployment nodes. The
-// exporter writes the node, and not the containment of the node, so the comparison does not
-// examine the containment (it is no relationship of the model, and it is not visible in the code).
-if (Object.hasOwn(workspace.model, 'deploymentNodes')) {
-  const knownDeploymentNodeKeys = new Set(['description', 'environment', 'id', 'instances', 'name', 'properties', 'tags', 'technology'])
-  const deploymentNodes = workspace.model.deploymentNodes
-  if (!Array.isArray(deploymentNodes)) {
-    stop('the model of the workspace has the key deploymentNodes, and its value is not an array')
-  }
-  for (const node of deploymentNodes) {
-    checkKeys(node, knownDeploymentNodeKeys, 'the deployment node of the workspace')
-    if (
-      typeof node.name !== 'string' ||
-      typeof node.id !== 'string' ||
-      typeof node.environment !== 'string' ||
-      typeof node.instances !== 'string'
-    ) {
-      stop(`the deployment node of the workspace has no name, no id, no environment or no instances (a string): ${JSON.stringify(node)}`)
-    }
-  }
-}
-
-// The key `properties` of an element is the Structurizr map of text values. The traceability check
-// (tools/gates/traceability.py, feat-8-traceability-security-gates) reads the property `specmgr-req` of it. This
-// comparison does not use the values: it accepts the key, and stops if the value is not a map of texts.
-// The key `perspectives` of an element is the native block of the Rozanski & Woods perspectives
-// (documentation only, feat-50-structurizr-model-rules, Task 110.130): an array of the objects with
-// the text keys name, description and value. This comparison does not use the values: it accepts
-// the key, and stops if the value is not an array of objects of that form.
-const knownSystemKeys = new Set(['containers', 'description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'tags'])
-const knownContainerKeys = new Set(['components', 'description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'relationships', 'tags', 'technology'])
-const knownComponentKeys = new Set(['description', 'documentation', 'id', 'name', 'perspectives', 'properties', 'relationships', 'tags', 'technology'])
-const knownRelationshipKeys = new Set(['description', 'destinationId', 'id', 'sourceId', 'tags'])
-const knownPerspectiveKeys = new Set(['name', 'description', 'value'])
-
-function checkKeys(element, knownKeys, where) {
-  for (const key of Object.keys(element)) {
-    if (!knownKeys.has(key)) {
-      stop(`${where} has the key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
-    }
-  }
-  if (Object.hasOwn(element, 'properties')) {
-    const properties = element.properties
-    const isMapOfTexts =
-      typeof properties === 'object' &&
-      properties !== null &&
-      !Array.isArray(properties) &&
-      Object.values(properties).every((value) => typeof value === 'string')
-    if (!isMapOfTexts) {
-      stop(`${where} has the key properties, and its value is not a map of texts`)
-    }
-  }
-  if (Object.hasOwn(element, 'perspectives')) {
-    const perspectives = element.perspectives
-    if (!Array.isArray(perspectives)) {
-      stop(`${where} has the key perspectives, and its value is not an array`)
-    }
-    perspectives.forEach((perspective, index) => {
-      checkKeys(perspective, knownPerspectiveKeys, `the perspective ${index} of ${where}`)
-      if (
-        typeof perspective.name !== 'string' ||
-        typeof perspective.description !== 'string' ||
-        typeof perspective.value !== 'string'
-      ) {
-        stop(`the perspective ${index} of ${where} has the keys name, description and value, and they are not all texts`)
-      }
-    })
-  }
-}
-
-const system = systems[0]
-checkKeys(system, knownSystemKeys, `the software system ${system.name ?? '<no name>'} of the workspace`)
-if (!Array.isArray(system.containers)) {
-  stop('the software system of the workspace has no containers (an array)')
-}
-const frontend = system.containers.find((container) => container.name === 'frontend')
-if (frontend === undefined) {
-  stop('the workspace has no container frontend (the container of the pnpm module)')
-}
-for (const container of system.containers) {
-  checkKeys(container, knownContainerKeys, `the container ${container.name ?? '<no name>'} of the workspace`)
-  if (Array.isArray(container.components)) {
-    for (const component of container.components) {
-      checkKeys(component, knownComponentKeys, `the component ${component.name ?? '<no name>'} of the container ${container.name} of the workspace`)
-      for (const relationship of component.relationships ?? []) {
-        checkKeys(relationship, knownRelationshipKeys, `the relationship of the component ${component.name} of the workspace`)
-      }
-    }
-  }
-  for (const relationship of container.relationships ?? []) {
-    checkKeys(relationship, knownRelationshipKeys, `the relationship of the container ${container.name} of the workspace`)
-  }
-}
-
-// The components of the container frontend, and the dependencies between them (the ids of the
-// relationships resolve to the components of the container).
-const modelComponents = new Map()
-if (!Array.isArray(frontend.components)) {
-  stop('the container frontend of the workspace has no components (an array)')
-}
-for (const component of frontend.components) {
-  if (typeof component.name !== 'string' || typeof component.id !== 'string') {
-    stop(`the component of the container frontend of the workspace has no name or no id: ${JSON.stringify(component)}`)
-  }
-  if (modelComponents.has(component.name)) {
-    stop(`the container frontend of the workspace has the component ${component.name} two times`)
-  }
-  modelComponents.set(component.name, component.id)
-}
-const idToUnit = new Map([...modelComponents].map(([name, id]) => [id, name]))
-const modelDependencies = new Set()
-for (const relationship of [...(frontend.relationships ?? []), ...frontend.components.flatMap((component) => component.relationships ?? [])]) {
-  if (typeof relationship.sourceId !== 'string' || typeof relationship.destinationId !== 'string') {
-    stop(`the relationship of the container frontend of the workspace has no sourceId or no destinationId: ${JSON.stringify(relationship)}`)
-  }
-  const source = idToUnit.get(relationship.sourceId)
-  const destination = idToUnit.get(relationship.destinationId)
-  if (source !== undefined && destination !== undefined) {
-    modelDependencies.add(`${source} -> ${destination}`)
-  }
-  // A relationship that has one side outside the container frontend (for example the dependency
-  // of the container frontend on the container backend) is no unit dependency.
-}
-
-// The code: the units of the frontend, and their dependencies (the internal imports between the units).
+// The code: the files of the module (the discovery from the files, the rule of thumb), and their
+// imports (the internal dependencies and the external imports).
 const units = discoverUnits()
-const imports = readImports(units)
-const codeUnits = [...units.keys()].sort()
+const { internal, external } = readImports(units)
+const fileToUnit = new Map()
+for (const [unit, fileSet] of units) {
+  for (const file of fileSet) {
+    fileToUnit.set(file, unit)
+  }
+}
+const codeFiles = [...fileToUnit.keys()].sort()
+
+// The ownership of the files (the most specific entry of code.path, the shared module).
+const ownersByFile = new Map(codeFiles.map((file) => [file, ownersOf(derived, file)]))
 const codeDependencies = new Set()
-for (const [source, target] of imports) {
-  const sourceUnit = unitOfFile(units, source)
-  const targetUnit = unitOfFile(units, target)
-  if (sourceUnit !== targetUnit) {
-    codeDependencies.add(`${sourceUnit} -> ${targetUnit}`)
+for (const [source, target] of internal) {
+  const sourceOwners = ownersByFile.get(source)
+  const targetOwners = ownersByFile.get(target)
+  if (sourceOwners.length === 1 && targetOwners.length === 1 && sourceOwners[0] !== targetOwners[0]) {
+    codeDependencies.add(`${sourceOwners[0]} -> ${targetOwners[0]}`)
   }
 }
 
 // The assertions.
 let failed = false
-for (const unit of codeUnits) {
-  if (!modelComponents.has(unit)) {
-    console.error(`FAIL the unit ${unit} of the frontend has no component in the model (the workspace ${workspacePath})`)
+// Group 3 (a): the file that no component owns stops the run, and the message names the unit of
+// the rule of thumb (the condition (a) of ACC-003). The file that two components own is the
+// ambiguous mapping (the exactly one of the closed set).
+const noComponent = new Set()
+for (const file of codeFiles) {
+  const owners = ownersByFile.get(file)
+  if (owners.length === 0) {
+    noComponent.add(fileToUnit.get(file))
+  } else if (owners.length > 1) {
+    console.error(`FAIL the file ${file} of the frontend has two components in the model: ${owners.join(' and ')} (the workspace ${workspacePath})`)
     failed = true
   }
 }
+for (const unit of [...noComponent].sort()) {
+  console.error(`FAIL the unit ${unit} of the frontend has no component in the model (the workspace ${workspacePath})`)
+  failed = true
+}
+// Group 3 (b): the internal dependency between mapped components that is not in the model stops
+// the run, and the message names the dependency (the condition (b) of ACC-003).
 for (const dependency of [...codeDependencies].sort()) {
-  if (!modelDependencies.has(dependency)) {
+  if (!derived.relations.has(dependency)) {
     console.error(`FAIL the dependency ${dependency} of the frontend is not in the model (the workspace ${workspacePath})`)
     failed = true
   }
 }
-for (const unit of [...modelComponents.keys()].sort()) {
-  if (!codeUnits.includes(unit)) {
-    console.error(`FAIL the component ${unit} of the model (the container frontend) has no unit in the code`)
+// Group 3 (c): the other direction: the model has no component without a file in the code, and no
+// relation without the dependency of the code.
+for (const component of [...derived.components.keys()].sort()) {
+  const inCode = [...ownersByFile.values()].some((owners) => owners.length === 1 && owners[0] === component)
+  if (!inCode) {
+    console.error(`FAIL the component ${component} of the model (the container frontend) has no unit in the code`)
     failed = true
   }
 }
-for (const dependency of [...modelDependencies].sort()) {
-  if (!codeDependencies.has(dependency)) {
-    console.error(`FAIL the dependency ${dependency} of the model (the container frontend) is not in the code`)
+for (const relation of [...derived.relations].sort()) {
+  if (!codeDependencies.has(relation)) {
+    console.error(`FAIL the dependency ${relation} of the model (the container frontend) is not in the code`)
+    failed = true
+  }
+}
+// Group 4: the import to an external package is allowed if and only if it matches an entry of the
+// source component's code.allowedExternal. The message names the import and the missing entry.
+for (const { file, specifier } of external) {
+  const owners = ownersByFile.get(file)
+  if (owners.length !== 1) {
+    continue // the file that no component owns (or two components own) is the condition (a) above.
+  }
+  const component = derived.components.get(owners[0])
+  if (!allowedExternalMatch(component.allowedExternal, specifier)) {
+    console.error(
+      `FAIL the import ${specifier} of the file ${file} is not allowed: the component ${owners[0]} has no entry in code.allowedExternal for ${specifier} (the workspace ${workspacePath})`,
+    )
     failed = true
   }
 }
@@ -434,9 +311,10 @@ for (const dependency of [...modelDependencies].sort()) {
 if (failed) {
   process.exit(1)
 }
-console.log(`ok   the units of the frontend are in the model: ${codeUnits.join(', ')}`)
+console.log(`ok   the files of the frontend are in the model: ${codeFiles.length} file(s) in the units ${[...units.keys()].sort().join(', ')}`)
+console.log(`ok   the dependencies of the files of the frontend are in the model: ${[...codeDependencies].sort().join(', ') || '(no dependency between the mapped components)'}`)
+console.log(`ok   the imports to the external packages are in code.allowedExternal of the model`)
+console.log(`ok   the model (the container frontend) has no component or no relation without the code`)
 console.log(
-  `ok   the dependencies of the units of the frontend are in the model: ${[...codeDependencies].sort().join(', ') || '(no unit dependency)'}`,
+  `PASS the workspace ${workspacePath} matches the code of the frontend (${derived.components.size} mapped component(s), ${codeDependencies.size} dependency(ies) between the mapped components)`,
 )
-console.log(`ok   the model (the container frontend) has no component or no dependency without the code`)
-console.log(`PASS the workspace ${workspacePath} matches the code of the frontend (${codeUnits.length} unit(s), ${codeDependencies.size} unit dependency(ies))`)

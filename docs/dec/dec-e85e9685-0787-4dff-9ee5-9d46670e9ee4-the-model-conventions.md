@@ -4,7 +4,7 @@ created: '2026-11-17T11:26:49.961+01:00'
 id: e85e9685-0787-4dff-9ee5-9d46670e9ee4
 status: draft
 type: dec
-updated: '2026-11-17T21:17:51.358+01:00'
+updated: '2026-11-18T05:51:56.518+01:00'
 version: 1.0.0
 ---
 
@@ -143,6 +143,10 @@ The tools of the two sides do not behave the same. ArchUnit examines the bytecod
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 02:56:00.000Z - The fix of the dynamic import (Phase 130 of feat-50-structurizr-model-rules)
+
+Task 130.130 of feat-50-structurizr-model-rules fixes the defect of the spike recorded above: the script `frontend/architecture/compare.mjs` reads the construct `import()` and the construct `require()` as dependencies with the same resolution as the static imports (an internal specifier resolves to a file of the units, an external specifier is checked against `code.allowedExternal`, and a specifier that does not resolve stops the script, exit code 2). The row "The construct `require()`" of the table of the spike (the behavior of `compare.mjs` before the fix) is the dated record of the probe, and it stays. Two facts of the run of Phase 130 (recorded in the section "The rules the model gives" of `model/README.md`): the graph of the runner of the frontend (ArchUniTS) has no edge to the external packages (the folder `node_modules` is excluded from the graph of the tool), so the check of `code.allowedExternal` is in the analyzer `compare.mjs`, and not in the runner; and the cycle of the rule set (the group of the cycle rule) is possible with both tools (the pinned ArchUniTS has the construct `haveNoCycles`). The forms of this decision stay unchanged, and the decision stays draft (the owner accepts it in the review of the pull request).
 
 ### 2026-11-17 20:05:00.000Z - The fit to the components of feat-9 (Phase 120 of feat-50-structurizr-model-rules)
 
