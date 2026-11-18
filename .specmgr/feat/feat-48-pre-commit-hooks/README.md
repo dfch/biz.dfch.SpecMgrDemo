@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-17T04:20:52.459+01:00'
 id: feat-48-pre-commit-hooks
-status: planning
+status: review
 type: feat
-updated: '2026-11-17T04:20:52.459+01:00'
+updated: '2026-11-18T18:57:09.942+01:00'
 version: 1.0.0
 ---
 
@@ -138,7 +138,7 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 
 ### Current Status
 
-**As of 2026-11-18**: Phase 130 is complete for the agent: the three documents (the root README, the engineering handbook TXT eff55a59-137b-40b0-8f7b-44c349aa923a, and `tools/README.md`) describe the install (`just install-hooks`) and the opt-out (`git commit --no-verify`, `git push --no-verify`, and the environment marker `SKIP_HOOKS_FOR_BULK` — the marker name is fixed in the handbook, per the Design Notes), and the permanent test `just test-hooks` (`tools/gates/test-hooks.sh`, the seven cases of the plan in a temporary git repository with the real gates) passes. Remaining: Task 130.120, the examination of the hooks, the tests and the documentation by the owner. The work happens on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`.
+**As of 2026-11-18**: Phase 130 is complete for the agent: the three documents (the root README, the engineering handbook TXT eff55a59-137b-40b0-8f7b-44c349aa923a, and `tools/README.md`) describe the install (`just install-hooks`) and the opt-out (`git commit --no-verify`, `git push --no-verify`, and the environment marker `SKIP_HOOKS_FOR_BULK` — the marker name is fixed in the handbook, per the Design Notes), and the permanent test `just test-hooks` (`tools/gates/test-hooks.sh`, the seven cases of the plan in a temporary git repository with the real gates) passes. Remaining: Task 130.120, the examination of the hooks, the tests and the documentation by the owner. The work happens on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`. The feature has the status `review`: the implementation of all phases is complete, the remaining task is 130.120 (the examination by the owner), and the orchestrator opens the pull request to `dev` (the one PR that covers the plan and the implementation, per the owner).
 
 ### Blockers
 
