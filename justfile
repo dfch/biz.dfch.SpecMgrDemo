@@ -201,6 +201,10 @@ workflow-scan:
 test-security-gates:
     @{{ just_executable() }} _gate test-security-gates.sh 120.100
 
+# Test: the git hooks of tools/hooks/ with the real gates in a temporary git repository (the seven cases of the plan) (feat-48-pre-commit-hooks, Task 130.110).
+test-hooks:
+    @{{ just_executable() }} _gate test-hooks.sh 130.110
+
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:
     .specmgr/feat/feat-5-foundation-monorepo-ci/bin/110.110-06-verify-tools.sh

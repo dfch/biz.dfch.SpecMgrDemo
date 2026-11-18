@@ -69,6 +69,8 @@ This handbook is the index of the development policies and standards of this rep
 
 - The asdste100 MCP gives the STE rules and words. It loads the register files as more word lists.
 - `terminology/en/` has the terminology register (technical nouns and technical verbs) and the gap log.
+- The git hooks in `tools/hooks/` run the fast gates locally, before a commit and before a push (feat-48-pre-commit-hooks). `just install-hooks` sets `core.hooksPath` to the folder (opt-in, idempotent; uninstall with `git config --unset core.hooksPath`). `pre-commit` runs the six fast gates (`commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`) and stops the commit on the first failing gate. `commit-msg` checks the subject of the commit in progress with the Conventional Commits feature-scope rule (DEC a56f231b-d063-4bef-bbc8-3deb4daff76e). `pre-push` re-runs the six gates against the base; it is the backstop for a commit made with the bypass.
+- The hooks are bypassed with `git commit --no-verify` or `git push --no-verify` (for a person). For the bulk commits of the coding agent, the environment marker `SKIP_HOOKS_FOR_BULK`, set and non-empty, makes the hooks skip every gate. Within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004, an agent must not use the marker for a normal commit. The details are in `tools/hooks/README.md`.
 
 ## Open Items
 
@@ -81,6 +83,10 @@ This handbook is the index of the development policies and standards of this rep
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 16:35:38.000Z - Git hooks of the fast local gates
+
+The two bullets in `Tools and Data` name the git hooks of feat-48-pre-commit-hooks: the first bullet gives the folder `tools/hooks/`, the install (`just install-hooks`, opt-in, idempotent, uninstall `git config --unset core.hooksPath`), and the three hooks (`pre-commit` with the six fast gates, `commit-msg` with the Conventional Commits feature-scope rule, and `pre-push` as the backstop that re-checks the commits against the base); the second bullet gives the opt-out (`--no-verify` for a person, and the environment marker `SKIP_HOOKS_FOR_BULK`, set and non-empty, for the bulk commits of the coding agent, within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004: an agent must not use the marker for a normal commit).
 
 ### 2026-11-04 09:22:00.000Z - Review flow for the close of a feature
 
