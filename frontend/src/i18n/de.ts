@@ -27,6 +27,8 @@ export const de: Catalog = {
     invalid: 'Der Dienst hat eine Antwort gegeben, die die Anwendung nicht versteht.',
     code: {
       not_found: 'Die Information wurde nicht gefunden.',
+      method_not_allowed: 'Die Methode der Anfrage ist nicht erlaubt.',
+      not_acceptable: 'Das Format der Antwort ist nicht akzeptabel.',
       validation_failed: 'Die Anfrage ist nicht gültig.',
       rate_limited: 'Es gibt zu viele Anfragen. Versuchen Sie es später noch einmal.',
       internal_error: 'Der Dienst hat einen internen Fehler.',

@@ -11,6 +11,18 @@ export const getStatusStatus200Schema = statusSchema.describe('The status of the
 
 export type GetStatusStatus200SchemaType = z.infer<typeof getStatusStatus200Schema>
 
+export const getStatusStatus404Schema = problemSchema.describe('An error, as RFC 9457 (Problem Details) describes it.')
+
+export type GetStatusStatus404SchemaType = z.infer<typeof getStatusStatus404Schema>
+
+export const getStatusStatus405Schema = problemSchema.describe('An error, as RFC 9457 (Problem Details) describes it.')
+
+export type GetStatusStatus405SchemaType = z.infer<typeof getStatusStatus405Schema>
+
+export const getStatusStatus406Schema = problemSchema.describe('An error, as RFC 9457 (Problem Details) describes it.')
+
+export type GetStatusStatus406SchemaType = z.infer<typeof getStatusStatus406Schema>
+
 export const getStatusStatus429Schema = problemSchema.describe('An error, as RFC 9457 (Problem Details) describes it.')
 
 export type GetStatusStatus429SchemaType = z.infer<typeof getStatusStatus429Schema>
@@ -27,7 +39,7 @@ export const getStatusResponseSchema = getStatusStatus200Schema
 
 export type GetStatusResponseSchemaType = z.infer<typeof getStatusResponseSchema>
 
-export const getStatusErrorSchema = z.union([getStatusStatus429Schema, getStatusStatus500Schema, getStatusStatus503Schema])
+export const getStatusErrorSchema = z.union([getStatusStatus404Schema, getStatusStatus405Schema, getStatusStatus406Schema, getStatusStatus429Schema, getStatusStatus500Schema, getStatusStatus503Schema])
 
 export type GetStatusErrorSchemaType = z.infer<typeof getStatusErrorSchema>
 
@@ -42,6 +54,9 @@ export type GetStatusOptionsSchemaType = z.infer<typeof getStatusOptionsSchema>
 
 export const getStatusResponsesSchema = z.object({
   '200': getStatusStatus200Schema,
+  '404': getStatusStatus404Schema,
+  '405': getStatusStatus405Schema,
+  '406': getStatusStatus406Schema,
   '429': getStatusStatus429Schema,
   '500': getStatusStatus500Schema,
   '503': getStatusStatus503Schema,

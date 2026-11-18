@@ -31,8 +31,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * detail of a failure is text of the server that a client must not get, CWE-209). The text of the failure is in
  * the log of the service, with the trace identifier.
  *
- * <p>The mapping (the list ErrorCode of the contract is the only list of codes, and the contract has no
- * response 4xx for an unknown path or for a wrong method, so the closest documented code is used):
+ * <p>The mapping (the list ErrorCode of the contract is the only list of codes, and the contract documents
+ * the responses 404, 405 and 406 of the operations with the shared response ProblemResponse, so the code of
+ * each of these statuses is its own value of the list):
  *
  * <ul>
  *   <li>the failure of the check of the state (StatusCheckException, the system cannot give its state): the code
@@ -41,8 +42,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *       the path 404, a method that the path does not support 405, a media type that cannot be given 406, a media
  *       type that is not supported 415, a missing or a wrong parameter 400, and so on): the status of the error
  *       itself, with the headers that it gives (for example Allow), and the code not_found for 404,
- *       rate_limited for 429, service_unavailable for 503, internal_error for another status 5xx, and
- *       validation_failed for each other status 4xx;
+ *       method_not_allowed for 405, not_acceptable for 406, rate_limited for 429, service_unavailable for 503,
+ *       internal_error for another status 5xx, and validation_failed for each other status 4xx;
  *   <li>a request that cannot be read or has a value of the wrong type (the failure of the conversion): the code
  *       validation_failed with the status 400;
  *   <li>each other failure: the code internal_error with the status 500, and a log entry of the failure.
@@ -117,6 +118,8 @@ public class ProblemAdvice {
   static ErrorCode codeOf(HttpStatusCode status) {
     return switch (status.value()) {
       case 404 -> ErrorCode.NOT_FOUND;
+      case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
+      case 406 -> ErrorCode.NOT_ACCEPTABLE;
       case 429 -> ErrorCode.RATE_LIMITED;
       case 503 -> ErrorCode.SERVICE_UNAVAILABLE;
       default -> status.is4xxClientError() ? ErrorCode.VALIDATION_FAILED : ErrorCode.INTERNAL_ERROR;

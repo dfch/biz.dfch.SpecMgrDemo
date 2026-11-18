@@ -28,6 +28,8 @@ export const en = {
     invalid: 'The service gave an answer that the application does not understand.',
     code: {
       not_found: 'The information was not found.',
+      method_not_allowed: 'The method of the request is not allowed.',
+      not_acceptable: 'The format of the answer is not acceptable.',
       validation_failed: 'The request is not valid.',
       rate_limited: 'There are too many requests. Try again later.',
       internal_error: 'The service has an internal error.',

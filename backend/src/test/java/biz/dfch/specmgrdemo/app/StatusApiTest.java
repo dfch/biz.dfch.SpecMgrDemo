@@ -133,7 +133,7 @@ class StatusApiTest {
                       assertTrue(
                           String.valueOf(mvcResult.getResponse().getHeader("Allow")).contains("GET"),
                           "the header Allow of the status 405"))
-              .andExpect(jsonPath("$.code").value("validation_failed"))
+              .andExpect(jsonPath("$.code").value("method_not_allowed"))
               .andExpect(jsonPath("$.status").value(405))
               .andExpect(jsonPath("$.traceId").value(TRACE_ID_OF_THE_TEST))
               .andReturn();
@@ -150,7 +150,7 @@ class StatusApiTest {
               .perform(get("/status").accept(MediaType.TEXT_PLAIN))
               .andExpect(status().isNotAcceptable())
               .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
-              .andExpect(jsonPath("$.code").value("validation_failed"))
+              .andExpect(jsonPath("$.code").value("not_acceptable"))
               .andExpect(jsonPath("$.status").value(406))
               .andReturn();
       assertMachineMembersOnly(result);
@@ -160,6 +160,8 @@ class StatusApiTest {
   @Test
   void theCodeOfAnErrorOfSpringWebMvcIsAValueOfTheListErrorCode() {
     assertEquals("not_found", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.NOT_FOUND).getValue());
+    assertEquals("method_not_allowed", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.METHOD_NOT_ALLOWED).getValue());
+    assertEquals("not_acceptable", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.NOT_ACCEPTABLE).getValue());
     assertEquals("rate_limited", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS).getValue());
     assertEquals("service_unavailable", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE).getValue());
     assertEquals("internal_error", ProblemAdvice.codeOf(org.springframework.http.HttpStatus.BAD_GATEWAY).getValue());

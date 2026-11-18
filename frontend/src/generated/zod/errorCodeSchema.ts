@@ -5,6 +5,6 @@
 
 import * as z from 'zod'
 
-export const errorCodeSchema = z.enum(['not_found', 'validation_failed', 'rate_limited', 'internal_error', 'service_unavailable']).describe('The code of an error. The frontend shows the text for each code.')
+export const errorCodeSchema = z.enum(['not_found', 'method_not_allowed', 'not_acceptable', 'validation_failed', 'rate_limited', 'internal_error', 'service_unavailable']).describe('The code of an error. The frontend shows the text for each code.')
 
 export type ErrorCodeSchemaType = z.infer<typeof errorCodeSchema>

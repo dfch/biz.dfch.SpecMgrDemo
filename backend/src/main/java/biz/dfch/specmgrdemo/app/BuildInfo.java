@@ -5,7 +5,7 @@ package biz.dfch.specmgrdemo.app;
  * commit of the source of the build. The two values come from the build (the filtered resource
  * build-info.properties, the header comment of backend/pom.xml), and not from a fixed text of the code.
  *
- * @param version the version of the build (the value of the property build.info.version of the pom, 0.1.0)
+ * @param version the version of the build (the value of the property build.info.version of the pom, 0.2.0)
  * @param commit the commit of the source of the build (the value of the property build.info.commit that the just
  *     recipe replaces with git rev-parse HEAD, the default unknown)
  */

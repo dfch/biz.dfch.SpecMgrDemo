@@ -108,7 +108,7 @@ class StatusErrorIT {
   void theOperationInfoIsNotPartOfTheFailureOfTheCheck() throws Exception {
     HttpResponse<String> response = get("/info");
     assertEquals(200, response.statusCode(), "the response 200 of the operation GET /info");
-    assertTrue(response.body().contains("\"version\":\"0.1.0\""), "the version of the build: " + response.body());
+    assertTrue(response.body().contains("\"version\":\"0.2.0\""), "the version of the build: " + response.body());
   }
 
   /**

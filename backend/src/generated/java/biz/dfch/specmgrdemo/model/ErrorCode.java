@@ -23,6 +23,10 @@ public enum ErrorCode {
   
   NOT_FOUND("not_found"),
   
+  METHOD_NOT_ALLOWED("method_not_allowed"),
+  
+  NOT_ACCEPTABLE("not_acceptable"),
+  
   VALIDATION_FAILED("validation_failed"),
   
   RATE_LIMITED("rate_limited"),

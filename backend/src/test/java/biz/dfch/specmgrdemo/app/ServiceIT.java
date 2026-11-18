@@ -106,9 +106,9 @@ class ServiceIT {
 
   @Test
   void theVersionOfTheBuildIsTheVersionOfTheContract() throws Exception {
-    // The version of the build is the constant of the pom (0.1.0, the version of the contract, and not a
+    // The version of the build is the constant of the pom (0.2.0, the version of the contract, and not a
     // value of git, the task 200.120).
-    assertEquals("0.1.0", buildInfoProvider.buildInfo().version());
+    assertEquals("0.2.0", buildInfoProvider.buildInfo().version());
   }
 
 
@@ -139,14 +139,14 @@ class ServiceIT {
   @Test
   void aWrongMethodGivesTheErrorResponseWithTheStatus405() throws Exception {
     HttpResponse<String> response = send("POST", "/status", null);
-    assertProblem(response, 405, "validation_failed");
+    assertProblem(response, 405, "method_not_allowed");
     assertTrue(response.headers().firstValue("Allow").orElse("").contains("GET"), "the header Allow of the status 405");
   }
 
   @Test
   void aMediaTypeThatTheOperationCannotGiveGivesTheErrorResponseWithTheStatus406() throws Exception {
     HttpResponse<String> response = send("GET", "/status", "text/plain");
-    assertProblem(response, 406, "validation_failed");
+    assertProblem(response, 406, "not_acceptable");
   }
 
   /**

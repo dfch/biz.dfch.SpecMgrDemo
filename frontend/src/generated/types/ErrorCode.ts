@@ -5,6 +5,8 @@
 
 export const errorCode = {
   not_found: 'not_found',
+  method_not_allowed: 'method_not_allowed',
+  not_acceptable: 'not_acceptable',
   validation_failed: 'validation_failed',
   rate_limited: 'rate_limited',
   internal_error: 'internal_error',

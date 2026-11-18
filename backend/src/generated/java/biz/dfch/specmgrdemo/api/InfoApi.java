@@ -29,6 +29,9 @@ public interface InfoApi {
      * Gives the identification of the system and the notice of the license.
      *
      * @return The system gives its information. (status code 200)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 404)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 405)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 406)
      *         or An error. The body obeys RFC 9457 (Problem Details). (status code 500)
      */
     @RequestMapping(

@@ -12,7 +12,7 @@
   src/main/resources/build-info.properties is a template with the two placeholders ${build.info.version} and
   ${build.info.commit}. The execution default-resources of the core plugin maven-resources-plugin (the version is
   named here, as for each other plugin) filters the template into target/classes/build-info.properties. The property
-  build.info.version is the constant of the pom (0.1.0, the version of the contract, and not a value of git). The
+  build.info.version is the constant of the pom (0.2.0, the version of the contract, and not a value of git). The
   property build.info.commit has the default unknown in the pom, and each just recipe that starts Maven replaces it
   with the value of git rev-parse HEAD of the work tree (the function backend_maven_args of tools/gates/_lib.sh; the
   value has the suffix -dirty if the work tree has a change that is not committed). The service does not start with
@@ -214,9 +214,9 @@
          tools/versions.env has the same version (MAVEN_RESOURCES_PLUGIN_VERSION, just check-pins compares it). -->
     <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
     <!-- The values of the build for the operation GET /info (Task 200.120, the header comment). The version is the
-         constant of the project (0.1.0, the version of the contract), and not a value of git. The commit has the
+         constant of the project (0.2.0, the version of the contract), and not a value of git. The commit has the
          default unknown, and each just recipe that starts Maven replaces it with git rev-parse HEAD. -->
-    <build.info.version>0.1.0</build.info.version>
+    <build.info.version>0.2.0</build.info.version>
     <build.info.commit>unknown</build.info.commit>
     <!-- The test tools (feat-7-verification-architecture-tools, Phase 110). Each version is the one of
          tools/versions.env (just check-pins compares them). The scope of every test tool is test. -->
@@ -497,7 +497,7 @@
          maven-resources-plugin 3.5.0 reads as read-only), with the filtering of the execution default-resources
          on: the file src/main/resources/build-info.properties is filtered into target/classes/build-info.properties
          with the two properties build.info.version and build.info.commit (the header comment). A value of the
-         property that the build does not replace stays the default of the pom (the version 0.1.0, the commit
+         property that the build does not replace stays the default of the pom (the version 0.2.0, the commit
          unknown). The list of the test resources (the default src/test/resources) is not changed. -->
     <resources>
       <resource>
