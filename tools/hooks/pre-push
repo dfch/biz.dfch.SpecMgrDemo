@@ -5,7 +5,10 @@
 # against the base of the justfile (origin/GITHUB_BASE_REF, or origin/dev if
 # GITHUB_BASE_REF is not set), so that a commit made with --no-verify is
 # stopped before it reaches the base. It stops the push on the first failing
-# gate.
+# gate. The range is the one of the checked-out HEAD (the base of the
+# justfile), not the ref that is pushed: a branch that is not checked out, or
+# a push from a detached HEAD, is not covered by this local backstop (CI
+# remains the enforcement).
 #
 # It is a thin shell: it calls the just recipes only (the one entry point,
 # feat-5 REQ-002, REQ-009) and has no gate logic of its own, except the

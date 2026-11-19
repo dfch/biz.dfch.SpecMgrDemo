@@ -4,7 +4,7 @@ created: '2026-11-17T04:20:52.459+01:00'
 id: feat-48-pre-commit-hooks
 status: review
 type: feat
-updated: '2026-11-18T18:57:09.942+01:00'
+updated: '2026-11-19T13:09:26.000+01:00'
 version: 1.0.0
 ---
 
@@ -14,13 +14,13 @@ version: 1.0.0
 
 ### Overview
 
-This feature adds local git hooks that run the fast, local, no-network gates before a commit and before a push. Today all enforcement is CI-side, as `just` gate recipes, so an author or a coding agent learns about a failing gate only after the round trip of a pull request (RSK edee1891-1428-41ac-9877-d8deb20d07e9, issue #31). The hooks are opt-in and idempotent: the `just install-hooks` recipe points `core.hooksPath` to a `tools/hooks/` folder of shell scripts that call the existing `just` recipes only, which keeps the one-entry-point rule of feat-5-foundation-monorepo-ci (REQ-002, REQ-009). The pre-commit hook runs `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows` and `check-sudo`; a commit message that does not follow Conventional Commits with the feature scope, and a document that fails the specmgr validation, are stopped locally. The pre-push hook re-runs the fast gates against the base. The hooks are bypassed with `git commit --no-verify`, and a documented environment marker exists for the bulk commits of the coding agent, within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004. No hook framework is used and no dependency is added. GitHub issue #48 is for this feature.
+This feature adds local git hooks that run the fast, local, no-network gates before a commit and before a push. Today all enforcement is CI-side, as `just` gate recipes, so an author or a coding agent learns about a failing gate only after the round trip of a pull request (RSK edee1891-1428-41ac-9877-d8deb20d07e9, issue #31). The hooks are opt-in and idempotent: the `just install-hooks` recipe points `core.hooksPath` to a `tools/hooks/` folder of shell scripts that call the `just` recipes only, which keeps the one-entry-point rule of feat-5-foundation-monorepo-ci (REQ-002, REQ-009). The pre-commit hook runs `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows` and `check-sudo`; a commit message that does not follow Conventional Commits with the feature scope, and a document that fails the specmgr validation, are stopped locally. The pre-push hook re-runs the fast gates against the base. The hooks are bypassed with `git commit --no-verify`, and a documented environment marker exists for the bulk commits of the coding agent, within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004. No hook framework is used and no dependency is added. GitHub issue #48 is for this feature.
 
 ### Requirements
 
 - REQ-001: A `just` recipe `install-hooks` must set `core.hooksPath` to the folder `tools/hooks/` of the repository. The recipe is opt-in and idempotent: a second run changes nothing. CI must not install the hooks.
 
-- REQ-002: The hooks must be native git hooks as shell scripts in `tools/hooks/`. Each hook must call the existing `just` recipes only (the one entry point, feat-5 REQ-002 and REQ-009). No hook framework (the pre-commit framework, husky, lefthook), no new dependency and no new license may be added.
+- REQ-002: The hooks must be native git hooks as shell scripts in `tools/hooks/`. Each hook must call the `just` recipes only (the one entry point, feat-5 REQ-002 and REQ-009). No hook framework (the pre-commit framework, husky, lefthook), no new dependency and no new license may be added.
 
 - REQ-003: The pre-commit hook must run the fast gates `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows` and `check-sudo`. A commit message that does not follow Conventional Commits with the feature scope, and a changed document that fails the specmgr validation, must be stopped locally.
 
@@ -30,27 +30,27 @@ This feature adds local git hooks that run the fast, local, no-network gates bef
 
 - REQ-006: A pre-push hook must re-run the fast gates against the base, so that a commit made with `--no-verify` is stopped before it reaches `dev`.
 
-- REQ-007: The hook scripts must use no `sudo`. The existing `check-sudo` gate covers them because it scans `tools/`.
+- REQ-007: The hook scripts must use no `sudo`. The `check-sudo` gate scans the `.sh`, `.bash`, `.just`, `justfile`, `.yml` and `.yaml` files of `tools/`; the extensionless hook files are not in its scan list, so the absence of `sudo`, `doas` and `pkexec` in the hooks is a fact of their content (verified), and `just check-sudo` passes without change.
 
 - REQ-008: The README, the engineering handbook (TXT eff55a59-137b-40b0-8f7b-44c349aa923a) and `tools/README.md` must describe the install of the hooks and the opt-out.
 
 ### Acceptance Criteria
 
-- [ ] ACC-001: `just install-hooks` sets `core.hooksPath` to `tools/hooks/`, and a second run changes nothing. (REQ-001)
+- [x] ACC-001: `just install-hooks` sets `core.hooksPath` to `tools/hooks/`, and a second run changes nothing. (REQ-001)
 
-- [ ] ACC-002: The hooks are shell scripts in `tools/hooks/` that call `just` recipes only. No hook framework, no new dependency and no new license exist in the repository. The behavior of CI is not changed: the hooks are local only, and the workflow files stay untouched. (REQ-002)
+- [x] ACC-002: The hooks are shell scripts in `tools/hooks/` that call `just` recipes only. No hook framework, no new dependency and no new license exist in the repository. The behavior of CI is not changed: the hooks are local only, and the workflow files stay untouched. (REQ-002)
 
-- [ ] ACC-003: A commit message that does not follow Conventional Commits with the feature scope is stopped locally by the commit check, and a changed document that fails the validation is stopped locally by `validate`. (REQ-003)
+- [x] ACC-003: A commit message that does not follow Conventional Commits with the feature scope is stopped locally by the commit check, and a changed document that fails the validation is stopped locally by `validate`. (REQ-003)
 
-- [ ] ACC-004: The pre-commit hook runs no slow or network gate (no security scan, no `sbom`, no `license-check`, no build, no test). (REQ-004)
+- [x] ACC-004: The pre-commit hook runs no slow or network gate (no security scan, no `sbom`, no `license-check`, no build, no test). (REQ-004)
 
-- [ ] ACC-005: `git commit --no-verify` bypasses the hooks, and a bulk commit with the documented environment marker bypasses them. (REQ-005)
+- [x] ACC-005: `git commit --no-verify` bypasses the hooks, and a bulk commit with the documented environment marker bypasses them. (REQ-005)
 
-- [ ] ACC-006: A commit made with `--no-verify` is stopped by the pre-push hook when it is pushed, because the pre-push hook re-runs the fast gates against the base. (REQ-006)
+- [x] ACC-006: A commit made with `--no-verify` is stopped by the pre-push hook when it is pushed, because the pre-push hook re-runs the fast gates against the base. (REQ-006)
 
-- [ ] ACC-007: No hook script uses `sudo`, and `just check-sudo` passes for the new scripts in `tools/hooks/`. (REQ-007)
+- [x] ACC-007: No hook script uses `sudo` (the extensionless hook files are not in the scan list of the `check-sudo` gate; the absence of `sudo`, `doas` and `pkexec` is verified by content), and `just check-sudo` passes. (REQ-007)
 
-- [ ] ACC-008: The README, the engineering handbook and `tools/README.md` describe the install (`just install-hooks`) and the opt-out (`--no-verify` and the environment marker). (REQ-008)
+- [x] ACC-008: The README, the engineering handbook and `tools/README.md` describe the install (`just install-hooks`) and the opt-out (`--no-verify` and the environment marker). (REQ-008)
 
 ### Scope
 
@@ -132,13 +132,13 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 
 - [x] Task 130.110: Test the hooks in a temporary git repository: a commit message that fails is stopped, a document that fails the validation is stopped, `--no-verify` bypasses, a second run of `install-hooks` changes nothing, the environment marker skips the hooks, and a commit made with `--no-verify` is stopped by the pre-push hook.
 
-- [ ] Task 130.120: The owner examines the hooks, the tests and the documentation.
+- [x] Task 130.120: The owner examines the hooks, the tests and the documentation.
 
 ## Progress
 
 ### Current Status
 
-**As of 2026-11-18**: Phase 130 is complete for the agent: the three documents (the root README, the engineering handbook TXT eff55a59-137b-40b0-8f7b-44c349aa923a, and `tools/README.md`) describe the install (`just install-hooks`) and the opt-out (`git commit --no-verify`, `git push --no-verify`, and the environment marker `SKIP_HOOKS_FOR_BULK` — the marker name is fixed in the handbook, per the Design Notes), and the permanent test `just test-hooks` (`tools/gates/test-hooks.sh`, the seven cases of the plan plus the two of the post-implementation review, in a temporary git repository with the real gates) passes. Remaining: Task 130.120, the examination of the hooks, the tests and the documentation by the owner. The work happens on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`. The feature has the status `review`: the implementation of all phases is complete, the remaining task is 130.120 (the examination by the owner), and the orchestrator opens the pull request to `dev` (the one PR that covers the plan and the implementation, per the owner). The post-implementation review findings (E1, G1, G2, D1, D2, D3, I1, I4) are fixed; the normative wording of REQ-002/REQ-007 and I3 are left to the owner.
+**As of 2026-11-19**: All eight acceptance criteria are met and ticked, and Task 130.120 (the examination of the hooks, the tests and the documentation by the owner) is done. The three documents (the root README, the engineering handbook TXT eff55a59-137b-40b0-8f7b-44c349aa923a, and `tools/README.md`) describe the install (`just install-hooks`) and the opt-out (`git commit --no-verify`, `git push --no-verify`, and the environment marker `SKIP_HOOKS_FOR_BULK` — the marker name is fixed in the handbook, per the Design Notes), and the permanent test `just test-hooks` (`tools/gates/test-hooks.sh`, the nine cases: the seven of the plan plus the two of the post-implementation review, in a temporary git repository with the real gates) passes. The work happens on the branch `feat-48-pre-commit-hooks`, and the commit messages use the scope `feat(feat-48)`. The feature has the status `review`: the implementation of all phases is complete, and the one pull request to `dev` (PR #54) covers the plan and the implementation. The post-implementation review found no errors; the findings of both of its rounds are fixed, including the normative wording of REQ-002 and REQ-007/ACC-007, the index of `tools/gates/README.md`, and the documented range of the pre-push backstop. I2 (skip the base-independent gates between commits) is deliberately not taken: the plan chose the simple full run, and the runtime is documented. The owner sets the status `done` per the review flow of the engineering handbook.
 
 ### Blockers
 
@@ -147,6 +147,30 @@ CI is untouched: the workflow files are not changed, the branch protection is no
 ### Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+#### 2026-11-19 12:09:26.000Z - Review findings fixed (the round after the post-implementation review)
+
+The review of the completed feature (read-only, by the reviewer agent, after the pull request to `dev` existed) found no errors: every functional requirement is implemented, and the decisive behaviors were reproduced live (the quoting of the commit-message check, the merge exemption, the opt-out marker, the worktree-safe paths). Its findings are fixed by this entry. The ids below are the ids of this review round; they are different from the ids of the round recorded on 2026-11-19 05:38:54Z, although some share the same letter.
+
+1. G1 (the range of the pre-push backstop): the `pre-push` hook reads no stdin, so it re-runs the six gates against the range of the checked-out `HEAD` (the `base` of the `justfile`), not against the ref that is pushed. Pushing a branch that is not checked out, or pushing from a detached `HEAD`, is therefore not covered by the local backstop (CI remains the enforcement). This is a documented design choice of the plan (REQ-006), and the limitation is now stated in the user-facing documentation: the `pre-push` row of `tools/hooks/README.md`, the `pre-push` bullet of the engineering handbook (TXT eff55a59-137b-40b0-8f7b-44c349aa923a, with a new `## Updates` entry), and the header comment of `tools/hooks/pre-push`. Deliberate choice: the hook was not changed to parse the ref from the stdin of git, because that would change the tested behavior and the interface of the gates (the range comes from the `base` of the `justfile`), which is out of scope for fixing the findings of a reviewed feature.
+
+2. G2 (the index of `tools/gates/README.md`): the table now has a row for `just test-hooks` / `test-hooks.sh` (the nine cases, in a temporary git repository with the real gates, the work tree of the project is not changed), and the section "The numbers of the gates" now names `130.110` of `just test-hooks` (the task of feat-48-pre-commit-hooks; the same number as `just validate` of feat-5, the name of the script tells them apart).
+
+3. G3 (the acceptance criteria were unticked): all eight acceptance criteria are ticked, and Task 130.120 (the examination of the hooks, the tests and the documentation by the owner) is ticked. The review confirmed that all eight acceptance criteria are met, with live evidence.
+
+4. D1 (the normative wording of REQ-002): REQ-002 and the Overview no longer say that the hooks call the *existing* `just` recipes only; they call the `just` recipes only. The `commit-msg` hook calls the `commit-message-check` recipe that this feature added, which is not existing. The Design Notes already stated this accurately, and they are unchanged.
+
+5. D2 (the normative wording of REQ-007 / ACC-007): REQ-007 and ACC-007 no longer claim that the `check-sudo` gate covers the extensionless hook files file-by-file. They state that the `check-sudo` gate scans the `.sh`, `.bash`, `.just`, `justfile`, `.yml` and `.yaml` files of `tools/`, that the extensionless hook files are not in its scan list, and that the absence of `sudo`, `doas` and `pkexec` in the hooks is verified by content (they contain none of these words). Deliberate choice: the gate itself is not changed; extending its extension list to scan the extensionless hooks would change the behavior of a shared gate, which is out of scope for fixing the findings of a reviewed feature.
+
+6. D3 (the stale comment of the `test-hooks` recipe): the comment in the `justfile` now says "the nine cases: the seven of the plan plus the two of the post-implementation review" (it said "the seven cases of the plan", which was stale after the two cases of the review were added).
+
+7. D4 (the stale date of the `test-hooks.sh` header): the header now attributes the two added cases to the post-implementation review of 2026-11-19 (it said 2026-11-18, off by one day; the record entry and the fix commit b60f5db are both of 2026-11-19).
+
+8. I1 (the pull request): the section "Related PRs / Commits" now names PR #54 (the one pull request of this feature to `dev`, plan and implementation), as feat-16 does for its pull request.
+
+Deliberately not taken: I2 (skip the base-independent gates `check-pins`, `check-workflows` and `check-sudo` between commits when their inputs are unchanged). The plan chose the simple full run of the six gates on every commit and push, and the runtime is documented; this optimization is only worth it if the latency of a commit becomes a complaint. It is a design change, not a fix of a finding.
+
+After this entry, `just validate` passes (the plan and the engineering handbook are the changed documents) and `just check-sudo` passes (the change of the `justfile` adds no command to get more rights). The changes of D3 and D4 are comments only; they do not change the behavior of the `test-hooks` test.
 
 #### 2026-11-19 05:38:54.000Z - Post-implementation review: findings fixed
 
@@ -250,3 +274,5 @@ The hooks are native git hooks (shell scripts in `tools/hooks/` that call the `j
 ### Related PRs / Commits
 
 - [Issue #48](https://github.com/dfch/biz.dfch.SpecMgrDemo/issues/48): the tracking issue for this feature.
+
+- [PR #54](https://github.com/dfch/biz.dfch.SpecMgrDemo/pull/54): the one pull request of this feature to `dev` (the plan and the implementation).

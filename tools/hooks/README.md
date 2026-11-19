@@ -8,7 +8,7 @@ Each hook is a shell script that calls the existing `just` recipes only (the one
 |---|---|
 | `pre-commit` | Runs the six fast gates before a commit, as `just` recipes: `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`. It stops the commit on the first failing gate |
 | `commit-msg` | Checks the subject line of the commit in progress with the `just` recipe `commit-message-check`, which applies the same rule as the `commit-check` gate: Conventional Commits with the feature scope (DEC a56f231b-d063-4bef-bbc8-3deb4daff76e: `type(feat-N): subject`) |
-| `pre-push` | Re-runs the six fast gates against the base before a push, as `just` recipes: `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`. It stops the push on the first failing gate |
+| `pre-push` | Re-runs the six fast gates against the base before a push, as `just` recipes: `commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`. The range is the one of the checked-out `HEAD` (the `base` of the `justfile`), not the ref that is pushed: a branch that is not checked out, or a push from a detached `HEAD`, is not covered by the local backstop (CI remains the enforcement). It stops the push on the first failing gate |
 
 ## Opt-out
 

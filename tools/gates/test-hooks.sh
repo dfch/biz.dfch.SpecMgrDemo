@@ -11,7 +11,7 @@
 # push and just call runs with GITHUB_BASE_REF=work in the environment, so the base of the justfile is origin/work.
 # It never changes the real work tree.
 #
-# The nine cases (the seven of the plan, and the two added by the post-implementation review of 2026-11-18):
+# The nine cases (the seven of the plan, and the two added by the post-implementation review of 2026-11-19):
 #   1. a conforming commit (feat(feat-48): test commit) passes the six gates of pre-commit and the commit-msg check,
 #      and the following push passes the six gates of pre-push and reaches the bare origin;
 #   2. a commit message that fails is stopped: the commit-msg check gives NOT CORRECT, and no commit is made;
