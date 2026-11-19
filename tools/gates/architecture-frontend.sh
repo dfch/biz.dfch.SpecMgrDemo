@@ -15,7 +15,10 @@
 # generated has no dependency on the unit test, the pattern src/(**)); R2' the layer rule (the
 # layers of the generated code - the units types and zod - do not depend on the layer of the
 # tests, the direction of the code is test -> generated); R3' the imports rule (the generated
-# code does not import from the unit root, the files that lie directly in frontend/src). The run
+# code does not import from the unit root, the files that lie directly in frontend/src); R4' the
+# layer rule of the product code (feat-9-walking-skeleton, Phase 300: the units client, i18n,
+# telemetry and ui do not depend on the layer of the tests); R5' the layer rule of the user
+# interface (the units client, i18n and telemetry do not depend on the unit ui). The run
 # is green (exit code 0), and each rule has no violation. A rule whose pattern has no file is not
 # green (the check gives the violation No files found matching pattern(s), the option
 # allowEmptyTests is false by default).
@@ -53,7 +56,7 @@ cd "${frontend_dir}"
 passed=0
 failed=0
 
-echo "== the cases that are successful (ArchUniTS: R1' the slice form, R2' the layer rule, R3' the imports rule)"
+echo "== the cases that are successful (ArchUniTS: R1' the slice form, R2' the layer rule, R3' the imports rule, R4' and R5' the layer rules of the product code)"
 set +e
 run_output="$(node architecture/rules.mjs "$(pwd)" 2>&1)"
 run_code=$?
@@ -64,7 +67,7 @@ if [[ ${run_code} -ne 0 ]]; then
     failed=$((failed + 1))
 else
     if [[ "${run_output}" == *"PASS the architecture rules of the frontend are green"* ]]; then
-        echo "ok   the run of the architecture rules is green (no violation for R1', R2' and R3')"
+        echo "ok   the run of the architecture rules is green (no violation for R1' to R5')"
         passed=$((passed + 1))
     else
         echo "FAIL the run of the architecture rules has no PASS line:"

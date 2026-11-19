@@ -2,7 +2,7 @@
 
 The Java backend. The project uses Maven (DEC 870244cf-9bea-46bf-8ff2-fe030325743d).
 
-This folder has the Maven module and no product code. The folder has the Spring server interfaces that the generator makes from `contracts/openapi.yaml` (`feat-6-contracts-openapi-pipeline`). The first product code comes with the walking skeleton.
+This folder has the Maven module. It has the Spring server interfaces that the generator makes from `contracts/openapi.yaml` (`feat-6-contracts-openapi-pipeline`), and the product code of the walking skeleton (`feat-9-walking-skeleton`): the package `biz.dfch.specmgrdemo.app` has the main class `SpecMgrDemoApplication`, the controllers of the two operations `GET /status` and `GET /info`, the check of the state, the handler of the error (`ProblemAdvice`, the response `application/problem+json` with machine values only), the reader of the value of the build (`BuildInfoProvider`) and the OpenTelemetry filter and configuration (`TraceFilter`, `OpenTelemetryConfiguration`). The runtime is Spring Boot 4.0.9 with Spring Framework 7.0.10.
 
 | Path | Content |
 |---|---|
@@ -10,8 +10,10 @@ This folder has the Maven module and no product code. The folder has the Spring 
 | `mvnw` | The Maven Wrapper (version 3.3.4, type `only-script`, no jar). Start Maven with `./mvnw`. CI has no action that installs Maven. CI does not use the Maven of the runner |
 | `.mvn/wrapper/maven-wrapper.properties` | The Maven version of `tools/versions.env` and the sha256 of the Maven download. The procedure to change the values is in `tools/gates/README.md` (section "Maven Wrapper") |
 | `src/generated/` | The generated Java code (the Spring server interfaces and the model classes). The code is committed to git, and no person changes it by hand. The folder has a `README.md` with the mark `Generated code, do not change`. Each Java file has the annotation `@Generated`. The folder `.openapi-generator` has the hash of the OpenAPI file that the generator read |
-| `src/test/java/biz/dfch/specmgrdemo/testtools/` | The tests of the example module (feat-7-verification-architecture-tools, Phase 110). They exercise the generated code (the module has no product code): the unit tests of JUnit, the integration tests of Testcontainers (the suffix IT), the property tests of jqwik, and the cases that are not successful (the classes without a suffix; see below) |
-| `src/test/java/biz/dfch/specmgrdemo/architecture/` | The architecture tools (feat-7-verification-architecture-tools, Phase 130): `ModuleStructureTest` (R1, the module structure with Spring Modulith: the top-level packages are exactly the modules api and model), `LayerRuleTest` (R2, the layer rule with ArchUnit: the layer model does not depend on the layer api), `BrokenLayerRule` (the case that is not successful: the violated layer rule, no suffix Test), and `ModelComparisonTest` (the test that compares the workspace of `model/` with the packages and the dependencies of the module; the recipe `architecture-model`) |
+| `src/test/java/biz/dfch/specmgrdemo/testtools/` | The tests of the example module (feat-7-verification-architecture-tools, Phase 110). They exercise the generated code (the model): the unit tests of JUnit, the integration tests of Testcontainers (the suffix IT), the property tests of jqwik, and the cases that are not successful (the classes without a suffix; see below) |
+| `src/main/java/biz/dfch/specmgrdemo/app/` | The product code of the walking skeleton (the package `app`, the module `app` of `model/workspace.json`) |
+| `src/test/java/biz/dfch/specmgrdemo/app/` | The tests of the package `app`: the unit tests (`StatusApiTest`, `InfoApiTest`, `TraceFilterTest`, `OpenTelemetryConfigurationTest`, `BuildInfoProviderTest`, `StatusConfigurationTest`) and the integration tests that start the service with `RunningService` (`ServiceIT`, `StatusErrorIT`). The service does not start with the commit `unknown`: the recipes of the `justfile` give the property `build.info.commit` (`git rev-parse HEAD`, with the suffix `-dirty` for a work tree with a change that is not committed), and a run in an IDE needs `-Dbuild.info.commit=$(git rev-parse HEAD)` |
+| `src/test/java/biz/dfch/specmgrdemo/architecture/` | The architecture tools (feat-7-verification-architecture-tools, Phase 130): `ModuleStructureTest` (R1, the module structure with Spring Modulith: the top-level packages are exactly the modules api, model and app), `LayerRuleTest` (R2, the layer rule with ArchUnit: the layer model does not depend on the layer api), `BrokenLayerRule` (the case that is not successful: the violated layer rule, no suffix Test), and `ModelComparisonTest` (the test that compares the workspace of `model/` with the packages and the dependencies of the module; the recipe `architecture-model`) |
 
 The folder `target/` is the output of a build, and it is not in git. The file `.jqwik-database` is the failure database of jqwik (a run of a property that is not successful writes it), and it is not in git.
 
@@ -32,7 +34,7 @@ The recipes compare the sha256 of the jar of the plug-in before they start it (`
 | `skipDefaultInterface` | `true` | The plan: no method in the interface that the generator gives without the option |
 | `hideGenerationTimestamp` | `true` | The plan: no time in the files. Two starts are the same (REQ-011) |
 | `generateSupportingFiles` (plug-in option) | `false` | The plan: no `pom.xml`, no `OpenApiGeneratorApplication` and no other file of the generator |
-| `useSpringBoot3` | `true` | 7.27.0 gives this value when the option is not set (written out): Jakarta EE 10, package `jakarta.*` |
+| `useSpringBoot4` | `true` | The runtime is Spring Boot 4.0.9 with Spring Framework 7.0.10 (the rework of feat-9-walking-skeleton, 2026-11-17; the option was `useSpringBoot3` before). Jakarta EE 11, package `jakarta.*`. The generated files are the same as with `useSpringBoot3` (the interfaces and the model) |
 | `annotationLibrary`, `documentationProvider` | `none` | Set by the agent: the generated code has no annotation of swagger, and the module has no `swagger-annotations-jakarta` |
 | `openApiNullable` | `false` | Set by the agent: the generated code has no `JsonNullable`, and the module has no `jackson-databind-nullable` |
 | `generateJsonIncludeAnnotations`, `generateJsonSetterNullsAnnotations` | `false` | 7.27.0 gives these values when the options are not set (written out). The generator writes a warning for an option that is not set |
@@ -42,21 +44,21 @@ The recipes compare the sha256 of the jar of the plug-in before they start it (`
 
 ## The libraries of the generated code
 
-The module has no BOM. `spring-boot-dependencies` and a Spring Boot starter are not in the `pom.xml`. The version of each library is in the `pom.xml`. The Spring Boot BOM manages `tomcat-annotations-api` at a version that is lower. A Spring Boot starter can add `jakarta.annotation-api` to the module again. The owner selects `org.apache.tomcat:tomcat-annotations-api` for `jakarta.annotation.Generated` (the decision is on 2026-11-04). The tree has 12 components, all Apache-2.0 (`just sbom` and `just license-check`):
+The module has no BOM: `spring-boot-dependencies` is not imported in the `pom.xml`, and the version of each library is named there (the starters `spring-boot-starter-web` and `spring-boot-starter-log4j2` too, each with the exclusion of `jakarta.annotation-api` and of `spring-boot-starter-logging`). The Spring Boot BOM manages `tomcat-annotations-api` at a version that is lower. A Spring Boot starter can add `jakarta.annotation-api` to the module again, so the starters exclude it. The owner selects `org.apache.tomcat:tomcat-annotations-api` for `jakarta.annotation.Generated` (the decision is on 2026-11-04). The generated code needs the five libraries of the table, and the tree of the SBOM of the module (the scope compile and runtime, with the web service, the logging and OpenTelemetry of the walking skeleton, see the header of the `pom.xml`) has 55 components, all permitted (`just sbom` and `just license-check`):
 
 | Library | Version | The module has it for |
 |---|---|---|
-| `org.springframework:spring-web` | 6.2.19 | `ResponseEntity` and the annotations of Spring Web (the `MVC` part; gives `spring-beans`, `spring-core`, `spring-jcl` and `micrometer-observation`) |
-| `org.springframework:spring-context` | 6.2.19 | `@Validated` (gives `spring-aop` and `spring-expression`) |
-| `jakarta.validation:jakarta.validation-api` | 3.0.2 | Jakarta Bean Validation (the API only, no program that does the check) |
+| `org.springframework:spring-web` | 7.0.10 | `ResponseEntity` and the annotations of Spring Web (the `MVC` part; gives `spring-beans`, `spring-core`, `commons-logging` and `micrometer-observation`) |
+| `org.springframework:spring-context` | 7.0.10 | `@Validated` (gives `spring-aop` and `spring-expression`) |
+| `jakarta.validation:jakarta.validation-api` | 3.1.1 | Jakarta Bean Validation (the API only, no program that does the check) |
 | `com.fasterxml.jackson.core:jackson-annotations` | 2.21 | `@JsonProperty` and `@JsonValue` of the model classes |
-| `org.apache.tomcat:tomcat-annotations-api` | 10.1.61 | `jakarta.annotation.Generated` |
+| `org.apache.tomcat:tomcat-annotations-api` | 11.0.29 | `jakarta.annotation.Generated` (Jakarta Annotations 3.0; the scope `provided`) |
 
 `./mvnw dependency:tree` must not show `jakarta.annotation-api`. The two jars have the same package, and they must not be on the same class path.
 
 ## The test tools (feat-7-verification-architecture-tools, the phases 110 and 130)
 
-The test tools are in the `pom.xml` in the scope `test` (the property of each one is named there). `tools/versions.env` has the same versions, and `just check-pins` compares them. The license of each tool is in the license table of the plan of the feature: JUnit and jqwik are EPL-2.0 (the class Review), and the deviation of the owner is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted 2026-11-09). Testcontainers is MIT, and the JDBC driver is BSD-2-Clause. The scope `test` keeps the tools out of the SBOM (the default `includeTestScope=false` of the cyclonedx plug-in), so the tree of 12 components above is the tree of the module:
+The test tools are in the `pom.xml` in the scope `test` (the property of each one is named there). `tools/versions.env` has the same versions, and `just check-pins` compares them. The license of each tool is in the license table of the plan of the feature: JUnit and jqwik are EPL-2.0 (the class Review), and the deviation of the owner is in the register DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (accepted 2026-11-09). Testcontainers is MIT, and the JDBC driver is BSD-2-Clause. The scope `test` keeps the tools out of the SBOM (the default `includeTestScope=false` of the cyclonedx plug-in), so the tree of the SBOM (55 components) is the tree of the module:
 
 | Tool | Version | The module has it for |
 |---|---|---|
@@ -65,8 +67,8 @@ The test tools are in the `pom.xml` in the scope `test` (the property of each on
 | `org.postgresql:postgresql` | 42.7.14 | The JDBC driver of the container (test scope only) |
 | `net.jqwik:jqwik` | 1.10.2 | The property tests (the JUnit Platform engine next to the JUnit engine) |
 | `org.apache.maven.plugins:maven-surefire-plugin` | 3.6.1 | The test runner of the Maven build (runs the engines of the JUnit Platform) |
-| `org.springframework.modulith:spring-modulith-core` | 1.4.14 | The module structure (R1, the recipe `architecture-backend`). The 1.4.x line and not the 2.x line: the core of the 2.x line has the dependencies spring-core and spring-context 7.0.9, and the module has the Spring Framework 6.2.19 line (the plan records the decision) |
-| `org.springframework.boot:spring-boot` | 3.5.16 | A dependency of the code of Spring Modulith 1.4.14 that the POM of the artifact does not declare (the module detection calls the class ConfigDataEnvironmentPostProcessor of this jar in each start). The 3.5.x line of the Spring Framework 6.2.x line; its dependencies are spring-core and spring-context 6.2.19, the versions of the module. The module has no class of Spring Boot, and no context starts |
+| `org.springframework.modulith:spring-modulith-core` | 2.0.9 | The module structure (R1, the recipe `architecture-backend`). The 2.0.x line is the line of Spring Boot 4.0.x (the core has the dependencies spring-core and spring-context 7.0.9, and the module has the Spring Framework 7.0.10; the plan records the decision) |
+| `org.springframework.boot:spring-boot` | 4.0.9 | The jar is in the scope compile through the starter `spring-boot-starter-web` (the version of the property `spring-boot.version`, the same as `SPRING_BOOT_VERSION` of `tools/versions.env`); the `pom.xml` has no declaration of the jar |
 | `com.tngtech.archunit:archunit`, `com.tngtech.archunit:archunit-junit5` | 1.5.1 | The layer rule (R2, the recipe `architecture-backend`), and the source of the package dependencies of the comparison with the model (the recipe `architecture-model`) |
 | `com.structurizr:structurizr-client` | 6.2.4 | The reader of the workspace of `model/` (the JSON reader and the model classes; the recipe `architecture-model`). The artifact with the reader of the 6.x line (the POM `com.structurizr:structurizr` has no jar) |
 
@@ -92,7 +94,7 @@ A test that verifies a requirement has the identifier of its VCR document in its
 void theStatusHasAState() { ... }
 ```
 
-The recipe `just traceability` reads the files `.java` and `.kt` in `backend/src/test/`. A `vcr:<uuid>` inside a string literal counts (also an upper case identifier), and a `vcr:<uuid>` in a comment of any form (a line comment, a trailing comment after code, a block comment over many lines) is not read. A test file outside the folders that the check reads is an error (`TEST_ROOTS`, see `tools/gates/README.md`). The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test name. The check does not read the report of the test run. No test has a `vcr:` today, because the only REQ has the status `draft` and no VCR. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
+The recipe `just traceability` reads the files `.java` and `.kt` in `backend/src/test/`. A `vcr:<uuid>` inside a string literal counts (also an upper case identifier), and a `vcr:<uuid>` in a comment of any form (a line comment, a trailing comment after code, a block comment over many lines) is not read. A test file outside the folders that the check reads is an error (`TEST_ROOTS`, see `tools/gates/README.md`). The check stops (error) for a `vcr:<uuid>` that is not the identifier of a VCR document. It gives a warning (no stop) if the VCR of an approved REQ is in no test name. The check does not read the report of the test run. Since `feat-9-walking-skeleton` (Phase 400) the tests `ServiceIT` and `StatusErrorIT` have the display names `vcr:4f98618c-4291-4d60-995f-1fd8a60b9bfd the operation gives the state of the system`, `vcr:4f98618c-4291-4d60-995f-1fd8a60b9bfd the operation gives the error response` and `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the operation gives the identification and the license` (the name of each is the one that its verification case record states). The class `ServiceForE2e` is no test: it starts the service for the end-to-end test of the frontend (`./mvnw test -Dtest=ServiceForE2e`, started by `frontend/e2e/service.mjs`), and no normal run selects it. The rules are in `tools/gates/README.md` (the section "The traceability check (Gate 2)").
 
 ## Build
 

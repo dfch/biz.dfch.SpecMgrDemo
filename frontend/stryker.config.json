@@ -5,7 +5,7 @@
   "vitest": {
     "configFile": "vitest.config.ts"
   },
-  "mutate": ["src/mutation-example.ts", "src/generated/zod/**/*.ts"],
+  "mutate": ["src/mutation-example.ts", "src/generated/zod/**/*.ts", "src/client/**/*.ts", "src/i18n/**/*.ts", "src/telemetry/**/*.ts"],
   "reporters": ["clear-text", "html", "json"],
   "htmlReporter": {
     "fileName": "mutation-report/mutation.html"

@@ -11,9 +11,10 @@
 # code is committed, and the gate check-generated compares it with HEAD; the phase is
 # necessary, the generator execution of generate-sources adds src/generated/java as a compile
 # source root, and the goal skips a project with no compile source root). PIT mutates the
-# compiled classes of the module (target/classes, the generated model code; the module has
-# no product code) and runs the target tests (the unit tests of the generated code, see the
-# configuration in backend/pom.xml) on each mutant. The run is green (exit code 0) and makes
+# compiled classes of the module (target/classes: the generated model code and, since the
+# fixes of the review of feat-9-walking-skeleton, the product code of the package app) and runs the target
+# tests (the unit tests of the generated code and of the package app, see the configuration in
+# backend/pom.xml) on each mutant. The run is green (exit code 0) and makes
 # the HTML report and the XML report in target/pit-reports (the folder is in .gitignore
 # through target/). The XML report is the deterministic source that part 2 asserts on.
 #
@@ -38,6 +39,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 pitest_version="$(version_of PIT_VERSION)"
@@ -51,7 +54,7 @@ rm -rf "${report_dir}" # no old report can pass for the new one
 echo "== the report (PIT)"
 set +e
 run_output="$(./mvnw --batch-mode --no-transfer-progress test-compile \
-    "org.pitest:pitest-maven:${pitest_version}:mutationCoverage" -Dcodegen.skip=true 2>&1)"
+    "org.pitest:pitest-maven:${pitest_version}:mutationCoverage" -Dcodegen.skip=true "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
 run_code=$?
 set -e
 if [[ ${run_code} -ne 0 ]]; then

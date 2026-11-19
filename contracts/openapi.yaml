@@ -11,7 +11,7 @@ info:
   title: SpecMgr Demo API
   # The version of the interface. It follows Semantic Versioning 2.0.0 and goes up for each accepted
   # breaking change (DEC 93594b2b-be54-4f60-9f53-ec2ce6c84be4). While the first number is 0, the second number goes up.
-  version: 0.1.0
+  version: 0.2.0
   description: The interfaces between the backend and the frontend of the SpecMgr Demo application.
 # The URL is relative to the host of the file. This is the default of OpenAPI. The rule oas3-api-servers wants it written.
 servers:
@@ -31,11 +31,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Status"
+        "404":
+          $ref: "#/components/responses/ProblemResponse"
+        "405":
+          $ref: "#/components/responses/ProblemResponse"
+        "406":
+          $ref: "#/components/responses/ProblemResponse"
         "429":
           $ref: "#/components/responses/ProblemResponse"
         "500":
           $ref: "#/components/responses/ProblemResponse"
         "503":
+          $ref: "#/components/responses/ProblemResponse"
+  /info:
+    get:
+      operationId: getInfo
+      summary: Get the information of the system
+      description: Gives the identification of the system and the notice of the license.
+      # The identifier of the REQ document "The System Gives Its Version and Its License" (docs/req/).
+      x-specmgr-req: 271168a4-2a6f-40a1-b277-89711b18a087
+      responses:
+        "200":
+          description: The system gives its information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Info"
+        "404":
+          $ref: "#/components/responses/ProblemResponse"
+        "405":
+          $ref: "#/components/responses/ProblemResponse"
+        "406":
+          $ref: "#/components/responses/ProblemResponse"
+        "500":
           $ref: "#/components/responses/ProblemResponse"
 components:
   responses:
@@ -64,6 +92,31 @@ components:
           type: string
           format: date-time
           description: The time of the check.
+    Info:
+      type: object
+      description: The information of the system (the identification and the notice of the license).
+      required:
+        - version
+        - commit
+        - copyright
+        - repository
+        - license
+      properties:
+        version:
+          type: string
+          description: The version of the build.
+        commit:
+          type: string
+          description: The commit of the source of the build.
+        copyright:
+          type: string
+          description: The copyright holder of the system.
+        repository:
+          type: string
+          description: The address of the repository of the system.
+        license:
+          type: string
+          description: The license of the system.
     # RFC 9457 Problem Details. The schema has no text in a language. The backend sends the error code, and
     # the frontend shows the text for each error code from its catalog (DEC 51b00b5f-d1d8-49d8-9f40-28537ff69698).
     # `title` and `detail` are the members of RFC 9457. They are for logs and for developers (English), and a
@@ -104,6 +157,8 @@ components:
       description: The code of an error. The frontend shows the text for each code.
       enum:
         - not_found
+        - method_not_allowed
+        - not_acceptable
         - validation_failed
         - rate_limited
         - internal_error

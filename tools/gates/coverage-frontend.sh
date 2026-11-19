@@ -16,7 +16,7 @@
 # `broken` are the cases that are not successful and are not in the run), and the coverage
 # is over the SOURCE files of the module (the include set of the config): the generated
 # code (the folders src/generated/types and src/generated/zod, the two artifacts of the
-# generator) and the example file src/mutation-example.ts (the file that lies directly in
+# generator), the product code src/client, src/i18n and src/telemetry (feat-9-walking-skeleton, review N7), and the example file src/mutation-example.ts (the file that lies directly in
 # src/). The test files (src/test/) are no source files of the module, so they are
 # excluded. The run is green (exit code 0) and makes the text report (the console summary:
 # the table with the row `All files`, and the block `Coverage summary`) and the HTML report

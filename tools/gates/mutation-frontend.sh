@@ -12,7 +12,8 @@
 # Vitest 5.1.0) runs Vitest as the test runner with the config vitest.config.ts (the normal
 # run: the tests of the generated Zod schemas and the weak test of the example). Stryker
 # mutates the scope of the config (src/mutation-example.ts, the example file for the mutation
-# tests, and the generated Zod schemas in src/generated/zod) and runs the tests on each mutant.
+# tests, the generated Zod schemas in src/generated/zod, and the product code without DOM in src/client,
+# src/i18n and src/telemetry, feat-9-walking-skeleton, review N7) and runs the tests on each mutant.
 # The run is green (exit code 0; the config has no breaking threshold, thresholds.break is
 # null: the tool operates as a report and not as a gate, the DEC about verification). The run
 # makes the HTML report and the JSON report in mutation-report/ (the folder is in .gitignore).

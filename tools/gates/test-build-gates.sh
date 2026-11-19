@@ -10,10 +10,12 @@
 # work tree. The positive cases of the two gates are in test-generate-gate.sh and in the recipes themselves.
 #
 # Cases for `compile` (each must give exit code 1 with the message of the failed tool):
-#   - the control: the copy compiles (exit code 0);
+#   - the control: the copy compiles and its bundle builds (exit code 0), and the build leaves no folder dist/ in the copy;
 #   - a Java file with a compile error in the source root of the module (backend/src/main/java);
 #   - a TypeScript file with a type error in frontend/src (`tsc --noEmit --strict`);
-#   - a generated TypeScript file with a type error (compile.sh compiles the committed code of frontend/src/generated).
+#   - a generated TypeScript file with a type error (compile.sh compiles the committed code of frontend/src/generated);
+#   - a bundle that does not build: frontend/index.html names a script that does not exist. `tsc` does not read index.html, so
+#     only `vite build` (the second step of the frontend in compile.sh, feat-9-walking-skeleton, review N6a) stops it.
 # And one case that shows a limit (finding G8 of phase 120): a generated Java file with a syntax error does NOT stop `compile`,
 # because the Maven build makes the Java code again (the execution `spring-interfaces` is bound to generate-sources). The gate
 # for generated code (check-generated.sh) is the gate that stops this change, and the test shows that it does.
@@ -78,7 +80,9 @@ compile_run() { (cd "${repo}" && "${compile}" backend frontend); }
 docs_run() { (cd "${repo}" && "${api_docs}" backend "${work}/docs"); }
 
 section "compile (ACC-005)"
-expect 0 "PASS. The Maven module and the pnpm module compile with the generated code." "the control: the copy compiles" compile_run
+expect 0 "PASS. The Maven module and the pnpm module compile with the generated code, and the bundle builds." "the control: the copy compiles and the bundle builds" compile_run
+[[ ! -e "${repo}/frontend/dist" ]] && { echo "ok   the control left no frontend/dist (the bundle is built in a temporary folder)"; passed=$((passed + 1)); } \
+    || { echo "FAIL the control left a frontend/dist"; failed=$((failed + 1)); }
 
 mkdir -p "${repo}/backend/src/main/java/biz/dfch/specmgrdemo"
 printf 'package biz.dfch.specmgrdemo;\n\npublic class Broken {\n    int x = "text";\n}\n' >"${repo}/backend/src/main/java/biz/dfch/specmgrdemo/Broken.java"
@@ -94,6 +98,11 @@ reset
 printf '\nexport const broken: number = "text";\n' >>"${repo}/frontend/src/generated/zod/errorCodeSchema.ts"
 commit_all
 expect 1 "tsc failed in" "a generated TypeScript file with a type error stops compile (it compiles the committed code)" compile_run
+reset
+
+sed -i 's#/src/main.tsx#/src/missing.tsx#' "${repo}/frontend/index.html"
+commit_all
+expect 1 "vite build failed in" "a bundle that does not build (index.html names a missing script; tsc passes) stops compile" compile_run
 reset
 
 printf '\nthis is not Java;\n' >>"${repo}/backend/src/generated/java/biz/dfch/specmgrdemo/model/ErrorCode.java"
