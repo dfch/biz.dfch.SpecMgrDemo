@@ -22,7 +22,7 @@ workspace "SpecMgrDemo" "The architecture model of the project (DEC b6e8808f-86b
                         "code.language" "java"
                         "code.package" "biz.dfch.specmgrdemo.api"
                         "code.allowedExternal" "org.springframework.., jakarta.validation.., jakarta.annotation"
-                        "specmgr-req" "1ca335d7-969a-443e-9392-165fdeea99a0"
+                        "specmgr-refs" "REQ 1ca335d7-969a-443e-9392-165fdeea99a0"
                     }
                 }
 

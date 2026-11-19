@@ -4,7 +4,7 @@ created: '2026-11-02T14:43:15.040+01:00'
 id: f21920d2-4da5-4cf7-bd94-2e9bcba77342
 status: accepted
 type: dec
-updated: '2026-11-16T10:06:00.000+01:00'
+updated: '2026-11-19T00:42:09.342+01:00'
 version: 1.0.0
 ---
 
@@ -60,13 +60,18 @@ Planning session of 2026-11-02.
 
 ## Related Artifacts
 
+### Decisions
+
+- DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4: The Model Conventions
+  This decision fixes the form of the property `specmgr-refs` of the model.
+
 ### Goals
 
 - GOL b94e2758-3368-407e-8fee-827c897e192b: Show the Goal and the Test of Each Requirement
 
 ## More Information
 
-- A Structurizr element has the identifier in a `properties` entry.
+- A Structurizr element has the references to the specmgr artifacts in the property `specmgr-refs` (the form `TYPE UUID; TYPE UUID`: the text `; ` separates the entries, and the entry is the document type and the identifier with one space between them; the types are the document types that the tag of reference uses with an identifier of the form UUID; DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 fixes the form). The old property `specmgr-req` (the identifier bare, that the character comma separates) keeps working for one release (the compatibility of Phase 150 of feat-50-structurizr-model-rules): the gate reads the two properties independently, and the warning counts the REQ identifiers of the element in the two forms (an identifier that the element gives in the two forms is counted one time). The removal of the old form is a change of a later release.
 - An OpenAPI operation has the identifier in an `x-` extension.
 - A test gives the identifier of its VCR in its name or in an annotation.
 - An approved REQ is a REQ with the status `accepted` or `implemented`. A REQ has no status `approved`.
@@ -79,6 +84,10 @@ Planning session of 2026-11-02.
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 20:42:00.000Z - The form `specmgr-refs` of the model (Phase 150 of feat-50-structurizr-model-rules)
+
+On 2026-11-18, Phase 150 of feat-50-structurizr-model-rules (Task 150.100 to 150.120) extends the traceability gate for the property `specmgr-refs` (the form `TYPE UUID; TYPE UUID`, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): the gate reads the entries of each element of the model, it checks the form of each entry, the type of each entry, and the document of the type, and the warning counts the REQ identifiers of the element in the two forms (the property `specmgr-req`, and an entry of the type `REQ` of the property `specmgr-refs`; an identifier that the element gives in the two forms is counted one time). The property of the component `api` of the model is in the new form. The old property `specmgr-req` keeps working for one release (the compatibility, Task 150.110): the removal of the old form is a change of a later release.
 
 ### 2026-11-16 10:05:00.000Z - The conventions and the approved REQ are in More Information
 

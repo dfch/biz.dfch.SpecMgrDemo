@@ -33,21 +33,21 @@ The limits of the tools (the language skew, the table of DEC e85e9685-0787-4dff-
 
 The test that compares the workspace with the code is the recipe `just architecture-model` (the analyzer of group 3 and group 4 above): the side of the backend is the JUnit class `biz.dfch.specmgrdemo.architecture.ModelComparisonTest` (the library structurizr-java reads the JSON, the source of the packages and the dependencies of the code is the analysis of ArchUnit on the compiled classes of the `code.root`, and the reading and the derivation are the shared class `ModelRules`), and the side of the frontend is the script `frontend/architecture/compare.mjs` (the strict reading of the workspace through the shared module `frontend/architecture/workspace.mjs`, the discovery of the files from the code, and the imports read with the compiler of the pinned package typescript, including the dynamic forms). The comparison is mapping-based (and not name-based): a code location without a component, a code location with two components, a dependency without a relation, and an import to an external package that is not in `code.allowedExternal`, stops the run, and the message names the violation. The other direction is closed too: a component without a code location, and a relation without the dependency of the code, stops the run. The relation of the container level (`frontend` -> `backend`) is not compared with the code, and the limits of the closed world are in DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4.
 
-## The property `specmgr-req` (traceability)
+## The property `specmgr-refs` (traceability)
 
-An element of the workspace has the identifier of its REQ document in the property `specmgr-req` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, `feat-8-traceability-security-gates`). The value is one identifier, or a list of identifiers that the character comma separates:
+The element of the workspace has the references to the specmgr artifacts in the property `specmgr-refs` (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4, the form `TYPE UUID; TYPE UUID`: the text `; ` separates the entries, and the entry is the document type and the identifier with one space between them). The gate `just traceability` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342) reads the property from each software system, container and component of the workspace, and it checks each entry:
+
+- **Error** (the gate stops): an entry that is not the form `TYPE UUID` (for example the semicolon without the space after it, or an identifier without the type, or a value that is not a text), a type that is not a document type (`GOL`, `PRB`, `QA`, `UC`, `REQ`, `RSK`, `DEC`, `ADR`, `VCR`, `SYSRS` and `TXT`), or an identifier that has no document of that type in `docs/<type>/` (a document of another type for the identifier is an error too).
+- **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-refs` (an entry of the type `REQ`) or in its `specmgr-req`.
+
+The old property `specmgr-req` (the identifier bare, that the character comma separates) keeps working for one release (the compatibility of Phase 150 of feat-50-structurizr-model-rules): the gate reads the two properties independently, an element may have the old form, the new form, or both, and the warning and the report count the REQ identifiers of the element in the two forms (an identifier that the element gives in the two forms is counted one time). The removal of the old form is a change of a later release.
+
+The element of a requirement is the component that makes it. The component `api` has the entry for the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`):
 
 ```json
 "properties" : {
-  "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0"
+  "specmgr-refs" : "REQ 1ca335d7-969a-443e-9392-165fdeea99a0"
 }
 ```
 
-Each identifier must be the identifier of a REQ document in `docs/req/`. The recipe `just traceability` reads the property from each software system, container and component of the workspace:
-
-- **Error** (the gate stops): an identifier that is not the identifier of a REQ document, or a value that is not an identifier.
-- **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-req`.
-
-The element of a requirement is the component that makes it. The component `api` has the identifier of the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`). Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.
-
-The property `specmgr-refs` (the form `TYPE UUID; TYPE UUID`, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4) replaces `specmgr-req` in Phase 150 of feat-50-structurizr-model-rules. The old form keeps working for one release.
+Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.

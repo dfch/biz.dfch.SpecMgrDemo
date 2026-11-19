@@ -20,7 +20,9 @@
 # rule category, the Broken* pattern), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
 # coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
-# traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
+# traceability check: the recipes traceability and test-traceability-gate, rewritten by 150.100 of
+# feat-50-structurizr-model-rules for the property specmgr-refs of the model, and the old property specmgr-req
+# that keeps working for one release, 150.110), and 120.110 to 120.130 are the tasks of
 # feat-8-traceability-security-gates (Gate 9, the security recipes vuln-scan, secret-scan and workflow-scan, and
 # their test test-security-gates), and 110.110 and 110.120 are the tasks of feat-50-structurizr-model-rules (the
 # model in DSL: the recipe generate-model, and the gate for the generated model with its test, the recipes
@@ -191,13 +193,13 @@ coverage-backend:
 coverage-frontend:
     @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
 
-# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
+# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json (the old form), for an entry of `specmgr-refs` of model/workspace.json (the new form TYPE UUID; TYPE UUID, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4: the form, the type, the document of the type) or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model (in `specmgr-req`, or in an entry of the type REQ of `specmgr-refs`: the check reads the two forms independently and counts the REQ identifiers of the element in the two forms), or whose VCR is not in the name of a test. The old form `specmgr-req` keeps working for one release (the compatibility) (feat-8-traceability-security-gates, Task 110.130; feat-50-structurizr-model-rules, Task 150.100 and 150.110).
 traceability:
-    @{{ just_executable() }} _gate traceability.sh 110.130 .
+    @{{ just_executable() }} _gate traceability.sh 150.100 .
 
-# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, and a reader of references with another form (ACC-004) (feat-8-traceability-security-gates, Task 110.150).
+# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, a reader of references with another form (ACC-004), and the property `specmgr-refs` of the model (the form TYPE UUID; TYPE UUID: the case that is successful with the several types, the entry that has no document of its type, the broken form, the type that is no document type, and the element that has the two forms; the fixtures of the old form `specmgr-req` stay unchanged and green with the same assertions, the compatibility, feat-50 Task 150.100 and 150.110) (feat-8-traceability-security-gates, Task 110.150).
 test-traceability-gate:
-    @{{ just_executable() }} _gate test-traceability-gate.sh 110.150
+    @{{ just_executable() }} _gate test-traceability-gate.sh 150.100
 
 # Report: the known vulnerabilities in the dependencies (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). OSV-Scanner reads the SBOM files of `just sbom` (build/sbom/*.cdx.json) and asks api.osv.dev (the network is needed). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (no network, a file that cannot be read, a missing binary, a wrong checksum) stops it (exit code 1). The data of OSV has a deviation in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (feat-8-traceability-security-gates, Task 120.110).
 vuln-scan: sbom
