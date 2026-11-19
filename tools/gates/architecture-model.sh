@@ -1,30 +1,43 @@
 #!/usr/bin/env bash
 # feat-7-verification-architecture-tools, Task 130.120 (REQ-004, ACC-002, ACC-003)
 #
-# The test that compares the Structurizr workspace with the modules, the packages and the
-# dependencies (the recipe architecture-model; DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73: "A test
-# reads the workspace and compares the components with the modules and the packages").
+# The test that compares the Structurizr workspace with the packages and the dependencies of the
+# code (the recipe architecture-model; refactored onto the rule set the model gives in
+# feat-50-structurizr-model-rules, Task 130.130, REQ-005; the canonical form is the section "The
+# rules the model gives" of model/README.md; DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4, that
+# replaces the name rule of DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73). This is the analyzer of the
+# closed set (group 3 of the canonical section) and of the exceptions (group 4): the limit of the
+# parity (the tools of the runner cannot examine a closed set, DEC e85e9685) stays in this recipe.
 #
 # Usage: architecture-model.sh <backend dir> <frontend dir>
 #
 # The workspace is the file model/workspace.json of the repository (the JSON form that the
-# writer of the library structurizr-java makes, see model/README.md). The name of a component is
-# the identifier of its package (backend) or of its unit (frontend).
+# exporter of the pinned container structurizr/structurizr makes from model/workspace.dsl, see
+# model/README.md). The comparison is mapping-based (and not name-based): the components are read
+# by their entries of the property code.package (backend) or of the property code.path (frontend),
+# and the mapping does not depend on the name of the component (DEC e85e9685).
 #
 # Part 1, the case that is successful (ACC-002: the committed workspace matches the code):
 #   - the backend side: the JUnit class ModelComparisonTest (the recipe runs it with
 #     ./mvnw test -Dcodegen.skip=true -Dtest=ModelComparisonTest). The reader is the library
 #     structurizr-java (the artifact structurizr-client, the class JsonReader), the source of the
-#     packages and the dependencies of the code is ArchUnit (the compiled classes of the module,
-#     the packages biz.dfch.specmgrdemo.*, the test classes are excluded by the import option
-#     DoNotIncludeTests). The assertions: every package has a component in the model (ACC-003a),
-#     every package dependency is in the model (ACC-003b), and the other direction (no component
-#     in the model without a package, no dependency in the model without the code - recorded in
-#     the plan). The run is green (exit code 0).
-#   - the frontend side: the script frontend/architecture/compare.mjs (a strict reading of the
-#     workspace, the discovery of the units from the files of the code, and the imports read with
-#     the compiler of the pinned package typescript). The same assertions for the units and the
-#     dependencies of the container frontend. The run is green (exit code 0, the PASS line).
+#     packages and the dependencies of the code is ArchUnit (the compiled classes of the base
+#     package of the container's code.root, the test classes are excluded by the import option
+#     DoNotIncludeTests), and the reading and the derivation are the shared class ModelRules (the
+#     same rule set as the runner ModelRuleRunnerTest). The assertions: every code location (the
+#     package of every class) is owned by exactly one component (ACC-003a), every code dependency
+#     between mapped components is in the model (ACC-003b), the other direction (no component in
+#     the model without a class, no relation in the model without the code), and every code
+#     dependency to a package that no component owns is allowed if and only if it matches an entry
+#     of the source component's code.allowedExternal (the platform java.* and javax.* is given).
+#     The run is green (exit code 0).
+#   - the frontend side: the script frontend/architecture/compare.mjs (the strict reading of the
+#     workspace and the derivation through the shared module frontend/architecture/workspace.mjs,
+#     the discovery of the files from the code - the rule of thumb stays the discovery, and it is
+#     the source of truth for what code exists - and the imports read with the compiler of the
+#     pinned package typescript, including the dynamic forms import() and require(), the fix of
+#     Task 130.130). The same assertions for the files and the imports of the container frontend.
+#     The run is green (exit code 0, the PASS line).
 #
 # Part 2, the two conditions of ACC-003, each demonstrated in a temporary copy of the repository
 # (copy_work_tree in _lib.sh; the script changes the workspace of the copy only, and the
@@ -50,7 +63,12 @@
 # traceability check). The frontend side (compare.mjs, a strict reader) accepts the key `properties` of a software
 # system, a container and a component if the value is a map of texts, and it stops (exit code 2) for each other value.
 # The cases change a copy of the workspace file only (a file in the temporary folder), and start compare.mjs on the
-# module with it.
+# module with it. The case of the component with the map of texts keeps the mapping of the component (the merge
+# of the key into the existing properties, and not the replacement): the comparison is mapping-based (Task
+# 130.130), and a replacement would destroy the entries of code.path of the component (the files of the
+# component would have no mapped element, and the comparison would stop - the correct behavior of the
+# closed set, and not the case of the reader that this part examines). The case of the empty map is on the
+# software system (the properties of the system carry no mapping).
 #
 # The script needs JDK 21 (the Maven Wrapper of the module), Node and pnpm (install_frontend for
 # the run of part 1 and for the copies of the frontend) and the network for the first run (Maven
@@ -283,15 +301,18 @@ fi
 
 echo
 echo "== The key properties of an element (the frontend side: a map of texts is accepted, each other value stops the comparison)"
-# set_properties <workspace file> <level: system | container | component> <JSON value> : set the key `properties` of one
-# element of the copy of the workspace (the software system, the container frontend, the component zod of it)
+# set_properties <workspace file> <level: system | container | component> <JSON value> <merge 0|1> :
+# set the key `properties` of one element of the copy of the workspace (the software system, the
+# container frontend, the component zod of it). The merge (1) keeps the existing properties and adds
+# the keys of the value (the case of the component: the mapping code.* of the component is
+# load-bearing for the mapping-based comparison, Task 130.130). The replace (0) is the whole value.
 set_properties() {
-    local file="$1" level="$2" value="$3"
-    uv run --no-project --quiet python - "${file}" "${level}" "${value}" <<'PYEOF'
+    local file="$1" level="$2" value="$3" merge="$4"
+    uv run --no-project --quiet python - "${file}" "${level}" "${value}" "${merge}" <<'PYEOF'
 import json
 import sys
 
-path, level, value_text = sys.argv[1], sys.argv[2], sys.argv[3]
+path, level, value_text, merge = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
 value = json.loads(value_text)
 workspace = json.load(open(path, encoding="utf-8"))
 system = workspace["model"]["softwareSystems"][0]
@@ -301,17 +322,18 @@ element = {
     "container": container,
     "component": next(c for c in container["components"] if c["name"] == "zod"),
 }[level]
-element["properties"] = value
+element["properties"] = {**(element.get("properties") or {}), **value} if merge else value
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(workspace, handle, indent=2)
 PYEOF
 }
-# properties_case <ok | stop> <level> <JSON value> <description> : compare.mjs with the copy that has the value
+# properties_case <ok | stop> <level> <JSON value> <description> [merge 0|1] : compare.mjs with the
+# copy that has the value
 properties_case() {
-    local want="$1" level="$2" value="$3" description="$4" file
+    local want="$1" level="$2" value="$3" description="$4" merge="${5:-0}" file
     file="${work}/properties-${level}-${RANDOM}.json"
     cp "${frontend_dir}/../model/workspace.json" "${file}"
-    set_properties "${file}" "${level}" "${value}"
+    set_properties "${file}" "${level}" "${value}" "${merge}"
     set +e
     run_output="$(node "${frontend_dir}/architecture/compare.mjs" "${frontend_dir}" "${file}" 2>&1)"
     run_code=$?
@@ -330,8 +352,8 @@ properties_case() {
 }
 properties_case ok system '{"specmgr-req": "11111111-1111-4111-8111-111111111111", "other": "a text"}' "the software system has a map of texts"
 properties_case ok container '{"specmgr-req": "11111111-1111-4111-8111-111111111111, 22222222-2222-4222-8222-222222222222"}' "the container has a map of texts (a list with a comma)"
-properties_case ok component '{"specmgr-req": "11111111-1111-4111-8111-111111111111"}' "the component has a map of texts"
-properties_case ok component '{}' "the component has an empty map"
+properties_case ok component '{"specmgr-req": "11111111-1111-4111-8111-111111111111"}' "the component has a map of texts (the merge keeps the mapping of the component)" 1
+properties_case ok system '{}' "the software system has an empty map"
 properties_case stop system '"a text"' "the software system has a text as the value of properties"
 properties_case stop container '["specmgr-req"]' "the container has a list as the value of properties"
 properties_case stop component 'null' "the component has null as the value of properties"

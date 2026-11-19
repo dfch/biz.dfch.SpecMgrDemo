@@ -16,8 +16,10 @@
 # architecture-model are the jobs of feat-7-verification-architecture-tools (Task 140.100; the tools run as a
 # report without a threshold, no artifact upload, and the checkouts have no fetch-depth: 0). The jobs traceability,
 # vuln-scan, secret-scan and workflow-scan are the jobs of feat-8-traceability-security-gates (Task 140.100; gate 2 and
-# the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). CODEOWNERS
-# covers this folder (/tools/), so the owner reviews each change.
+# the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). The job
+# check-model-generated is the job of feat-50-structurizr-model-rules (Task 160.100; the gate for the generated model,
+# like check-generated; the make-recipe generate-model has no job, and the test of the gate runs in test-gates).
+# CODEOWNERS covers this folder (/tools/), so the owner reviews each change.
 #
 # Format: <workflow file> <job> <action>...   (one line for each job; the actions are in any order)
 ci.yml validate actions/checkout extractions/setup-just astral-sh/setup-uv
@@ -47,3 +49,4 @@ ci.yml traceability actions/checkout extractions/setup-just astral-sh/setup-uv
 ci.yml vuln-scan actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
 ci.yml secret-scan actions/checkout extractions/setup-just
 ci.yml workflow-scan actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml check-model-generated actions/checkout extractions/setup-just

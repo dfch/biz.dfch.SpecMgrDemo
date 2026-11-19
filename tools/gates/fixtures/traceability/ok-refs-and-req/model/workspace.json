@@ -1,0 +1,22 @@
+{
+  "id" : 0,
+  "model" : {
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "components" : [ {
+          "id" : "3",
+          "name" : "api",
+          "properties" : {
+            "specmgr-req" : "22222222-2222-4222-8222-222222222222",
+            "specmgr-refs" : "REQ 11111111-1111-4111-8111-111111111111; DEC 44444444-4444-4444-8444-444444444444"
+          }
+        } ],
+        "id" : "2",
+        "name" : "backend"
+      } ],
+      "id" : "1",
+      "name" : "Fixture"
+    } ]
+  },
+  "name" : "Fixture"
+}

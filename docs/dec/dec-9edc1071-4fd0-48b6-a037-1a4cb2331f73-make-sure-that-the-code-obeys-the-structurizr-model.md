@@ -4,7 +4,7 @@ created: '2026-11-02T14:44:22.801+01:00'
 id: 9edc1071-4fd0-48b6-a037-1a4cb2331f73
 status: accepted
 type: dec
-updated: '2026-11-02T15:17:51.813+01:00'
+updated: '2026-11-17T11:43:32.294+01:00'
 version: 1.0.0
 ---
 
@@ -72,6 +72,10 @@ The maturity of ArchUniTS is not known. The skeleton FEAT must write the same ru
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-17 11:45:00.000Z - Partly superseded by the model conventions DEC
+
+DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (The Model Conventions, feat-50-structurizr-model-rules, Phase 100) partly supersedes this decision. The rule "the name of a package is the same as the identifier of its component in the model" (the first entry of Consequences) is replaced by the explicit mapping `code.*` of that decision. The choice of the tools (ArchUnit and Spring Modulith for the backend, ArchUniTS for the frontend) stays. The status of this decision is not changed.
 
 ### 2026-11-02 00:00:00.000Z - Draft written
 

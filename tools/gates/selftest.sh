@@ -467,8 +467,8 @@ expect 2 "has no job" "required-setup.txt has no job" run_real_wf "${work}/wf-re
 printf 'ci.yml validate\nci.yml validate\n' >"${work}/required-twice.txt"
 expect 2 "is twice in the file" "required-setup.txt has a job twice" run_real_wf "${work}/wf-real" "${work}/required-twice.txt"
 expect 2 "cannot read" "required-setup.txt does not exist" run_real_wf "${work}/wf-real" "${work}/no-such-required.txt"
-# the data file of the repository is the one that the workflow needs: each of the 27 jobs is in it
-expect 0 "27 run step(s)" "required-setup.txt of the repository has the 27 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model, and 4 of feat-8: traceability, vuln-scan, secret-scan, workflow-scan)" run_real_wf "${work}/wf-real"
+# the data file of the repository is the one that the workflow needs: each of the 28 jobs is in it
+expect 0 "28 run step(s)" "required-setup.txt of the repository has the 28 gate jobs (7 of feat-5, 5 of feat-6: lint, breaking-changes, check-generated, compile, api-docs, 11 of feat-7: test-unit-backend, test-integration-backend, test-unit-frontend, test-e2e, test-random-backend, test-random-frontend, mutation-backend, mutation-frontend, architecture-backend, architecture-frontend, architecture-model, 4 of feat-8: traceability, vuln-scan, secret-scan, workflow-scan, and 1 of feat-50: check-model-generated)" run_real_wf "${work}/wf-real"
 
 # ---------------------------------------------------------------------------------------------
 section "check-pins.sh (Task 130.142)"
@@ -1557,15 +1557,15 @@ section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-veri
 # JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
 # maven-surefire-plugin, the mutation tool PIT (the plugin pitest-maven and its plugin
 # dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120), the
-# architecture tools Spring Modulith (spring-modulith-core and the jar spring-boot that the code
-# of the core needs), ArchUnit (archunit and archunit-junit5) and structurizr-client (feat-7-
+# architecture tools ArchUnit (archunit and archunit-junit5) and structurizr-client (feat-7-
 # verification-architecture-tools, Phase 130), and the coverage tool JaCoCo (the plugin
 # jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the properties of
 # backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION,
 # JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
-# SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION, STRUCTURIZR_VERSION and
-# JACOCO_VERSION of versions.env. The messages start with `Maven test pins:`. Each tool has a
-# version key, and each case changes one place only.
+# ARCHUNIT_VERSION, STRUCTURIZR_VERSION and JACOCO_VERSION of versions.env. The jars of Spring
+# Modulith (spring-modulith-core and spring-boot) were removed in Phase 160 of feat-50 (the test
+# code does not use them any more; there is no case for them). The messages start with
+# `Maven test pins:`. Each tool has a version key, and each case changes one place only.
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1619,8 +1619,6 @@ for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontain
     "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
     "pitest-maven|PIT_VERSION|pitest.version|plugin" \
     "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency" \
-    "spring-modulith-core|SPRING_MODULITH_VERSION|spring-modulith.version|dependency" \
-    "spring-boot|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
     "archunit|ARCHUNIT_VERSION|archunit.version|dependency" \
     "archunit-junit5|ARCHUNIT_VERSION|archunit.version|dependency" \
     "structurizr-client|STRUCTURIZR_VERSION|structurizr.version|dependency" \
@@ -1667,8 +1665,6 @@ sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>
     -e 's#<groupId>org.testcontainers</groupId>#<groupId>other.tc</groupId>#g' \
     -e 's#<groupId>org.postgresql</groupId>#<groupId>other.pg</groupId>#' \
     -e 's#<groupId>org.pitest</groupId>#<groupId>other.pitest</groupId>#g' \
-    -e 's#<groupId>org.springframework.modulith</groupId>#<groupId>other.modulith</groupId>#' \
-    -e 's#<groupId>org.springframework.boot</groupId>#<groupId>other.boot</groupId>#' \
     -e 's#<groupId>com.tngtech.archunit</groupId>#<groupId>other.archunit</groupId>#g' \
     -e 's#<groupId>com.structurizr</groupId>#<groupId>other.structurizr</groupId>#' \
     -e 's#<groupId>org.jacoco</groupId>#<groupId>other.jacoco</groupId>#' \
@@ -1679,7 +1675,7 @@ dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
 expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
 # The form of the values in versions.env, and a key that is not there
 for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION \
-    PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION SPRING_MODULITH_VERSION SPRING_BOOT_VERSION ARCHUNIT_VERSION STRUCTURIZR_VERSION \
+    PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION ARCHUNIT_VERSION STRUCTURIZR_VERSION \
     JACOCO_VERSION; do
     for range in "^$(version_of "${key}")" "latest"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/tver-form.env"

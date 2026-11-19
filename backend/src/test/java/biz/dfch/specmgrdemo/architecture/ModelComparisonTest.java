@@ -1,242 +1,203 @@
 package biz.dfch.specmgrdemo.architecture;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.structurizr.Workspace;
-import com.structurizr.io.json.JsonReader;
-import com.structurizr.model.Component;
-import com.structurizr.model.Container;
-import com.structurizr.model.Element;
-import com.structurizr.model.Relationship;
-import com.structurizr.model.SoftwareSystem;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
-import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.core.importer.ImportOption;
-import java.io.StringReader;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /**
- * The test that compares the Structurizr workspace with the modules and the packages of the code
- * (feat-7-verification-architecture-tools, Task 130.120, REQ-004, ACC-003; DEC
- * 9edc1071-4fd0-48b6-a037-1a4cb2331f73: "A test reads the workspace and compares the components
- * with the modules and the packages").
+ * The test that compares the Structurizr workspace with the packages and the dependencies of the code
+ * (feat-7-verification-architecture-tools, Task 130.120, REQ-004, ACC-003; refactored onto the rule
+ * set the model gives in feat-50-structurizr-model-rules, Task 130.130, REQ-005; the canonical form is
+ * the section "The rules the model gives" of model/README.md; DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4,
+ * that replaces the name rule of DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73).
  *
  * <p>The side of the backend (this class; the side of the frontend is the script
  * frontend/architecture/compare.mjs of the recipe architecture-model). The workspace is the file
- * {@code model/workspace.json} of the repository (the path is relative to the folder of the module;
- * the property {@code model.workspace.path} gives another file, for the temporary copy of the
- * recipe architecture-model, part 2). The reader is the library structurizr-java (the artifact
- * structurizr-client, the class com.structurizr.io.json.JsonReader).
+ * model/workspace.json of the repository (the path is relative to the folder of the module; the
+ * property {@code model.workspace.path} gives another file, for the temporary copy of the recipe
+ * architecture-model, part 2). The reader is the library structurizr-java (the artifact
+ * structurizr-client, the class com.structurizr.io.json.JsonReader), and the reading and the
+ * derivation are the shared class {@link ModelRules} (the same rule set that the runner
+ * {@link ModelRuleRunnerTest} uses, so the two cannot drift apart).
  *
- * <p>The code is the source: the top-level packages of the compiled classes of the module (the
- * packages {@code biz.dfch.specmgrdemo.*}; the classes of the test are excluded by the import
- * option DoNotIncludeTests of ArchUnit, the same option that Spring Modulith uses for R1), and
+ * <p>The comparison is mapping-based (and not name-based): the components of the container {@code
+ * backend} are read by their entries of the property {@code code.package} (the list form of the DEC),
+ * and the code is the source: the classes of the base package of the container's property {@code
+ * code.root} (the test classes are excluded by the import option DoNotIncludeTests of ArchUnit), and
  * their dependencies (the analysis of the dependencies of ArchUnit, the natural source: for each
- * class, the classes that it references).
+ * class, the classes that it references). A package is owned by the component of the most specific
+ * entry (the entry that is the package itself, or the longest entry that is a prefix of the package).
  *
- * <p>The assertions (the two conditions of ACC-003, and the other direction, recorded in the plan):
+ * <p>The assertions (the groups 3 and 4 of the canonical section, the closed set and the exceptions):
  * <ul>
- *   <li>every package has a component in the model (the components of the container {@code backend},
- *       named like the packages, DEC 9edc1071: "The name of a package is the same as the identifier
- *       of its component in the model");
- *   <li>every package dependency is in the model (the dependencies between the components of the
- *       container {@code backend});
- *   <li>the other direction: no component in the model without a package, and no dependency in the
- *       model without the package dependency of the code.
+ *   <li>every code location (the package of every class under code.root) is owned by exactly one
+ *       component (the package that no component owns stops the test, and the message names the
+ *       package; the package that two components own is the ambiguous mapping, and the message names
+ *       the two components);
+ *   <li>every code dependency between mapped components has a relation in the model (the message
+ *       names the dependency, the packages of the source and of the destination);
+ *   <li>the other direction: no component in the model without a class in the code, and no relation
+ *       in the model without the code dependency (a model that the code does not have is a drift too:
+ *       the code must obey the model, and the model must describe the code);
+ *   <li>every code dependency to a package that no component owns is allowed if and only if it
+ *       matches an entry of the source component's code.allowedExternal (the form of the DEC: the
+ *       package is the entry, or a sub-package of the entry; a trailing .. marks the sub-packages).
+ *       The dependency to the platform of the language (the packages java.* and javax.*) is given
+ *       (the runtime of the language), and the check does not examine it. The package that an entry
+ *       of code.ignore of the container covers is not examined at all (none today).
  * </ul>
  *
  * <p>The run is green on the committed code (ACC-002: the case that is successful, and ACC-003: the
  * workspace matches the code). The recipe architecture-model shows the case that is not successful
- * in a temporary copy of the repository: it removes a component (or a dependency) from the copy of
- * the workspace, and the run of this class stops for it, naming the package (or the dependency)
- * that the model has no record of.
+ * in a temporary copy of the repository: it removes a component (or a relation) from the copy of the
+ * workspace, and the run of this class stops for it, naming the package (or the dependency) that the
+ * model has no record of.
  */
 class ModelComparisonTest {
 
-  private static final String BASE_PACKAGE = "biz.dfch.specmgrdemo";
-
-  /**
-   * A dependency between two top-level packages of the module (the source and the target, in the
-   * name of the package and not in the full name).
-   */
-  record PackageDependency(String source, String target) implements Comparable<PackageDependency> {
-    @Override
-    public int compareTo(PackageDependency other) {
-      int result = Comparator.comparing(PackageDependency::source).thenComparing(PackageDependency::target)
-          .compare(this, other);
-      return result;
-    }
-  }
-
   @Test
   void thePackagesAndDependenciesOfTheModuleAreInTheWorkspace() throws Exception {
-    Path workspacePath = Path.of(System.getProperty("model.workspace.path", "../model/workspace.json"));
-    Workspace workspace = readWorkspace(workspacePath);
-    Container backend = theContainer(workspace, "backend");
+    Path workspacePath = ModelRules.workspacePath();
+    Workspace workspace = ModelRules.readWorkspace(workspacePath);
+    ModelRules.ContainerMapping mapping = ModelRules.derive(workspace, "backend");
+    JavaClasses classes = ModelRules.importClasses(mapping.root());
 
-    // The code: the top-level packages of the compiled classes of the module, and their dependencies.
-    JavaClasses classes =
-        new ClassFileImporter()
-            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-            .importPackages(BASE_PACKAGE);
-    Set<String> packages =
-        classes.stream()
-            .map(ModelComparisonTest::topLevelPackage)
-            .filter(java.util.Objects::nonNull)
-            .collect(Collectors.toCollection(TreeSet::new));
-    Set<PackageDependency> codeDependencies = dependenciesOf(classes);
-
-    // The model: the components of the container backend, and the dependencies between them.
-    Set<String> modelComponents =
-        backend.getComponents().stream().map(Element::getName).collect(Collectors.toCollection(TreeSet::new));
-    Map<String, Component> componentsById =
-        backend.getComponents().stream().collect(Collectors.toMap(Element::getId, component -> component));
-    Set<PackageDependency> modelDependencies = dependenciesBetween(backend, componentsById);
-
-    // ACC-003 (a): a package that has no component in the model stops the test, and the message
-    // names the package.
-    for (String p : packages) {
-      assertTrue(
-          modelComponents.contains(p),
-          "the package " + BASE_PACKAGE + "." + p + " has no component in the model (the workspace " + workspacePath + ")");
+    // The code: the packages of the classes (the class that lies directly in the base package has no
+    // top-level package, and it is no code location of the closed world, as before the refactor), and
+    // their dependencies.
+    Map<String, List<ModelRules.MappedComponent>> ownersByPackage = new TreeMap<>();
+    for (JavaClass javaClass : classes) {
+      String packageName = javaClass.getPackageName();
+      if (!packageName.equals(mapping.root())) {
+        ownersByPackage.putIfAbsent(packageName, ModelRules.owners(mapping, packageName));
+      }
     }
-    // ACC-003 (b): a package dependency that is not in the model stops the test, and the message
-    // names the dependency.
-    for (PackageDependency dependency : codeDependencies) {
+    // The dependencies of the code: the pair of the packages (the source and the destination, and
+    // the components that own them, or null for a package that no component owns).
+    record CodeDependency(String sourcePackage, String destinationPackage, String sourceComponent, String destinationComponent)
+        implements Comparable<CodeDependency> {
+      @Override
+      public int compareTo(CodeDependency other) {
+        return java.util.Comparator.comparing(CodeDependency::sourcePackage)
+            .thenComparing(CodeDependency::destinationPackage)
+            .compare(this, other);
+      }
+    }
+    Set<CodeDependency> codeDependencies = new TreeSet<>();
+    for (JavaClass javaClass : classes) {
+      String sourcePackage = javaClass.getPackageName();
+      if (sourcePackage.equals(mapping.root())) {
+        continue;
+      }
+      ModelRules.MappedComponent sourceOwner = ModelRules.ownerOf(mapping, sourcePackage);
+      for (com.tngtech.archunit.core.domain.Dependency dependency : javaClass.getDirectDependenciesFromSelf()) {
+        String destinationPackage = dependency.getTargetClass().getPackageName();
+        if (destinationPackage.equals(sourcePackage)) {
+          continue;
+        }
+        ModelRules.MappedComponent destinationOwner = ModelRules.ownerOf(mapping, destinationPackage);
+        codeDependencies.add(
+            new CodeDependency(
+                sourcePackage,
+                destinationPackage,
+                sourceOwner == null ? null : sourceOwner.name(),
+                destinationOwner == null ? null : destinationOwner.name()));
+      }
+    }
+
+    // Group 3 (a): the code location that no component owns stops the test, and the message names
+    // the package (the condition (a) of ACC-003). The code location that two components own is the
+    // ambiguous mapping (the exactly one of the closed set).
+    for (Map.Entry<String, List<ModelRules.MappedComponent>> entry : ownersByPackage.entrySet()) {
+      List<ModelRules.MappedComponent> owners = entry.getValue();
+      if (owners.isEmpty()) {
+        if (ModelRules.entryCoversPackage(mapping.ignore(), entry.getKey())) {
+          continue; // the package is in code.ignore of the container: the check does not examine it.
+        }
+        assertTrue(
+            false,
+            "the package " + entry.getKey() + " has no component in the model (the workspace " + workspacePath + ")");
+      }
+      if (owners.size() > 1) {
+        String names = owners.stream().map(ModelRules.MappedComponent::name).reduce((a, b) -> a + ", " + b).orElse("");
+        assertTrue(
+            false,
+            "the package " + entry.getKey() + " has two components in the model (" + names
+                + ") (the workspace " + workspacePath + ")");
+      }
+    }
+    // Group 3 (b): the code dependency between mapped components that is not in the model stops the
+    // test, and the message names the dependency (the condition (b) of ACC-003).
+    for (CodeDependency dependency : codeDependencies) {
+      if (dependency.sourceComponent() != null && dependency.destinationComponent() != null
+          && !dependency.sourceComponent().equals(dependency.destinationComponent())
+          && !mapping.relations().contains(new ModelRules.ModelPair(dependency.sourceComponent(), dependency.destinationComponent()))) {
+        assertTrue(
+            false,
+            "the dependency "
+                + dependency.sourcePackage()
+                + " -> "
+                + dependency.destinationPackage()
+                + " is not in the model (the workspace "
+                + workspacePath
+                + ")");
+      }
+    }
+    // Group 3 (c): the other direction: the model has no component without a class in the code, and
+    // no relation without the code dependency.
+    for (ModelRules.MappedComponent component : mapping.components()) {
+      boolean inCode =
+          ownersByPackage.values().stream().anyMatch(owners -> owners.size() == 1 && owners.get(0).name().equals(component.name()));
+      assertTrue(inCode, "the component " + component.name() + " of the model (the container backend) has no package in the code");
+    }
+    for (ModelRules.ModelPair relation : mapping.relations()) {
+      boolean inCode =
+          codeDependencies.stream()
+              .anyMatch(dependency -> dependency.sourceComponent().equals(relation.source())
+                  && dependency.destinationComponent().equals(relation.destination()));
       assertTrue(
-          modelDependencies.contains(dependency),
+          inCode,
+          "the dependency " + relation.source() + " -> " + relation.destination()
+              + " of the model (the container backend) is not in the code");
+    }
+    // Group 4: the code dependency to a package that no component owns (and that code.ignore does not
+    // cover) is allowed if and only if it matches an entry of the source component's
+    // code.allowedExternal. The dependency to the platform of the language is given.
+    for (CodeDependency dependency : codeDependencies) {
+      if (dependency.destinationComponent() != null || dependency.sourceComponent() == null) {
+        continue; // the dependency between mapped components is the condition (b) above.
+      }
+      if (ModelRules.isPlatformPackage(dependency.destinationPackage())
+          || ModelRules.entryCoversPackage(mapping.ignore(), dependency.destinationPackage())) {
+        continue;
+      }
+      ModelRules.MappedComponent source =
+          mapping.components().stream()
+              .filter(component -> component.name().equals(dependency.sourceComponent()))
+              .findFirst()
+              .orElseThrow();
+      assertTrue(
+          ModelRules.entryCoversPackage(source.allowedExternal(), dependency.destinationPackage()),
           "the dependency "
-              + BASE_PACKAGE
-              + "."
-              + dependency.source()
+              + dependency.sourcePackage()
               + " -> "
-              + BASE_PACKAGE
-              + "."
-              + dependency.target()
-              + " is not in the model (the workspace "
+              + dependency.destinationPackage()
+              + " is not allowed: the component "
+              + source.name()
+              + " has no entry in code.allowedExternal for "
+              + dependency.destinationPackage()
+              + " (the workspace "
               + workspacePath
               + ")");
     }
-    // The other direction (recorded in the plan): the model has no component without a package, and
-    // no dependency without the dependency of the code. A model that the code does not have is a
-    // drift too (the code must obey the model, and the model must describe the code).
-    for (String component : modelComponents) {
-      assertTrue(
-          packages.contains(component),
-          "the component " + component + " of the model (the container backend) has no package in the code");
-    }
-    for (PackageDependency dependency : modelDependencies) {
-      assertTrue(
-          codeDependencies.contains(dependency),
-          "the dependency "
-              + dependency.source()
-              + " -> "
-              + dependency.target()
-              + " of the model (the container backend) is not in the code");
-    }
-  }
-
-  /**
-   * Read the workspace file with the library structurizr-java. A file that is not in the form of the
-   * writer of the library (or that is not JSON) stops the test (the reader throws).
-   */
-  private static Workspace readWorkspace(Path workspacePath) throws Exception {
-    assertTrue(Files.isRegularFile(workspacePath), "the workspace does not exist: " + workspacePath);
-    String content = Files.readString(workspacePath);
-    try (StringReader reader = new StringReader(content)) {
-      Workspace result = new JsonReader().read(reader);
-      assertNotNull(result, "the reader of structurizr-java made no workspace from " + workspacePath);
-      return result;
-    }
-  }
-
-  /**
-   * The container of the name in the one software system of the model.
-   */
-  private static Container theContainer(Workspace workspace, String name) {
-    Set<SoftwareSystem> systems = workspace.getModel().getSoftwareSystems();
-    assertEquals(1, systems.size(), "the model has exactly one software system (it has " + systems.size() + ")");
-    Container result = systems.iterator().next().getContainerWithName(name);
-    assertNotNull(result, "the model has no container " + name);
-    return result;
-  }
-
-  /**
-   * The top-level package of the class under the base package (the segment after the base package),
-   * or null if the class is not under the base package.
-   */
-  private static String topLevelPackage(JavaClass javaClass) {
-    String packageName = javaClass.getPackageName();
-    String prefix = BASE_PACKAGE + ".";
-    if (!packageName.startsWith(prefix)) {
-      return null;
-    }
-    String rest = packageName.substring(prefix.length());
-    int separator = rest.indexOf('.');
-    String result = separator < 0 ? rest : rest.substring(0, separator);
-    return result.isEmpty() ? null : result;
-  }
-
-  /**
-   * The dependencies between the top-level packages of the module: for each class of the compiled
-   * classes (the test classes are excluded), the classes that it references, in the other top-level
-   * packages.
-   */
-  private static Set<PackageDependency> dependenciesOf(JavaClasses classes) {
-    Set<PackageDependency> result = new TreeSet<>();
-    for (JavaClass javaClass : classes) {
-      String source = topLevelPackage(javaClass);
-      if (source == null) {
-        continue;
-      }
-      for (com.tngtech.archunit.core.domain.Dependency dependency : javaClass.getDirectDependenciesFromSelf()) {
-        String target = topLevelPackage(dependency.getTargetClass());
-        if (target != null && !target.equals(source)) {
-          result.add(new PackageDependency(source, target));
-        }
-      }
-    }
-    return result;
-  }
-
-  /**
-   * The dependencies of the model between the components of the container: the relationships of the
-   * model whose source and whose destination are components of the container (the ids of the
-   * relationship are resolved with the ids of the components; the reader of the library resolves the
-   * objects of the source and of the destination too, and both give the same pair).
-   */
-  private static Set<PackageDependency> dependenciesBetween(Container container, Map<String, Component> componentsById) {
-    Set<PackageDependency> result = new TreeSet<>();
-    for (Relationship relationship : container.getModel().getRelationships()) {
-      Element source = relationship.getSource();
-      Element destination = relationship.getDestination();
-      if (source instanceof Component sourceComponent
-          && destination instanceof Component destinationComponent
-          && sourceComponent.getContainer() == container
-          && destinationComponent.getContainer() == container) {
-        result.add(new PackageDependency(sourceComponent.getName(), destinationComponent.getName()));
-      } else if (source == null || destination == null) {
-        // The reader has not resolved one side of the relationship (the file has an id that the
-        // model has no element for). The id of the source and the id of the destination give the
-        // pair, if both ids are components of the container.
-        Component sourceById = componentsById.get(relationship.getSourceId());
-        Component destinationById = componentsById.get(relationship.getDestinationId());
-        if (sourceById != null && destinationById != null) {
-          result.add(new PackageDependency(sourceById.getName(), destinationById.getName()));
-        }
-      }
-    }
-    return result;
   }
 }
