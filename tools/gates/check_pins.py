@@ -195,12 +195,14 @@ no entry in frontend/package.json and no integrity key.
 The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110, 120, 130 and 140; REQ-001,
 REQ-002, REQ-003, ACC-011): JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik,
 the test runner maven-surefire-plugin, the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin
-dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools Spring Modulith (the
-artifact org.springframework.modulith:spring-modulith-core and the jar org.springframework.boot:spring-boot that the
-code of Spring Modulith 1.4.14 needs for the module detection), ArchUnit (the artifacts com.tngtech.archunit:archunit
-and com.tngtech.archunit:archunit-junit5), the reader of the workspace structurizr-client
-(com.structurizr:structurizr-client) and the coverage tool JaCoCo (the plugin org.jacoco:jacoco-maven-plugin,
-Phase 140). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
+dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools ArchUnit (the
+artifacts com.tngtech.archunit:archunit and com.tngtech.archunit:archunit-junit5), the reader of the workspace
+structurizr-client (com.structurizr:structurizr-client) and the coverage tool JaCoCo (the plugin
+org.jacoco:jacoco-maven-plugin, Phase 140). The jars of Spring Modulith (the artifact
+org.springframework.modulith:spring-modulith-core and the jar org.springframework.boot:spring-boot) were in the
+module for the hard-coded rule R1 of feat-7; Phase 160 of feat-50-structurizr-model-rules removes them from the
+pom.xml and the keys from tools/versions.env (the test code does not use them any more: no pin for a dependency
+that is not there). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
 (the cyclonedx plugin keeps the test scope out of the SBOM; the plugin and the plugin dependency are in <build><plugins>
 and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and MAVEN_TEST_PLUGINS
 below). The check is always on, and it fails closed. The script stops for each of these:
@@ -376,8 +378,6 @@ MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("org.postgresql", "postgresql", "POSTGRESQL_VERSION"),
     ("net.jqwik", "jqwik", "JQWIK_VERSION"),
     ("org.pitest", "pitest-junit5-plugin", "PIT_JUNIT5_PLUGIN_VERSION"),
-    ("org.springframework.modulith", "spring-modulith-core", "SPRING_MODULITH_VERSION"),
-    ("org.springframework.boot", "spring-boot", "SPRING_BOOT_VERSION"),
     ("com.tngtech.archunit", "archunit", "ARCHUNIT_VERSION"),
     ("com.tngtech.archunit", "archunit-junit5", "ARCHUNIT_VERSION"),
     ("com.structurizr", "structurizr-client", "STRUCTURIZR_VERSION"),

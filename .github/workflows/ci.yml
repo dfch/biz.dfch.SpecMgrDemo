@@ -31,6 +31,10 @@
 #     job: it is the hosted default setup of GitHub (no workflow file, REQ-006). The checkouts do not
 #     keep the credentials of the token. The owner makes the new jobs required checks of the rulesets (branch-protection.md,
 #     the steps of Task 140.130).
+#   - feat-50-structurizr-model-rules added the job check-model-generated (Task 160.100). The recipe makes the JSON of
+#     the model again from the DSL in a temporary folder with the pinned container (the image is pulled by its digest
+#     on the runner) and stops for a JSON that is not up to date. The make-recipe generate-model has no job (the house
+#     precedent generate/check-generated), and the gate test runs in test-gates.
 
 name: CI
 
@@ -590,6 +594,26 @@ jobs:
         with:
           version: "0.13.7"
       - run: just workflow-scan
+
+  # The gate for the generated model (feat-50-structurizr-model-rules, Task 160.100, ACC-004): the JSON of the model is
+  # the JSON that the pinned container makes from the DSL now (like check-generated). The recipe needs Docker (the
+  # runner has the docker CLI and the daemon, as test-integration-backend; the image is pulled by its digest on the
+  # first run, so the timeout is the long one) and the network for the pull. The recipe needs no base branch (no
+  # fetch-depth: 0), and no setup action but just (the pin is in tools/versions.env, and the step names the digest,
+  # not the tag). The make-recipe generate-model has no job (the house precedent generate/check-generated), and the
+  # test of the gate (test-check-model-generated-gate) runs in test-gates.
+  check-model-generated:
+    name: check-model-generated
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
+        with:
+          just-version: "1.59.0"
+      - run: just check-model-generated
 
   # The tests of the gates themselves: the license gate with its fixtures, and the other
   # gates with good and bad input.

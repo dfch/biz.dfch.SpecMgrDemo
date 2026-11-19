@@ -79,7 +79,7 @@ The gates have `git`, `bash`, `uv` and `just` as necessary. `uv` starts the Pyth
 | `test-unit-frontend`, `test-random-frontend`, `test-e2e` | Node, pnpm (the frozen install of `frontend/`, `install_frontend` in `_lib.sh`), Vitest, fast-check, Playwright with the chromium browser in the user cache of the home, axe-core | `VITEST_VERSION`, `FAST_CHECK_VERSION`, `PLAYWRIGHT_VERSION`, `AXE_CORE_VERSION`, `VITE_VERSION` and the integrity values `*_INTEGRITY` | `frontend/pnpm-lock.yaml` (`feat-7-verification-architecture-tools`) |
 | `mutation-backend` | the Maven Wrapper of `backend/` (JDK 21) and the mutation tool of `backend/pom.xml` (PIT, the plugin pitest-maven and the plugin dependency pitest-junit5-plugin) | `PIT_VERSION`, `PIT_JUNIT5_PLUGIN_VERSION` | `backend/pom.xml` (`feat-7-verification-architecture-tools`) |
 | `mutation-frontend` | Node, pnpm (the frozen install of `frontend/`, `install_frontend` in `_lib.sh`), Stryker (@stryker-mutator/core) and the plugin that runs Vitest as the test runner (@stryker-mutator/vitest-runner) | `STRYKER_VERSION`, `STRYKER_VITEST_RUNNER_VERSION` and the integrity values `*_INTEGRITY` | `frontend/pnpm-lock.yaml` (`feat-7-verification-architecture-tools`) |
-| `architecture-backend` | the Maven Wrapper of `backend/` (JDK 21) and the architecture tools of `backend/pom.xml` (ArchUnit archunit and archunit-junit5, in the scope `test`; the jars of Spring Modulith spring-modulith-core and spring-boot stay in the `pom.xml`, but the test code does not use them any more since Phase 130 of feat-50 - Phase 160 decides) | `ARCHUNIT_VERSION` (and `SPRING_MODULITH_VERSION`, `SPRING_BOOT_VERSION`, the pins that stay) | `backend/pom.xml` (`feat-50-structurizr-model-rules`) |
+| `architecture-backend` | the Maven Wrapper of `backend/` (JDK 21) and the architecture tool of `backend/pom.xml` (ArchUnit archunit and archunit-junit5, in the scope `test`; the jars of Spring Modulith spring-modulith-core and spring-boot are removed in Phase 160 of feat-50 - the test code does not use them any more since Phase 130, and no pin stays for a dependency that is not there) | `ARCHUNIT_VERSION` | `backend/pom.xml` (`feat-50-structurizr-model-rules`) |
 | `architecture-frontend` | Node, pnpm (the frozen install of `frontend/`, `install_frontend` in `_lib.sh`), ArchUniTS (the npm package archunit), and the compiler of the pinned package typescript (the comparison reads the imports with it) | `ARCHUNIT_TS_VERSION` and the integrity values `*_INTEGRITY`, `TYPESCRIPT_VERSION` | `frontend/pnpm-lock.yaml` (`feat-7-verification-architecture-tools`) |
 | `architecture-model` | the Maven Wrapper of `backend/` (JDK 21) and the reader of the workspace structurizr-client (the scope `test`, with ArchUnit for the source of the package dependencies), Node and pnpm (the frontend side, the script `frontend/architecture/compare.mjs`), and `uv` (the mutation of the workspace of the temporary copies) | `STRUCTURIZR_VERSION`, `ARCHUNIT_VERSION`, `ARCHUNIT_TS_VERSION`, `TYPESCRIPT_VERSION` | `backend/pom.xml` and `frontend/pnpm-lock.yaml` (`feat-7-verification-architecture-tools`) |
 | `traceability`, `test-traceability-gate` | specmgr (the function `find_references`), and PyYAML that is one of its dependencies (the lock file has it). `uv` makes the environment | `SPECMGR_VERSION` | `specmgr.lock` (`feat-22-python-tools-lockfile`) |
@@ -162,6 +162,28 @@ No action is new: all are in `tools/license/allowed-actions.txt`, and the inputs
 same as in the other jobs (`just check-pins` compares them with `tools/versions.env`). The first real run of the jobs is the
 CI run of the pull request of the feature (the agent cannot run GitHub CI from the machine; `just check-workflows`,
 `just check-pins` and `just check-sudo` pass).
+
+## The CI job of `feat-50-structurizr-model-rules`
+
+The one job `check-model-generated` (Task 160.100) is in `.github/workflows/ci.yml`, and it has a line in
+`required-setup.txt`, as the jobs of feat-5, feat-6, feat-7 and feat-8. It is the gate for the generated model (like
+`check-generated` for the generated Java and TypeScript code): the JSON of the model must be the JSON that the pinned
+container makes from the DSL now (the DSL is the source, DEC b6e8808f-86b4-41a4-92f2-33d38869beed). It is a gate (not a
+report): it stops the pull request for a JSON that is not up to date, and for a DSL that does not parse (the line named).
+The make-recipe `generate-model` has no job (the house precedent `generate`/`check-generated`: the make-recipe is for the
+developer, and the gate is the check), and the test of the gate (`test-check-model-generated-gate`) runs in `test-gates`
+(the house precedent: the tests of the gates run in `test-gates`, and no own job).
+
+| Job (= recipe) | Actions (with `actions/checkout` and `extractions/setup-just`) | `fetch-depth: 0` | Timeout | The cause |
+|---|---|---|---|---|
+| `check-model-generated` | None | No | 15 | Docker (the runner has the docker CLI and the daemon, as `test-integration-backend`) and the network for the first pull (the image is pulled by its digest, `STRUCTURIZR_IMAGE_DIGEST` of `tools/versions.env`: the digest names the exact content, so a moved tag gives no other content) |
+
+No action is new: all are in `tools/license/allowed-actions.txt`, and the inputs (the versions of the setup actions) are
+the same as in the other jobs (`just check-pins` compares them with `tools/versions.env`). The pin of the image is in
+`tools/versions.env` (`STRUCTURIZR_IMAGE` and `STRUCTURIZR_IMAGE_DIGEST`), and the recipe names the digest, and not the
+tag (the license of the image is Apache-2.0, the class Permitted of DEC 84c37f7d-08cb-457d-8ab3-1db37dba9bc9; the tool
+does not go to users, rule A, so it is not in the SBOM). The job is not a required check in the rulesets yet: the owner
+sets it with the steps in `branch-protection.md` in the folder of feat-5 (the section for the jobs of feat-50).
 
 ## The gate for generated code
 
