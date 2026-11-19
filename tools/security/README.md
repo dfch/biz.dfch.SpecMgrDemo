@@ -155,7 +155,7 @@ identifiers only (the condition of the OSV deviation): no report text, no adviso
 |---|---|---|
 | `osv-baseline.txt` | `<OSV identifier> <package>@<version>` (`GHSA-4mjr-xmp4-gh2g qs@6.15.1`). A new version of the package is another line | 5 lines, all Medium (CVSS 6.9 and 6.3), all of the frontend: `minimatch@10.2.6` (1) and `qs@6.15.1` (4). 0 Critical, 0 High |
 | `gitleaks-baseline.txt` | The fingerprint of gitleaks: `<file>:<rule>:<line>` (the files), `<commit>:<file>:<rule>:<line>` (the history) | No line (0 findings in the files and in the history) |
-| `zizmor-baseline.txt` | `<audit> <file> <place>` (`artipacked .github/workflows/ci.yml jobs/lint/steps/0`). The place is the path of the keys and the indexes of the YAML, so a change of the line numbers of the file does not change the line | 11 lines, all `artipacked` (Medium, confidence Low) of the checkouts of the jobs of feat-7. 0 High |
+| `zizmor-baseline.txt` | `<audit> <file> <place>` (`artipacked .github/workflows/ci.yml jobs/lint/steps/0`). The place is the path of the keys and the indexes of the YAML, so a change of the line numbers of the file does not change the line | 0 lines. The state of 2026-11-17 had 11 lines, all `artipacked` (Medium, confidence Low) of the checkouts of the jobs of feat-7; the 11 checkouts have `persist-credentials: false` since 2026-11-18 (the decision of the owner, option A), and the 11 lines are removed. 0 High |
 
 **The level gate.** After the tool, the script starts `security_threshold.py` (`security_level_gate` in `tools/gates/_security.sh`)
 with the baseline file and the report of the tool in a machine-readable form (OSV-Scanner `--format json`, gitleaks
@@ -194,12 +194,13 @@ without a change of the code (a new finding that is not in the baseline, or a fi
 is a new version of the package, or a decision of the owner for a baseline line (never for Critical or High). This is probably
 why `vuln-scan` is not a required check of the ruleset of `dev`.
 
-**The open decisions and the limits of the baseline (the owner decides).**
+**The decisions and the limits of the baseline.**
 
 - **gitleaks, `GITLEAKS_LEVEL`.** A secret on a baseline line passes. REQ-006 says that a finding that is Critical or High stops in
-  each case. gitleaks gives no severity, so the level is Unrated and the baseline is the only rule. The owner decides
-  `GITLEAKS_LEVEL` (`security_threshold.py`): with the value Critical, each secret would stop in each case. The behavior is not
-  changed here.
+  each case. gitleaks gives no severity, so the level is Unrated and the baseline is the only rule. The owner decided on 2026-11-18
+  that the level stays Unrated (the plan of feat-9, the entry of Decisions Made of this date): the constant `GITLEAKS_LEVEL` in
+  `security_threshold.py` keeps the value Unrated, and the behavior is not changed. With the value Critical, each secret would
+  stop in each case (the constant is the one place to change it).
 - **zizmor, the key of a finding.** The key is `<audit> <file> <place>`, so several findings of one audit at one place of one
   file are one line of the baseline (`security_threshold.py`, the function `findings_zizmor`: the finding with the highest
   level stands for the line).

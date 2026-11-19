@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-15T21:50:00.000+01:00'
 id: 4f98618c-4291-4d60-995f-1fd8a60b9bfd
-status: draft
+status: approved
 type: vcr
-updated: '2026-11-18T12:06:59.333+01:00'
+updated: '2026-11-19T00:21:41.763+01:00'
 version: 1.0.0
 ---
 
@@ -46,11 +46,15 @@ The integration test of the backend has the name `vcr:4f98618c-4291-4d60-995f-1f
 
 ## More Information
 
-The tests are written in feat-9-walking-skeleton (the task 400.100 of the plan), and they exist: AC-001 is the test `ServiceIT` and AC-002 is the test `StatusErrorIT` (the package `biz.dfch.specmgrdemo.app` of the backend; each starts the real service with the class `RunningService`), and each has the name that this record states. They run in `just test-integration-backend` and they pass. The status of this record is `draft`. The owner decides the status (the record is not set to another status by the work of the feature).
+The tests are written in feat-9-walking-skeleton (the task 400.100 of the plan), and they exist: AC-001 is the test `ServiceIT` and AC-002 is the test `StatusErrorIT` (the package `biz.dfch.specmgrdemo.app` of the backend; each starts the real service with the class `RunningService`), and each has the name that this record states. They run in `just test-integration-backend` and they pass. The owner accepted the evidence of this record on 2026-11-18 (the one-time permission, the statement in the chat: "VCR: one-time permission: accept evidence"), and the status is `approved`.
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 23:55:00.000+01:00 - The owner accepts the evidence; the status is `approved`
+
+The owner gave a permission for one time to accept the evidence of this record (statement of the owner on 2026-11-18, in the chat: "VCR: one-time permission: accept evidence"). The evidence is the test that carries it: AC-001 is the test `ServiceIT` and AC-002 is the test `StatusErrorIT` (the package `biz.dfch.specmgrdemo.app` of the backend; each has the name that this record states, and they run in `just test-integration-backend`; the pull request #53 of feat-9-walking-skeleton is open and its CI is green). The sentence of More Information that the status is `draft` and the owner decides is replaced by the fact: the owner accepted the evidence on 2026-11-18, and the status is `approved` (the frontmatter is changed with the status tool in the same work). The statements (the acceptance criteria) of this record are not changed.
 
 ### 2026-11-18 12:07:00.000+01:00 - The tests exist; the step 4 of AC-002 is verified strictly
 

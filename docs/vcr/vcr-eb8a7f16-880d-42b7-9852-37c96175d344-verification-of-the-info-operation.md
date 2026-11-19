@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-15T21:50:00.000+01:00'
 id: eb8a7f16-880d-42b7-9852-37c96175d344
-status: draft
+status: approved
 type: vcr
-updated: '2026-11-18T12:07:01.375+01:00'
+updated: '2026-11-19T00:21:59.018+01:00'
 version: 1.0.0
 ---
 
@@ -46,11 +46,15 @@ The end-to-end test has the name `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the u
 
 ## More Information
 
-The tests are written in feat-9-walking-skeleton (the task 400.110 of the plan), and they exist: AC-001 is the test `ServiceIT` (the package `biz.dfch.specmgrdemo.app` of the backend, it starts the real service with the class `RunningService`, and it runs in `just test-integration-backend`) and AC-002 is the end-to-end test in `frontend/e2e/service.spec.ts` (Playwright, it runs in `just test-e2e` against the real service and the built frontend). Each has the name that this record states, and they pass. The status of this record is `draft`. The owner decides the status (the record is not set to another status by the work of the feature).
+The tests are written in feat-9-walking-skeleton (the task 400.110 of the plan), and they exist: AC-001 is the test `ServiceIT` (the package `biz.dfch.specmgrdemo.app` of the backend, it starts the real service with the class `RunningService`, and it runs in `just test-integration-backend`) and AC-002 is the end-to-end test in `frontend/e2e/service.spec.ts` (Playwright, it runs in `just test-e2e` against the real service and the built frontend). Each has the name that this record states, and they pass. The owner accepted the evidence of this record on 2026-11-18 (the one-time permission, the statement in the chat: "VCR: one-time permission: accept evidence"), and the status is `approved`.
 
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-18 23:55:00.000+01:00 - The owner accepts the evidence; the status is `approved`
+
+The owner gave a permission for one time to accept the evidence of this record (statement of the owner on 2026-11-18, in the chat: "VCR: one-time permission: accept evidence"). The evidence is the test that carries it: AC-001 is the test `ServiceIT` (the package `biz.dfch.specmgrdemo.app` of the backend, in `just test-integration-backend`) and AC-002 is the end-to-end test in `frontend/e2e/service.spec.ts` (Playwright, in `just test-e2e`); each has the name that this record states (the pull request #53 of feat-9-walking-skeleton is open and its CI is green). The sentence of More Information that the status is `draft` and the owner decides is replaced by the fact: the owner accepted the evidence on 2026-11-18, and the status is `approved` (the frontmatter is changed with the status tool in the same work). The statements (the acceptance criteria) of this record are not changed.
 
 ### 2026-11-18 12:07:00.000+01:00 - The tests exist
 
