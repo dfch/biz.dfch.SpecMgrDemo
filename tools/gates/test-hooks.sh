@@ -11,24 +11,32 @@
 # push and just call runs with GITHUB_BASE_REF=work in the environment, so the base of the justfile is origin/work.
 # It never changes the real work tree.
 #
-# The seven cases of the plan:
+# The nine cases (the seven of the plan, and the two added by the post-implementation review of 2026-11-18):
 #   1. a conforming commit (feat(feat-48): test commit) passes the six gates of pre-commit and the commit-msg check,
 #      and the following push passes the six gates of pre-push and reaches the bare origin;
 #   2. a commit message that fails is stopped: the commit-msg check gives NOT CORRECT, and no commit is made;
-#   3. a document that fails the validation is stopped: the corruption is verified with a direct run of the validate
+#   3. a merge in progress is exempt from the commit-msg check (the gate skips merge commits too): a conforming empty
+#      commit on a side branch passes the hooks, the merge is created with the default (non-conforming) subject, and
+#      the commit-check gate passes with the merge in the range (the gate skips merge commits, git log --no-merges);
+#   4. a document that fails the validation is stopped: the corruption is verified with a direct run of the validate
 #      gate first (the fixture is real), and the commit stops at the second gate (validate), after the first gate
 #      (commit-check) passed; no commit is made;
-#   4. --no-verify bypasses: the commit with the corrupted document and a message that fails is made, with no hook
+#   5. --no-verify bypasses: the commit with the corrupted document and a message that fails is made, with no hook
 #      output at all;
-#   5. a second run of install-hooks changes nothing: the two snapshots of git config --list are byte-identical, and
+#   6. a second run of install-hooks changes nothing: the two snapshots of git config --list are byte-identical, and
 #      core.hooksPath is still tools/hooks;
-#   6. the environment marker SKIP_HOOKS_FOR_BULK (set and non-empty) skips the hooks: the commit with a message that
-#      fails is made, the SKIP notice appears for pre-commit and for commit-msg, and no gate output appears;
-#   7. a commit made with --no-verify is stopped by the pre-push hook: the push stops at the first gate
-#      (commit-check), and the bare origin does not receive the commits.
+#   7. the environment marker SKIP_HOOKS_FOR_BULK (set and non-empty) skips the commit hooks: the commit with a
+#      message that fails is made, the SKIP notice appears for pre-commit and for commit-msg, and no gate output
+#      appears;
+#   8. a commit made with --no-verify is stopped by the pre-push hook: the push stops at the first gate
+#      (commit-check), and the bare origin does not receive the commits;
+#   9. the environment marker SKIP_HOOKS_FOR_BULK skips the pre-push hook: with the non-conforming commits of case 8
+#      in the range, the push succeeds, the SKIP notice of pre-push appears, no gate output appears, and the bare
+#      origin advances to the local tip.
 #
-# Needs git, just, uv, Node, pnpm, tar, sed, grep and cmp, as the six gates. It takes a few minutes (each run of the
-# six gates costs about a minute).
+# Needs git, just, uv, Node, pnpm, tar, sed, grep and cmp, as the six gates. With the warm tool caches (the specmgr
+# uv lock and the Spectral pnpm lock already installed), the test takes on the order of tens of seconds. On a machine
+# without the caches it takes a few minutes, because a run of the six gates installs the tools from the lock files.
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
@@ -119,21 +127,49 @@ expect 1 "NOT CORRECT: bad message" \
     "the failing message stops the commit after the six gates of pre-commit passed" case2_commit
 check "no commit is made for the failing message" test "$(r rev-parse HEAD)" = "${before}"
 
-section "case 3: a document that fails the validation is stopped at the second gate (validate)"
+section "case 3: a merge in progress is exempt from the commit-msg check (the gate skips merge commits too)"
+r branch side
+r checkout --quiet side
+case3_side() { r commit --allow-empty -m "feat(feat-48): side commit"; }
+expect 0 "OK: feat(feat-48): side commit" \
+    "the conforming empty commit on the side branch passes the commit hooks" case3_side
+r checkout --quiet work
+# One capture, two proofs: the merge commit is created, and its subject is the default merge subject of git
+# (not conforming: proof that the commit-msg hook exempted it via MERGE_HEAD instead of the rule passing it;
+# git runs no pre-commit hook when it completes a merge commit, so the commit-msg hook is the only hook that
+# sees the merge message, and the subject prefix covers the git-version spellings of the default message).
+set +e
+output="$(r merge --no-ff side 2>&1)"
+code=$?
+set -e
+if [[ ${code} -eq 0 && "$(r log --format=%s -1)" == "Merge branch 'side'"* ]]; then
+    echo "ok   the merge is created with the default (non-conforming) subject: the commit-msg hook exempted it (MERGE_HEAD)"
+    passed=$((passed + 1))
+else
+    echo "FAIL the merge exemption: want exit code 0 and the default merge subject (got '$(r log --format=%s -1)'); got exit code ${code}"
+    echo "${output}" | tail -n 30 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+case3_gate() { j commit-check; }
+expect 0 "1 commit message(s) correct. PASS" \
+    "the commit-check gate passes with the merge in the range (the gate skips merge commits via --no-merges)" case3_gate
+
+section "case 4: a document that fails the validation is stopped at the second gate (validate)"
 doc="docs/txt/txt-eff55a59-137b-40b0-8f7b-44c349aa923a-engineering-handbook.md"
 sed -i -e 's/^version: 1\.0\.0$/version: 1.0.0\ncorruption: [unclosed,/' "${repo}/${doc}"
 check "the test corrupted the document (an unclosed flow sequence in the frontmatter)" \
     grep -q '^corruption: \[unclosed,$' "${repo}/${doc}"
-case3_validate() { j validate; }
+case4_validate() { j validate; }
 expect 1 "while parsing a flow node" \
-    "the validate gate fails on the corruption before any commit (the fixture is real)" case3_validate
+    "the validate gate fails on the corruption before any commit (the fixture is real)" case4_validate
 before="$(r rev-parse HEAD)"
-# One capture, two proofs: the first gate (commit-check) passed, and the stop is at the second gate (validate).
+# One capture, two proofs: the first gate (commit-check) passed on the conforming side commit of case 3 in the range,
+# and the stop is at the second gate (validate).
 set +e
 output="$(r commit -am "feat(feat-48): broken doc" 2>&1)"
 code=$?
 set -e
-if [[ ${code} -eq 1 && "${output}" == *"No commit in origin/work..HEAD. Nothing to check. PASS"* \
+if [[ ${code} -eq 1 && "${output}" == *"1 commit message(s) correct. PASS"* \
     && "${output}" == *"while parsing a flow node"* ]]; then
     echo "ok   the commit stops at the validate gate (the second gate; the first gate, commit-check, passed)"
     passed=$((passed + 1))
@@ -144,7 +180,7 @@ else
 fi
 check "no commit is made for the corrupted document" test "$(r rev-parse HEAD)" = "${before}"
 
-section "case 4: --no-verify bypasses the hooks (the document is still corrupted)"
+section "case 5: --no-verify bypasses the hooks (the document is still corrupted)"
 before="$(r rev-parse HEAD)"
 # One capture, three proofs: the commit is made, with a message that fails and a document that fails, and no hook
 # output at all (no gate line and no SKIP notice).
@@ -162,14 +198,14 @@ else
     failed=$((failed + 1))
 fi
 
-section "case 5: a second run of install-hooks changes nothing"
+section "case 6: a second run of install-hooks changes nothing"
 r config --list >"${work}/config-before"
 j install-hooks
 r config --list >"${work}/config-after"
 check "the two snapshots of git config --list are byte-identical" cmp -s "${work}/config-before" "${work}/config-after"
 check "core.hooksPath is still tools/hooks" test "$(r config core.hooksPath)" = "tools/hooks"
 
-section "case 6: the environment marker SKIP_HOOKS_FOR_BULK (set and non-empty) skips the hooks"
+section "case 7: the environment marker SKIP_HOOKS_FOR_BULK (set and non-empty) skips the commit hooks (pre-commit and commit-msg)"
 before="$(r rev-parse HEAD)"
 # One capture, three proofs: the commit with a message that fails is made, the SKIP notice appears for pre-commit and
 # for commit-msg, and no gate output appears (the marker skips before the gates run).
@@ -188,7 +224,7 @@ else
     failed=$((failed + 1))
 fi
 
-section "case 7: a commit made with --no-verify is stopped by the pre-push hook (the bare origin stays)"
+section "case 8: a commit made with --no-verify is stopped by the pre-push hook (the bare origin stays)"
 remote_before="$(r ls-remote origin work)"
 # One capture, three proofs: the push stops at the first gate (commit-check, on the bypassed message), the second gate
 # (validate) does not run, and the bare origin did not receive the commits.
@@ -207,10 +243,30 @@ else
     failed=$((failed + 1))
 fi
 
+section "case 9: the environment marker SKIP_HOOKS_FOR_BULK skips the pre-push hook (the bare origin advances)"
+local_tip="$(r rev-parse HEAD)"
+# One capture, three proofs: the push with the marker succeeds although the range has the non-conforming commits of
+# case 8, the SKIP notice of pre-push appears, no gate output appears (the marker skips before the gates run), and
+# the bare origin advances to the local tip.
+set +e
+output="$(cd "${repo}" && GITHUB_BASE_REF=work SKIP_HOOKS_FOR_BULK=1 git push origin work 2>&1)"
+code=$?
+set -e
+if [[ ${code} -eq 0 && "${output}" == *"[pre-push] SKIP: SKIP_HOOKS_FOR_BULK"* \
+    && "${output}" != *"commit-check.sh"* && "${output}" != *"validate-docs.sh"* \
+    && "$(r ls-remote origin work | cut -f1)" == "${local_tip}" ]]; then
+    echo "ok   the marker skips pre-push (the SKIP notice, no gate output), and the bare origin advances to the local tip"
+    passed=$((passed + 1))
+else
+    echo "FAIL the marker skips the pre-push hook: want exit code 0, the SKIP notice, no gate output and the bare origin at the local tip; got exit code ${code}"
+    echo "${output}" | tail -n 30 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+
 echo
 echo "git hooks: ${passed} ok, ${failed} failed"
 if [[ ${failed} -eq 0 ]]; then
-    log "PASS: the seven cases of the git hooks of tools/hooks/ (feat-48-pre-commit-hooks, Task 130.110)"
+    log "PASS: the nine cases of the git hooks of tools/hooks/ (feat-48-pre-commit-hooks, Task 130.110)"
 else
     log "FAIL: ${failed} case(s) of the git hooks of tools/hooks/ did not pass (feat-48-pre-commit-hooks, Task 130.110)"
     exit 1

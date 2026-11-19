@@ -4,7 +4,8 @@
 # Git hook: commit-msg. It runs after the pre-commit hook, git gives the path
 # of the message file as the first argument, and the hook stops the commit if
 # the subject line of the commit in progress does not follow Conventional
-# Commits with the feature scope (type(feat-N): subject).
+# Commits with the feature scope (type(feat-N): subject). A merge in progress
+# is exempt: the commit-check gate skips merge commits (git log --no-merges).
 #
 # It is a thin shell: it extracts the subject line (the first line of the
 # file that is not a comment and not blank; that is plumbing, not gate
@@ -16,7 +17,8 @@
 # Bypass: git commit --no-verify. The environment marker SKIP_HOOKS_FOR_BULK
 # (set and non-empty) makes this hook skip all gates and exit 0 (Task 120.110,
 # DEC cc4449cd-78fb-452a-904f-7efda89cf004, the bulk commits of the coding
-# agent only). The details are documented in the handbook (Phase 130).
+# agent only). The details are in tools/hooks/README.md and in the engineering
+# handbook (TXT eff55a59-137b-40b0-8f7b-44c349aa923a).
 
 set -euo pipefail
 
@@ -33,6 +35,13 @@ fi
 
 [[ $# -eq 1 ]] || { echo "[commit-msg] ERROR: usage: commit-msg <message-file>" >&2; exit 1; }
 message_file="$1"
+
+# A merge in progress is exempt: the commit-check gate skips merge commits (git log --no-merges), so the same rule
+# exempts them, and the hook adds no verdict of its own. --git-path is the worktree-safe form of the check (a plain
+# .git/MERGE_HEAD path breaks in a linked work tree, where .git is a file).
+if [[ -f "$(git rev-parse --git-path MERGE_HEAD)" ]]; then
+    exit 0
+fi
 
 subject=""
 while IFS= read -r line || [[ -n "${line}" ]]; do
