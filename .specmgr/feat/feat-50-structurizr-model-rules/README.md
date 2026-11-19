@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-16T22:46:31.684+01:00'
 id: feat-50-structurizr-model-rules
-status: planning
+status: review
 type: feat
-updated: '2026-11-19T10:15:02.784+01:00'
+updated: '2026-11-19T12:31:57.553+01:00'
 version: 1.0.0
 ---
 
