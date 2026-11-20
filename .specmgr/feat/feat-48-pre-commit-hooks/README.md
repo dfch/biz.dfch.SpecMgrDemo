@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-17T04:20:52.459+01:00'
 id: feat-48-pre-commit-hooks
-status: review
+status: done
 type: feat
-updated: '2026-11-19T13:09:26.000+01:00'
+updated: '2026-11-20T09:14:58.165+01:00'
 version: 1.0.0
 ---
 
