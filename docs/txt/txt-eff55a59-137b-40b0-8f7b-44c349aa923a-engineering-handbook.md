@@ -4,7 +4,7 @@ created: '2026-11-02T14:45:48.242+01:00'
 id: eff55a59-137b-40b0-8f7b-44c349aa923a
 status: draft
 type: txt
-updated: '2026-11-04T10:20:51.999+01:00'
+updated: '2026-11-19T13:09:26.000+01:00'
 version: 1.0.0
 ---
 
@@ -69,6 +69,8 @@ This handbook is the index of the development policies and standards of this rep
 
 - The asdste100 MCP gives the STE rules and words. It loads the register files as more word lists.
 - `terminology/en/` has the terminology register (technical nouns and technical verbs) and the gap log.
+- The git hooks in `tools/hooks/` run the fast gates locally, before a commit and before a push (feat-48-pre-commit-hooks). `just install-hooks` sets `core.hooksPath` to the folder (opt-in, idempotent; uninstall with `git config --unset core.hooksPath`). `pre-commit` runs the six fast gates (`commit-check`, `validate`, `lint`, `check-pins`, `check-workflows`, `check-sudo`) and stops the commit on the first failing gate. `commit-msg` checks the subject of the commit in progress with the Conventional Commits feature-scope rule (DEC a56f231b-d063-4bef-bbc8-3deb4daff76e). `pre-push` re-runs the six gates against the base (the range of the checked-out `HEAD`, the `base` of the `justfile` — not the ref that is pushed, so a branch that is not checked out, or a push from a detached `HEAD`, is not covered by the local backstop; CI remains the enforcement); it is the backstop for a commit made with the bypass.
+- The hooks are bypassed with `git commit --no-verify` or `git push --no-verify` (for a person). For the bulk commits of the coding agent, the environment marker `SKIP_HOOKS_FOR_BULK`, set and non-empty, makes the hooks skip every gate. Within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004, an agent must not use the marker for a normal commit. The details are in `tools/hooks/README.md`.
 
 ## Open Items
 
@@ -81,6 +83,14 @@ This handbook is the index of the development policies and standards of this rep
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-19 12:09:26.000Z - The range of the pre-push hook
+
+The bullet in `Tools and Data` states the range of the `pre-push` hook: it re-runs the six gates against the base of the `justfile` (the range of the checked-out `HEAD`), not against the ref that is pushed. A branch that is not checked out, or a push from a detached `HEAD`, is therefore not covered by the local backstop; CI remains the enforcement. (The review finding G1 of feat-48-pre-commit-hooks; the hook itself is unchanged.)
+
+### 2026-11-18 16:35:38.000Z - Git hooks of the fast local gates
+
+The two bullets in `Tools and Data` name the git hooks of feat-48-pre-commit-hooks: the first bullet gives the folder `tools/hooks/`, the install (`just install-hooks`, opt-in, idempotent, uninstall `git config --unset core.hooksPath`), and the three hooks (`pre-commit` with the six fast gates, `commit-msg` with the Conventional Commits feature-scope rule, and `pre-push` as the backstop that re-checks the commits against the base); the second bullet gives the opt-out (`--no-verify` for a person, and the environment marker `SKIP_HOOKS_FOR_BULK`, set and non-empty, for the bulk commits of the coding agent, within the limits of DEC cc4449cd-78fb-452a-904f-7efda89cf004: an agent must not use the marker for a normal commit).
 
 ### 2026-11-04 09:22:00.000Z - Review flow for the close of a feature
 

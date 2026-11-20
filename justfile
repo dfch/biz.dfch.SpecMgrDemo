@@ -57,6 +57,11 @@ validate:
 commit-check:
     @{{ just_executable() }} _gate commit-check.sh 130.120 "{{ base }}"
 
+# Check the subject line of the commit in progress with the same rule as the `commit-check` gate (Conventional Commits with the feature number as scope). The commit-msg hook in tools/hooks calls this recipe; the rule is in the gate script, not in the hook (feat-48-pre-commit-hooks, Task 110.110). The subject may contain any character (spaces, brackets, double quotes, command substitution), so the parameter is exported ($subject) and the line passes the double-quoted variable "$subject" to the shell, which expands it without reinterpreting its value; it is not part of the unquoted variadic of the private recipe _gate.
+commit-message-check $subject:
+    @[[ -x "tools/gates/commit-check.sh" ]] || { echo "NOT IMPLEMENTED: tools/gates/commit-check.sh does not exist. The task 130.120 of feat-5-foundation-monorepo-ci writes it." >&2; exit 1; }
+    @exec "tools/gates/commit-check.sh" --message "$subject"
+
 # Make the SBOM files (CycloneDX) for the backend and the frontend.
 sbom:
     @{{ just_executable() }} _gate sbom.sh 130.130 "{{ sbom_dir }}"
@@ -217,9 +222,17 @@ workflow-scan:
 test-security-gates:
     @{{ just_executable() }} _gate test-security-gates.sh 120.100
 
+# Test: the git hooks of tools/hooks/ with the real gates in a temporary git repository (the nine cases: the seven of the plan plus the two of the post-implementation review) (feat-48-pre-commit-hooks, Task 130.110).
+test-hooks:
+    @{{ just_executable() }} _gate test-hooks.sh 130.110
+
 # Check the install on this machine: each tool has the pinned version.
 verify-tools:
     .specmgr/feat/feat-5-foundation-monorepo-ci/bin/110.110-06-verify-tools.sh
+
+# Install the git hooks on this machine: set core.hooksPath to tools/hooks, so that git runs the hooks of the folder before a commit and before a push. The install is opt-in (CI does not call the recipe) and idempotent (a second run changes nothing). Uninstall: git config --unset core.hooksPath (feat-48-pre-commit-hooks, Task 100.100).
+install-hooks:
+    git config core.hooksPath tools/hooks
 
 # Start a gate script from tools/gates/. Stop if the script does not exist.
 [private]
