@@ -16,6 +16,10 @@
 #     the difference (ACC-004: the gate stops for a JSON that differs from the DSL);
 #   - the stale-JSON case: a change of workspace.dsl with no new generation stops the gate (the
 #     committed file is not the file that the DSL makes now);
+#   - the inspection-count case: a change of workspace.dsl that gains one deployment node (the probe
+#     node host2) with a new generation of the committed file for the changed DSL stops the gate in
+#     the count check (the count of the inspection of the fresh generation is 16, and the recorded
+#     value is 14, the message names the count);
 #   - the broken-DSL case: a DSL that does not parse stops the gate (the container validate names the
 #     line);
 #   - the pin case: a value of STRUCTURIZR_IMAGE_DIGEST that is not a sha256 digest stops the gate
@@ -23,7 +27,8 @@
 #   - the usage: no argument, and a folder that does not exist.
 #
 # Needs docker (and the network for the first pull, if the image is not local), as the gate. It takes
-# about one minute (each case starts the container three times: validate, and two runs of the export).
+# about one minute (each case starts the container three times: validate, and two runs of the export;
+# the inspection-count case starts it one more time for the regeneration of the committed file).
 
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
@@ -84,6 +89,25 @@ sed -i 's/The status API of the project: the backend/The status API of the proje
 grep -q "(stale)" "${model}/workspace.dsl" || die "the test did not change the DSL"
 expect 1 "RESULT: STOP. The JSON of the model is not up to date with the DSL." \
     "a change of workspace.dsl with no new generation stops the gate (the stale JSON)" gate_run
+
+section "the inspection-count case (the committed file carries another count of the inspection than the recorded value)"
+# The copy of the DSL gains one deployment node (the probe node host2): with the pinned container,
+# the count of the inspection of a fresh generation is 16 (the recorded value of the committed model
+# is 14, the record in model/README.md and in the Updates entry of DEC b6e8808f). The committed file
+# of the copy is regenerated with the container for the changed DSL (the gate then compares the
+# committed file with the new generation byte for byte, and the count check stops for the value 16
+# that is not the recorded value 14).
+sed -i 's#^\(            host = deploymentNode "host".*\)$#\1\n            host2 = deploymentNode "host2" "A probe node" "Linux"#' "${model}/workspace.dsl"
+grep -q 'host2 = deploymentNode' "${model}/workspace.dsl" || die "the test did not change the DSL (the probe node host2 was not added)"
+export_dir="${work}/inspection-count"
+mkdir -p "${export_dir}"
+image="$(version_of STRUCTURIZR_IMAGE)"
+digest="$(version_of STRUCTURIZR_IMAGE_DIGEST)"
+docker run --rm -v "${model}:/src:ro" -v "${export_dir}:/out" -w /src "${image%%:*}@${digest}" export -w workspace.dsl -f json -o /out \
+    || die "the export of the container failed in the test (the probe node case)"
+cp "${export_dir}/workspace.json" "${model}/workspace.json"
+expect 1 'structurizr.inspection.error with the value 16, and the recorded value is 14' \
+    "the committed file with another count of the inspection stops the gate (the message names the count)" gate_run
 
 section "the broken-DSL case (a DSL that does not parse)"
 # Replace the final closing brace of the workspace with a token that the parser does not know (the

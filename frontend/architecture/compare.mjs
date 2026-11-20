@@ -16,8 +16,9 @@
  * folder suffix, the files of the folder at each depth; a file entry, the path without the suffix),
  * and the code is the source: the TypeScript files discovered from the files of the module (the rule
  * of thumb stays the discovery - it is the source of truth for what code exists; a file without a
- * component stops the comparison). The discovery: the top-level folders of frontend/src (today:
- * test), the folders of frontend/src/generated that contain TypeScript source (today: types and
+ * component stops the comparison, and the file that an entry of code.ignore of the container names
+ * is examined not at all - it is no unit and no violation). The discovery: the top-level folders of
+ * frontend/src (today: test), the folders of frontend/src/generated that contain TypeScript source (today: types and
  * zod; the generator makes two independent artifacts, so the folders of the generated code are the
  * units and not the folder generated), and the TypeScript files that lie directly in frontend/src
  * form the unit root (today: mutation-example.ts). The name of the rule of thumb (the unit) is in
@@ -30,20 +31,26 @@
  * feat-50-structurizr-model-rules: with the pinned typescript 5.9.3, the construct import() was
  * silently ignored before the fix, and the header of the old script claimed that it stops the run -
  * the defect of the spike of Phase 100). A dynamic form is read with the same resolution as the
- * static forms: an internal specifier (./ or ../) resolves to a file of the units (the construct
- * that resolves to no file stops the script, exit code 2), and an external specifier is an import
- * to a package (the check of code.allowedExternal below). A specifier that this script does not
- * understand (a syntax error, an import=, a dynamic form with a specifier that is not a string)
- * stops the script (exit code 2).
+ * static forms: an internal specifier (./ or ../) resolves to a file of the units, with the three
+ * candidates of the resolution (the path of the specifier, the path with the suffix .ts, and the
+ * file index.ts of the folder of the path), and the construct that resolves to no file of the
+ * units stops the script (exit code 2); an external specifier is an import to a package (the
+ * check of code.allowedExternal below). A specifier that this script does not understand (a syntax
+ * error, an import=, a dynamic form with a specifier that is not a string) stops the script (exit
+ * code 2).
  *
  * The workspace file is read strictly, and the rule set is derived, through the shared module
  * workspace.mjs (the same module that the runner runner.mjs uses, so the two cannot drift apart;
  * the backend side has the shared class ModelRules, the same design).
  *
  * The assertions (the groups 3 and 4 of the canonical section, the closed set and the exceptions):
- *   - every file of the code is owned by exactly one component (the file that no component owns
- *     stops the run, and the message names the unit of the rule of thumb; the file that two
- *     components own is the ambiguous mapping, and the message names the two components);
+ *   - every file of the code is owned by exactly one component, or it matches an entry of the
+ *     code.ignore of the container (the file is examined not at all, and the count is in the PASS
+ *     line); the file that no component owns and that is not ignored stops the run, and the message
+ *     names the file and the component of the unit if the unit has one (the file is not in the
+ *     code.path of the component), or the unit if the unit has no component; the file that two
+ *     components own is the ambiguous mapping (an entry of code.ignore does not resolve it), and
+ *     the message names the two components;
  *   - every internal dependency between owned files maps to a pair of components that has a
  *     relation in the model (the message names the dependency);
  *   - the other direction: no component in the model without a file in the code, and no relation in
@@ -63,7 +70,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
-import { allowedExternalMatch, deriveFrontend, ownersOf, readWorkspace, stop } from './workspace.mjs'
+import { allowedExternalMatch, deriveFrontend, ignoredFile, ownersOf, readWorkspace, stop } from './workspace.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const frontendDir = resolve(process.argv[2] ?? join(here, '..'))
@@ -86,14 +93,18 @@ function listTsFiles(dir, base) {
   return result
 }
 
+let ignoredFiles = 0
+
 /**
  * Discover the files of the code and the units of the rule of thumb (see the header). Return the
  * map of the units (the name of the unit to the files of the unit, relative to the frontend folder).
  * The discovery stays file-based (the source of truth for what code exists); the mapping of the
  * model (the property code.path) gives the ownership, and the rule of thumb gives the name of the
- * unit in the message.
+ * unit in the message. The file that the rule of thumb rejects (a TypeScript source that lies
+ * directly in the folder generated) and that an entry of code.ignore names is examined not at all:
+ * it is no unit and no violation (the counter of the ignored files counts it).
  */
-function discoverUnits() {
+function discoverUnits(ignoreEntries) {
   if (!existsSync(srcDir) || !statSync(srcDir).isDirectory()) {
     stop(`the folder of the source of the frontend does not exist: ${srcDir}`)
   }
@@ -114,6 +125,13 @@ function discoverUnits() {
         for (const generatedEntry of readdirSync(path)) {
           const generatedPath = join(path, generatedEntry)
           if (statSync(generatedPath).isFile() && generatedEntry.endsWith('.ts') && !generatedEntry.endsWith('.d.ts')) {
+            // A TypeScript source that lies directly in the folder generated (the rule of thumb has
+            // no unit for it): an entry of code.ignore (on the container) that names the file
+            // examines it not at all (group 4 of the canonical section).
+            if (ignoredFile(ignoreEntries, toPosix(relative(frontendDir, generatedPath)))) {
+              ignoredFiles += 1
+              continue
+            }
             stop(`the file src/generated/${generatedEntry} is a TypeScript source that lies directly in the folder generated. The rule of thumb has no unit for it (the units are the folders of the generated code). Add the unit to the plan and to the model, or move the file`)
           }
           if (statSync(generatedPath).isDirectory()) {
@@ -155,7 +173,7 @@ function readImports(units) {
     // fromFile is relative to the frontend folder: the resolution is against the frontend folder,
     // and not against the working directory of the run.
     const candidate = resolve(frontendDir, dirname(fromFile), specifier)
-    for (const suffix of ['', '.ts', join('index', 'ts')]) {
+    for (const suffix of ['', '.ts', '/index.ts']) {
       const path = candidate + suffix
       if (existsSync(path) && statSync(path).isFile()) {
         const target = toPosix(relative(frontendDir, path))
@@ -229,7 +247,7 @@ const derived = deriveFrontend(readWorkspace(workspacePath))
 
 // The code: the files of the module (the discovery from the files, the rule of thumb), and their
 // imports (the internal dependencies and the external imports).
-const units = discoverUnits()
+const units = discoverUnits(derived.ignore)
 const { internal, external } = readImports(units)
 const fileToUnit = new Map()
 for (const [unit, fileSet] of units) {
@@ -252,22 +270,49 @@ for (const [source, target] of internal) {
 
 // The assertions.
 let failed = false
-// Group 3 (a): the file that no component owns stops the run, and the message names the unit of
-// the rule of thumb (the condition (a) of ACC-003). The file that two components own is the
-// ambiguous mapping (the exactly one of the closed set).
+// The components that own at least one file of each unit (for the message of group 3 (a): the
+// file that no component owns names the component of the unit, if the unit has one).
+const unitComponents = new Map()
+for (const file of codeFiles) {
+  const owners = ownersByFile.get(file)
+  if (owners.length === 1) {
+    const unit = fileToUnit.get(file)
+    if (!unitComponents.has(unit)) {
+      unitComponents.set(unit, new Set())
+    }
+    unitComponents.get(unit).add(owners[0])
+  }
+}
+// Group 3 (a): the file that no component owns and that no entry of code.ignore matches stops the
+// run (the condition (a) of ACC-003). The file that matches an entry of code.ignore (on the
+// container, the shared module) is examined not at all (group 4 of the canonical section): it is
+// no violation, and the count is in the PASS line. The message names the file and the component of
+// the unit if the unit has one (the file is not in the code.path of the component), or the unit if
+// the unit has no component. The file that two components own is the ambiguous mapping (the
+// exactly one of the closed set): an entry of code.ignore does not resolve the ambiguity.
 const noComponent = new Set()
 for (const file of codeFiles) {
   const owners = ownersByFile.get(file)
-  if (owners.length === 0) {
-    noComponent.add(fileToUnit.get(file))
-  } else if (owners.length > 1) {
+  if (owners.length > 1) {
     console.error(`FAIL the file ${file} of the frontend has two components in the model: ${owners.join(' and ')} (the workspace ${workspacePath})`)
     failed = true
+  } else if (owners.length === 0) {
+    if (ignoredFile(derived.ignore, file)) {
+      ignoredFiles += 1
+      continue
+    }
+    failed = true
+    const unit = fileToUnit.get(file)
+    const components = unitComponents.get(unit)
+    if (components !== undefined) {
+      console.error(`FAIL the file ${file} is not in the code.path of the component ${[...components].sort().join(' and ')} (the unit ${unit}, the workspace ${workspacePath})`)
+    } else {
+      noComponent.add(unit)
+    }
   }
 }
 for (const unit of [...noComponent].sort()) {
   console.error(`FAIL the unit ${unit} of the frontend has no component in the model (the workspace ${workspacePath})`)
-  failed = true
 }
 // Group 3 (b): the internal dependency between mapped components that is not in the model stops
 // the run, and the message names the dependency (the condition (b) of ACC-003).
@@ -315,6 +360,7 @@ console.log(`ok   the files of the frontend are in the model: ${codeFiles.length
 console.log(`ok   the dependencies of the files of the frontend are in the model: ${[...codeDependencies].sort().join(', ') || '(no dependency between the mapped components)'}`)
 console.log(`ok   the imports to the external packages are in code.allowedExternal of the model`)
 console.log(`ok   the model (the container frontend) has no component or no relation without the code`)
+const ignoredNote = ignoredFiles > 0 ? `, ${ignoredFiles} file(s) in code.ignore` : ''
 console.log(
-  `PASS the workspace ${workspacePath} matches the code of the frontend (${derived.components.size} mapped component(s), ${codeDependencies.size} dependency(ies) between the mapped components)`,
+  `PASS the workspace ${workspacePath} matches the code of the frontend (${derived.components.size} mapped component(s), ${codeDependencies.size} dependency(ies) between the mapped components${ignoredNote})`,
 )

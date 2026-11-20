@@ -169,7 +169,7 @@ architecture-backend:
 architecture-frontend:
     @{{ just_executable() }} _gate architecture-frontend.sh 140.110 frontend
 
-# Test: the test that compares the Structurizr workspace with the packages and the dependencies of the code (the mapping code.* of the elements, not the name; the rule set in model/README.md): the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package or a unit without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-50-structurizr-model-rules, Task 130.130; feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
+# Test: the test that compares the Structurizr workspace with the packages and the dependencies of the code (the mapping code.* of the elements, not the name; the rule set in model/README.md): the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package or a unit without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison), and the cases for the entry code.ignore of the container (a file directly in src/generated without a unit: without an entry the rule of thumb stops, with an entry that names it the comparison is green and the PASS line names the ignored count) (feat-50-structurizr-model-rules, Task 130.130; feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
     @{{ just_executable() }} _gate architecture-model.sh 130.130 backend frontend
 
@@ -177,7 +177,7 @@ architecture-model:
 generate-model:
     @{{ just_executable() }} _gate generate-model.sh 110.110 model
 
-# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), and it stops if the result differs from model/workspace.json (the committed file) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), it stops if the result differs from model/workspace.json (the committed file), and it stops if the committed file carries another value for the top-level property structurizr.inspection.error than the recorded value 14 (the count of the inspection, the stable consequence of the limit of the pinned exporter for the deployment content; the record is in model/README.md and in the Updates entry of the DEC) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
 check-model-generated:
     @{{ just_executable() }} _gate check-model-generated.sh 110.120 model
 

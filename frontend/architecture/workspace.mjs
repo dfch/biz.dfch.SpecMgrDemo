@@ -65,7 +65,9 @@ export function readWorkspace(workspacePath) {
   }
   for (const key of Object.keys(workspace)) {
     if (!knownTopLevelKeys.has(key)) {
-      stop(`the workspace has the top-level key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
+      stop(
+        `the workspace has the top-level key ${key}, which the comparison does not understand. Add the key to the conventions (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4) and to the strict reader`,
+      )
     }
   }
   // The top-level `properties` (the exporter writes the base64 text of the source DSL under the key
@@ -138,7 +140,9 @@ export function readWorkspace(workspacePath) {
   function checkKeys(element, knownKeys, where) {
     for (const key of Object.keys(element)) {
       if (!knownKeys.has(key)) {
-        stop(`${where} has the key ${key}, which the comparison does not understand. Add the key to the plan and to the script`)
+        stop(
+          `${where} has the key ${key}, which the comparison does not understand. Add the key to the conventions (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4) and to the strict reader`,
+        )
       }
     }
     if (Object.hasOwn(element, 'properties')) {
@@ -195,9 +199,11 @@ export function readWorkspace(workspacePath) {
 /**
  * Derive the rule set the model gives for the container frontend (the canonical section of
  * model/README.md): the mapped components (the components that have code.language typescript and
- * code.path, with their entries of code.path and their entries of code.allowedExternal), and the
+ * code.path, with their entries of code.path and their entries of code.allowedExternal), the
  * relations between them (the relationships of the model whose both sides are mapped components of
- * the container). An element without a mapping is not compared with the code (the first limit of the
+ * the container), and the entries of code.ignore of the container (the list form, container level,
+ * as the backend reading: the code locations that no element maps and that the check does not
+ * examine). An element without a mapping is not compared with the code (the first limit of the
  * closed world, DEC e85e9685).
  */
 export function deriveFrontend(workspace) {
@@ -249,7 +255,8 @@ export function deriveFrontend(workspace) {
       relations.add(`${source} -> ${destination}`)
     }
   }
-  return { components, relations }
+  const containerProperties = container.properties ?? {}
+  return { components, relations, ignore: parseList(containerProperties['code.ignore']) }
 }
 
 /**
@@ -333,4 +340,15 @@ export function ownersOf(derived, file) {
  */
 export function allowedExternalMatch(entries, packageName) {
   return entries.some((entry) => packageName === entry || packageName.startsWith(`${entry}/`))
+}
+
+/**
+ * The form of the DEC (the property code.ignore on the container, the TypeScript side): the file
+ * matches an entry if the entry is the file itself, or if the entry is the path of a folder with the
+ * folder suffix (the files of the folder at each depth). The same semantics as the entries of
+ * code.path. The file that an entry names is examined not at all (group 4 of the canonical section:
+ * the code location that no element maps and that the check does not examine).
+ */
+export function ignoredFile(ignoreEntries, filePath) {
+  return ignoreEntries.some((entry) => (entry.endsWith('/**') ? filePath.startsWith(`${entry.slice(0, -3)}/`) : filePath === entry))
 }

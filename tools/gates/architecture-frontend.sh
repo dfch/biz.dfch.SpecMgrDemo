@@ -19,34 +19,40 @@
 # apart), derives the rule set of the container frontend, and builds the checks of ArchUniTS
 # programmatically: one check per derived rule. The derived rules (the groups 1 and 2 of the
 # canonical section): the forbidden dependencies (every ordered pair of distinct mapped components
-# that has no relation in the model; today: the 10 pairs of the four units types, zod, test and
-# root, except the two modelled relations test -> zod and test -> root) and the cycle rule (no
-# dependency cycle among the mapped components, the construct haveNoCycles of ArchUniTS). The
-# pattern of a component is a pattern of the type RegExp of the entries of code.path (the form of
-# the spike of Phase 100: a folder entry with the folder suffix matches the files of the folder at
-# each depth, and a file entry matches the file; the text glob of the form (a|b) is not supported).
-# A violation names the imports (the source file and the target file of each dependency, as the
-# rules.mjs of feat-7). A rule whose pattern has no file is not green (the option allowEmptyTests
-# of the check is false by default, and the check gives the violation No files found matching
-# pattern(s)): a unit that disappears stops the run. The run is green (exit code 0) on the
-# committed code, and the report of the run names the derived rule count.
+# that has no relation in the model) and the cycle rule (no dependency cycle among the mapped
+# components, the construct haveNoCycles of ArchUniTS). The pattern of a component is a pattern of
+# the type RegExp of the entries of code.path (the form of the spike of Phase 100: a folder entry
+# with the folder suffix matches the files of the folder at each depth, and a file entry matches
+# the file; the text glob of the form (a|b) is not supported). A violation names the imports (the
+# source file and the target file of each dependency, as the rules.mjs of feat-7). A rule whose
+# pattern has no file is not green (the option allowEmptyTests of the check is false by default,
+# and the check gives the violation No files found matching pattern(s)): a unit that disappears
+# stops the run. The run is green (exit code 0) on the committed code, and the recipe asserts the
+# report line of the run against the counts of the model: the number of the forbidden pairs, and
+# the number of the rules (the pairs plus the cycle rule). The counts are derived from the model
+# at run time with the shared module workspace.mjs (the house pattern of the recipe
+# architecture-backend.sh), and not hard-coded in the recipe: the counts follow the model, and the
+# model may grow with a feature like feat-9-walking-skeleton (Task 120.110 of the plan of feat-50-
+# structurizr-model-rules).
 #
 # Part 2, the case that is not successful of the forbidden dependencies (ACC-006, the broken form
 # of the house pattern): the script frontend/architecture/runner.broken.mjs (a separate script
 # that the committed run of part 1 does not start) derives the same way: it reads the workspace
 # through the shared module workspace.mjs, takes the relations of the model between the mapped
-# components of the container frontend (today: the two relations test -> zod and test -> root),
-# and builds for each of them the check of ArchUniTS that FORBIDS it (the component test must not
-# depend on the component zod, and the component test must not depend on the component root). The
-# code has the direction of each modelled relation (the test files import the generated Zod
-# schemas and the file of the unit root), so each check is violated deterministically, and
-# ArchUniTS names the violating imports in the report (the source file and the target file of
-# each dependency: the four imports of the relation test -> zod, and the one import of the
-# relation test -> root). The run of the script gives exit code 1 (the violations are printed),
-# and the script also gives exit code 1 if a modelled relation has no violation in the code (the
-# case that is not successful that passes silently would hide a change of the code, the form of
-# the old script rules.broken.mjs of feat-7). The recipe asserts the exit code and the named
-# imports, and gives exit code 0.
+# components of the container frontend, and builds for each of them the check of ArchUniTS that
+# FORBIDS it. The code has the direction of each modelled relation (the other direction of the
+# closed world of the comparison compare.mjs: a relation of the model without the dependency of
+# the code stops the run), so each check is violated deterministically, and ArchUniTS names the
+# violating imports in the report (the source file and the target file of each dependency). The
+# run of the script gives exit code 1 (the violations are printed), and the script also gives
+# exit code 1 if a modelled relation has no violation in the code (the case that is not successful
+# that passes silently would hide a change of the code, the form of the old broken script of
+# feat-7). The recipe asserts the exit code, and for each relation of the model (the names
+# of the relations are facts of the model, derived at run time with the shared module
+# workspace.mjs, and not hard-coded in the recipe) it asserts the violated rule with at least one
+# named import. The recipe does not pin the per-relation count of the violations (the counts are
+# code-dependent facts that change with the code; the house pattern of the recipe
+# architecture-backend.sh). The recipe gives exit code 0.
 #
 # Part 3, the case that is not successful of the cycle rule (ACC-006, the broken form of the
 # house pattern): the committed code has no cycle of the mapped units (the cycle rule of part 1
@@ -98,19 +104,38 @@ if [[ ${run_code} -ne 0 ]]; then
     printf '%s\n' "${run_output}" | tail -n 40 | sed -e 's/^/     | /'
     failed=$((failed + 1))
 else
-    # The report of the run names the derived rule count (the 10 forbidden pairs of the model
-    # today, and the cycle rule).
-    if [[ "${run_output}" == *"the model gives 10 forbidden pair(s) and 1 cycle rule for the container frontend (11 rule(s))"* ]]; then
-        echo "ok   the report names the derived rule count (10 forbidden pair(s) and the cycle rule)"
-        passed=$((passed + 1))
-        printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^/     | /'
-    else
-        echo "FAIL the run has not the report of the derived rule count (the 10 forbidden pair(s) of the model today):"
-        printf '%s\n' "${run_output}" | grep -E "the model gives|FAIL" | head -n 5 | sed -e 's/^/     | /'
+    # The counts the model gives (the house pattern of the recipe architecture-backend.sh: derived
+    # from the model at run time with the shared module workspace.mjs, and not hard-coded in the
+    # recipe): the number of the forbidden pairs, and the number of the rules (the pairs plus the
+    # cycle rule), the same way the runner reads the model.
+    set +e
+    counts="$(node --input-type=module -e "
+import { deriveFrontend, forbiddenPairs, readWorkspace } from './architecture/workspace.mjs';
+const derived = deriveFrontend(readWorkspace(process.argv[1]));
+const pairs = forbiddenPairs(derived).length;
+console.log(pairs + ' ' + (pairs + 1));
+" "${frontend_dir}/../model/workspace.json" 2>&1)"
+    counts_code=$?
+    set -e
+    if [[ ${counts_code} -ne 0 || -z "${counts}" ]]; then
+        echo "FAIL the derivation of the counts from the model stopped (the shared module workspace.mjs):"
+        printf '%s\n' "${counts}" | tail -n 5 | sed -e 's/^/     | /'
         failed=$((failed + 1))
+    else
+        expected_pairs="${counts%% *}"
+        expected_rules="${counts##* }"
+        if [[ "${run_output}" == *"the model gives ${expected_pairs} forbidden pair(s) and 1 cycle rule for the container frontend (${expected_rules} rule(s))"* ]]; then
+            echo "ok   the report names the derived rule count of the model (the ${expected_pairs} forbidden pair(s), and the cycle rule)"
+            passed=$((passed + 1))
+            printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^/     | /'
+        else
+            echo "FAIL the run has not the report of the derived rule count of the model (the ${expected_pairs} forbidden pair(s), and the cycle rule):"
+            printf '%s\n' "${run_output}" | grep -E "the model gives|FAIL" | head -n 5 | sed -e 's/^/     | /'
+            failed=$((failed + 1))
+        fi
     fi
     if [[ "${run_output}" == *"PASS the rules the model gives (the container frontend) are green"* ]]; then
-        echo "ok   the run of the derived rules is green (no violation for the 10 forbidden pair(s) and the cycle rule)"
+        echo "ok   the run of the derived rules is green (no violation for the forbidden pairs and the cycle rule of the model)"
         passed=$((passed + 1))
     else
         echo "FAIL the run of the derived rules has no PASS line:"
@@ -125,20 +150,47 @@ set +e
 run_output="$(node architecture/runner.broken.mjs "$(pwd)" 2>&1)"
 run_code=$?
 set -e
-if [[ ${run_code} -eq 1 && "${run_output}" == *"the violated rule has 4 violation(s): the component test depends on the component zod"* \
-    && "${run_output}" == *"src/test/property.test.ts -> src/generated/zod/statusSchema.ts"* \
-    && "${run_output}" == *"src/test/status-schema.test.ts -> src/generated/zod/errorCodeSchema.ts"* \
-    && "${run_output}" == *"src/test/status-schema.test.ts -> src/generated/zod/problemSchema.ts"* \
-    && "${run_output}" == *"src/test/status-schema.test.ts -> src/generated/zod/statusSchema.ts"* \
-    && "${run_output}" == *"the violated rule has 1 violation(s): the component test depends on the component root"* \
-    && "${run_output}" == *"src/test/mutation-example.test.ts -> src/mutation-example.ts"* ]]; then
-    echo "ok   the run stops for the violated rules, and ArchUniTS names the violating imports"
-    passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -E "violation|src/test" | sed -e 's/^/     | /'
-else
-    echo "FAIL the run of runner.broken.mjs gives exit code ${run_code}, and the output has not the violations of the rules:"
+# The relations of the model between the mapped components of the container frontend (the same
+# derivation as the script runner.broken.mjs, the shared module workspace.mjs; the names of the
+# relations are facts of the model, and the recipe does not pin the per-relation count of the
+# violations, the code-dependent fact, the house pattern of the recipe architecture-backend.sh).
+set +e
+relations="$(node --input-type=module -e "
+import { deriveFrontend, readWorkspace } from './architecture/workspace.mjs';
+const derived = deriveFrontend(readWorkspace(process.argv[1]));
+console.log([...derived.relations].sort().join('\n'));
+" "${frontend_dir}/../model/workspace.json" 2>&1)"
+relations_code=$?
+set -e
+if [[ ${relations_code} -ne 0 || -z "${relations}" ]]; then
+    echo "FAIL the derivation of the relations from the model stopped (the shared module workspace.mjs; the case that is not successful cannot be demonstrated):"
+    printf '%s\n' "${relations}" | tail -n 5 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+elif [[ ${run_code} -ne 1 ]]; then
+    echo "FAIL the run of runner.broken.mjs gives exit code ${run_code}, and the expected code is 1 (the violated rules):"
     printf '%s\n' "${run_output}" | tail -n 10 | sed -e 's/^/     | /'
     failed=$((failed + 1))
+else
+    while IFS= read -r relation; do
+        [[ -n "${relation}" ]] || continue
+        source_component="${relation%% -> *}"
+        destination_component="${relation##* -> }"
+        # The block of the report of the relation (the lines after the line of the violated rule,
+        # to the next line that starts with ok): the named imports of the relation, without the
+        # order, and without the per-relation count.
+        block="$(printf '%s\n' "${run_output}" | awk -v marker="the component ${source_component} depends on the component ${destination_component}" \
+            'index($0, marker) > 0 { found = 1; next } found && /^ok / { exit } found { print }')"
+        import_line="$(printf '%s\n' "${block}" | grep -F ' -> ' | head -n 1)"
+        if [[ -n "${import_line}" ]]; then
+            echo "ok   the run stops for the modelled relation ${relation}, and ArchUniTS names at least one violating import"
+            passed=$((passed + 1))
+            printf '%s\n' "${block}" | head -n 3 | sed -e 's/^/     | /'
+        else
+            echo "FAIL the run of runner.broken.mjs has not the violated rule and the named import of the relation ${relation}:"
+            printf '%s\n' "${run_output}" | tail -n 10 | sed -e 's/^/     | /'
+            failed=$((failed + 1))
+        fi
+    done <<<"${relations}"
 fi
 
 echo

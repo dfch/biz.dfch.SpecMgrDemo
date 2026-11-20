@@ -16,12 +16,20 @@
 #      the tool, ACC-004).
 #   4. It stops (exit code 1) if the result differs from <model dir>/workspace.json (the committed
 #      file). The message names the difference (the diff from the committed file to the new generation).
+#   5. It stops (exit code 1) if the committed file carries another value for the top-level property
+#      structurizr.inspection.error than the recorded value 14 (the stable consequence of the limit of
+#      the pinned exporter for the deployment content: the record is in model/README.md and in the
+#      Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed). The message names the expected and
+#      the found value.
 #
 # The flow on a developer machine is: change model/workspace.dsl, `just generate-model`, `git add`,
-# `git commit`, `just check-model-generated`.
+# `git commit`, `just check-model-generated`. A change of the model or of the tool that changes the
+# count of the inspection is recorded in the same change in model/README.md and in the Updates entry
+# of DEC b6e8808f-86b4-41a4-92f2-33d38869beed (the recorded value above stays in sync with both).
 #
 # Exit codes: 0 pass, 1 the gate stops (a DSL that does not parse, a JSON that is not up to date, two
-# runs that differ, a pin that does not name an image, or docker that is missing).
+# runs that differ, a count of the inspection that is not the recorded value, a pin that does not
+# name an image, or docker that is missing).
 # Needs docker (and the network for the first pull, if the image is not local). The script changes no
 # file of the repository.
 
@@ -86,3 +94,26 @@ if ! cmp -s "${work1}/out/workspace.json" "${model_dir}/workspace.json"; then
     exit 1
 fi
 log "PASS. model/workspace.json is the JSON that the pinned container makes from model/workspace.dsl now"
+
+# --- 5. The committed file carries the recorded inspection state ----------------------------------------------
+# The recorded value of the count of the inspection (the top-level property structurizr.inspection.error
+# of the JSON): the stable consequence of the limit of the pinned exporter for the deployment content
+# (the DSL names the two containments of the node host, and the exporter does not serialize them into
+# the JSON). The record is in model/README.md and in the Updates entry of DEC
+# b6e8808f-86b4-41a4-92f2-33d38869beed. A changed count (a tool change or a model change that
+# worsens or fixes the inspection) stops the gate, and the message names the expected and the found
+# value (the form of the line is the stable two-space form that the pinned exporter writes).
+expected_inspection_error='14'
+found_inspection_error="$(sed -n -E 's/^[[:space:]]*"structurizr\.inspection\.error" : "([0-9]+)".*/\1/p' "${model_dir}/workspace.json" | head -n 1)"
+if [[ -z "${found_inspection_error}" ]]; then
+    stop "the committed file has no top-level property structurizr.inspection.error in the recorded form (the property is written by the pinned exporter; the recorded value is ${expected_inspection_error}): the record is in model/README.md and in the Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed"
+    echo "RESULT: STOP. The committed JSON has no recorded count of the inspection." >&2
+    exit 1
+fi
+if [[ "${found_inspection_error}" != "${expected_inspection_error}" ]]; then
+    stop "the committed file has the top-level property structurizr.inspection.error with the value ${found_inspection_error}, and the recorded value is ${expected_inspection_error}: the record of the count is in model/README.md and in the Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed (the limit of the pinned exporter for the deployment content)"
+    echo "     If a change of the model or of the tool changes the count, record the new count in model/README.md and in the DEC in the same change (and change the recorded value of this script)." >&2
+    echo "RESULT: STOP. The committed JSON has another count of the inspection than the recorded value." >&2
+    exit 1
+fi
+log "PASS. model/workspace.json carries the recorded inspection state (the property structurizr.inspection.error has the value ${expected_inspection_error})"

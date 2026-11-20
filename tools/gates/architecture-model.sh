@@ -70,6 +70,18 @@
 # closed set, and not the case of the reader that this part examines). The case of the empty map is on the
 # software system (the properties of the system carry no mapping).
 #
+# Part 4, the entry code.ignore of the container (the frontend side, the exception of the closed
+# world that the check does not examine, group 4 of the canonical section): in a temporary copy of
+# the repository, one scratch file lies directly in the folder src/generated (the rule of thumb
+# has no unit for it). The first sub-case runs the comparison of the copy with the workspace of
+# the copy and asserts that the run stops for the file (exit code 2, the rule-of-thumb message
+# "no unit for it") - the existing behavior without an entry. The second sub-case sets the
+# property code.ignore of the container frontend of the workspace of the copy to the one entry
+# that names the file (the mutation type "ignore" of mutate_workspace) and asserts that the run
+# is green (exit code 0, the PASS line names the ignored count) - the file is examined not at
+# all. In both sub-cases the scratch file exists in the temporary copy only, and the repository
+# is never changed.
+#
 # The script needs JDK 21 (the Maven Wrapper of the module), Node and pnpm (install_frontend for
 # the run of part 1 and for the copies of the frontend) and the network for the first run (Maven
 # Central, the npm registry). It does not change the repository (the copies are in a temporary
@@ -128,12 +140,17 @@ frontend_comparison() {
 # the names of the elements of the workspace; the helper resolves them to the ids, and a name
 # that the workspace has not stops the helper): {"type": "component", "container": <the
 # container>, "name": <the component>} removes the component and the dependency that names it,
-# and {"type": "relationship", "container": <the container>, "sourceId": <the source component>,
+# {"type": "relationship", "container": <the container>, "sourceId": <the source component>,
 # "destinationId": <the destination component>} removes the dependency between the two
 # components (the relationships of the workspace are by id; the values of sourceId and
-# destinationId are the names, as in the recipe). The four mutations are the two conditions of
-# ACC-003, for the two sides: the component model of the container backend, the component zod
-# of the container frontend, the dependency api -> model, and the dependency test -> zod.
+# destinationId are the names, as in the recipe), and {"type": "ignore", "container": <the
+# container>, "entries": <the text of the entries>} sets the property code.ignore of the
+# container (the list form of the DEC: the entries that the character comma separates; the
+# entries name the code locations that no element maps and that the check does not examine).
+# The mutations are the two conditions of ACC-003, for the two sides (the component model of
+# the container backend, the component zod of the container frontend, the dependency api ->
+# model, and the dependency test -> zod), and the demonstration of the entry code.ignore of
+# Part 4.
 mutate_workspace() {
     local file="$1" mutation="$2"
     uv run --no-project --quiet python - "${file}" "${mutation}" <<'PYEOF'
@@ -151,7 +168,7 @@ workspace = json.load(open(path, encoding="utf-8"))
 systems = workspace["model"]["softwareSystems"]
 kind = mutation.get("type")
 container_name = mutation.get("container")
-if kind not in ("component", "relationship") or not isinstance(container_name, str):
+if kind not in ("component", "relationship", "ignore") or not isinstance(container_name, str):
     sys.exit(f"unknown mutation {mutation_text}")
 container = next(
     (c for s in systems for c in s.get("containers", []) if c.get("name") == container_name), None
@@ -159,7 +176,14 @@ container = next(
 if container is None:
     sys.exit(f"the workspace has no container {container_name}")
 components = container.get("components", [])
-if kind == "component":
+if kind == "ignore":
+    entries = mutation.get("entries")
+    if not isinstance(entries, str):
+        sys.exit(f"unknown mutation {mutation_text}")
+    properties = container.get("properties") or {}
+    properties["code.ignore"] = entries
+    container["properties"] = properties
+elif kind == "component":
     component_name = mutation.get("name")
     if not isinstance(component_name, str):
         sys.exit(f"unknown mutation {mutation_text}")
@@ -360,6 +384,55 @@ properties_case stop component 'null' "the component has null as the value of pr
 properties_case stop component '{"specmgr-req": 5}' "the component has a number as the value of a property"
 properties_case stop component '{"specmgr-req": ["11111111-1111-4111-8111-111111111111"]}' "the component has a list as the value of a property"
 properties_case stop component '{"specmgr-req": {"a": "b"}}' "the component has a map as the value of a property"
+
+echo
+echo "== The entry code.ignore of the container (the frontend side: a file directly in src/generated that no component owns is examined not at all)"
+# The two sub-cases of the demonstration, each in a temporary copy of the repository (the
+# repository is never changed). The scratch file lies directly in the folder src/generated of
+# the copy (the rule of thumb has no unit for it): without an entry of code.ignore on the
+# container frontend of the workspace of the copy, the comparison stops for the file (exit code
+# 2, the rule-of-thumb message); with the entry that names the file, the comparison is green
+# (exit code 0, the PASS line names the ignored count).
+copy_work_tree "${work}/ignore-none"
+cat >"${work}/ignore-none/frontend/src/generated/ignored-probe.ts" <<'EOF'
+// Scratch file of the recipe architecture-model (feat-50-structurizr-model-rules, the fix pass
+// of the post-implementation review): the file lies directly in the folder src/generated (the
+// rule of thumb has no unit for it). Without an entry of code.ignore on the container frontend
+// of the workspace, the comparison stops for the file. The file exists in the temporary copy
+// only; the repository is never changed.
+export const ignoredProbe = 'probe'
+EOF
+frontend_comparison "${work}/ignore-none/frontend" "${work}/ignore-none/model/workspace.json"
+if [[ ${run_code} -eq 2 && "${run_output}" == *"no unit for it"* ]]; then
+    echo "ok   the file that lies directly in src/generated and that no entry of code.ignore names stops the run (the rule of thumb)"
+    passed=$((passed + 1))
+    printf '%s\n' "${run_output}" | head -n 2 | sed -e 's/^/     | /'
+else
+    echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the rule-of-thumb message of the file directly in src/generated:"
+    printf '%s\n' "${run_output}" | tail -n 5 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+copy_work_tree "${work}/ignore-entry"
+cat >"${work}/ignore-entry/frontend/src/generated/ignored-probe.ts" <<'EOF'
+// Scratch file of the recipe architecture-model (feat-50-structurizr-model-rules, the fix pass
+// of the post-implementation review): the file lies directly in the folder src/generated (the
+// rule of thumb has no unit for it). With an entry of code.ignore on the container frontend of
+// the workspace that names the file, the comparison examines it not at all. The file exists in
+// the temporary copy only; the repository is never changed.
+export const ignoredProbe = 'probe'
+EOF
+mutate_workspace "${work}/ignore-entry/model/workspace.json" \
+    '{"type": "ignore", "container": "frontend", "entries": "src/generated/ignored-probe.ts"}'
+frontend_comparison "${work}/ignore-entry/frontend" "${work}/ignore-entry/model/workspace.json"
+if [[ ${run_code} -eq 0 && "${run_output}" == *"PASS the workspace"* && "${run_output}" == *"1 file(s) in code.ignore"* ]]; then
+    echo "ok   the same file that an entry of code.ignore names is examined not at all (the comparison is green, the PASS line names the ignored count)"
+    passed=$((passed + 1))
+    printf '%s\n' "${run_output}" | grep -F "PASS the workspace" | head -n 1 | sed -e 's/^/     | /'
+else
+    echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the PASS line with the ignored count:"
+    printf '%s\n' "${run_output}" | tail -n 5 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
 
 echo
 echo "architecture-model: ${passed} ok, ${failed} failed"
