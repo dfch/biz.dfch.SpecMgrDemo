@@ -66,6 +66,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 work="$(mktemp -d)"
@@ -88,7 +90,7 @@ mvn_run() {
 }
 
 echo "== part 1: the run of the derived rules (the case that is successful)"
-mvn_run test -Dcodegen.skip=true -Dtest=ModelRuleRunnerTest
+mvn_run test -Dcodegen.skip=true -Dtest=ModelRuleRunnerTest "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 ]]; then
     echo "FAIL the run of the derived rules is not green (exit code ${run_code})"
     printf '%s\n' "${run_output}" | tail -n 40 | sed -e 's/^/     | /'
@@ -118,7 +120,7 @@ fi
 
 echo
 echo "== part 2: the case that is not successful of the forbidden dependencies (the class BrokenModelRule, ACC-006)"
-mvn_run test -Dcodegen.skip=true -Dtest=BrokenModelRule
+mvn_run test -Dcodegen.skip=true -Dtest=BrokenModelRule "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenModelRule"* && "${run_output}" == *"Architecture Violation"* \
     && "${run_output}" == *"biz.dfch.specmgrdemo.api.StatusApi.getStatus()"* && "${run_output}" == *"biz.dfch.specmgrdemo.model.Status"* ]]; then
     echo "ok   the run stops for the violated rule, and ArchUnit names the violating dependency"
@@ -161,9 +163,10 @@ public final class ZCycle {
   }
 }
 EOF
+backend_maven_args "${work}/cycle/backend" # the commit of the copy (the value of the build, Task 200.120)
 set +e
 run_output="$(cd "${work}/cycle/backend" && ./mvnw --batch-mode --no-transfer-progress test -Dcodegen.skip=true \
-    -Dtest=ModelRuleRunnerTest 2>&1)"
+    -Dtest=ModelRuleRunnerTest "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
 run_code=$?
 set -e
 # The cycle block of the report (the lines from "Cycle detected" to the first line of the

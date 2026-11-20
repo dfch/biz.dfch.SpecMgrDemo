@@ -18,12 +18,14 @@
  * of thumb stays the discovery - it is the source of truth for what code exists; a file without a
  * component stops the comparison, and the file that an entry of code.ignore of the container names
  * is examined not at all - it is no unit and no violation). The discovery: the top-level folders of
- * frontend/src (today: test), the folders of frontend/src/generated that contain TypeScript source (today: types and
- * zod; the generator makes two independent artifacts, so the folders of the generated code are the
- * units and not the folder generated), and the TypeScript files that lie directly in frontend/src
- * form the unit root (today: mutation-example.ts). The name of the rule of thumb (the unit) is in
- * the message that the recipe asserts. A file is owned by the component of the most specific entry
- * (the file entry that is the file itself, or the folder entry with the longest prefix).
+ * frontend/src (today: client, i18n, telemetry, ui and test), the folders of frontend/src/generated
+ * that contain TypeScript source (today: types and zod; the generator makes two independent
+ * artifacts, so the folders of the generated code are the units and not the folder generated), and
+ * the TypeScript files that lie directly in frontend/src form the unit root (today: main.tsx and
+ * mutation-example.ts). A TypeScript file is a file .ts or .tsx (a declaration file .d.ts is no
+ * source). The name of the rule of thumb (the unit) is in the message that the recipe asserts. A
+ * file is owned by the component of the most specific entry (the file entry that is the file
+ * itself, or the folder entry with the longest prefix).
  *
  * The imports of each file are read with the compiler of the pinned package typescript (the
  * devDependency of the module): the import declarations, the export-from declarations, and the
@@ -79,6 +81,12 @@ const srcDir = join(frontendDir, 'src')
 
 const toPosix = (path) => path.split(sep).join('/')
 
+/** The suffixes of a TypeScript source file (a declaration file .d.ts is no source). */
+const TS_SOURCE_SUFFIXES = ['.ts', '.tsx']
+
+/** True for a TypeScript source file: one of the source suffixes, and not a declaration file (.d.ts). */
+const isTsSource = (name) => TS_SOURCE_SUFFIXES.some((suffix) => name.endsWith(suffix)) && !name.endsWith('.d.ts')
+
 /** The TypeScript files of the folder (recursively), as paths relative to the frontend folder. */
 function listTsFiles(dir, base) {
   let result = []
@@ -86,7 +94,7 @@ function listTsFiles(dir, base) {
     const path = join(dir, entry)
     if (statSync(path).isDirectory()) {
       result = result.concat(listTsFiles(path, base))
-    } else if (entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
+    } else if (isTsSource(entry)) {
       result.push(toPosix(relative(base, path)))
     }
   }
@@ -118,13 +126,13 @@ function discoverUnits(ignoreEntries) {
 
   for (const entry of readdirSync(srcDir)) {
     const path = join(srcDir, entry)
-    if (statSync(path).isFile() && entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
+    if (statSync(path).isFile() && isTsSource(entry)) {
       addFile('root', toPosix(relative(frontendDir, path)))
     } else if (statSync(path).isDirectory()) {
       if (entry === 'generated') {
         for (const generatedEntry of readdirSync(path)) {
           const generatedPath = join(path, generatedEntry)
-          if (statSync(generatedPath).isFile() && generatedEntry.endsWith('.ts') && !generatedEntry.endsWith('.d.ts')) {
+          if (statSync(generatedPath).isFile() && isTsSource(generatedEntry)) {
             // A TypeScript source that lies directly in the folder generated (the rule of thumb has
             // no unit for it): an entry of code.ignore (on the container) that names the file
             // examines it not at all (group 4 of the canonical section).
@@ -165,7 +173,7 @@ function readImports(units) {
   }
   const absFiles = files.map((file) => resolve(frontendDir, file))
 
-  const program = ts.createProgram(absFiles, { noEmit: true, allowJs: false, skipLibCheck: true })
+  const program = ts.createProgram(absFiles, { noEmit: true, allowJs: false, skipLibCheck: true, jsx: ts.JsxEmit.ReactJSX })
   const internal = []
   const external = []
 
@@ -173,7 +181,7 @@ function readImports(units) {
     // fromFile is relative to the frontend folder: the resolution is against the frontend folder,
     // and not against the working directory of the run.
     const candidate = resolve(frontendDir, dirname(fromFile), specifier)
-    for (const suffix of ['', '.ts', '/index.ts']) {
+    for (const suffix of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
       const path = candidate + suffix
       if (existsSync(path) && statSync(path).isFile()) {
         const target = toPosix(relative(frontendDir, path))

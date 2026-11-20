@@ -2,13 +2,23 @@
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
-  "description": "The TypeScript frontend. This module has no product code. It has the Zod schemas that Kubb makes from contracts/openapi.yaml (feat-6-contracts-openapi-pipeline). Do not use a range for a version: just check-pins compares the versions with tools/versions.env. See README.md.",
+  "description": "The TypeScript frontend: the user interface of the walking skeleton (React, i18next, OpenTelemetry) and the generated types and Zod schemas that Kubb makes from contracts/openapi.yaml (feat-6-contracts-openapi-pipeline). Do not use a range for a version: just check-pins compares the versions with tools/versions.env. See README.md.",
   "type": "module",
   "scripts": {
     "generate": "node generate.mjs",
-    "compile": "tsc --noEmit --strict"
+    "compile": "tsc --noEmit --strict",
+    "dev": "vite",
+    "build": "vite build"
   },
   "dependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.223.2",
+    "@opentelemetry/resources": "2.12.1",
+    "@opentelemetry/sdk-trace-web": "2.12.1",
+    "i18next": "27.1.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "18.0.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -18,10 +28,13 @@
     "@playwright/test": "1.65.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@vitest/coverage-v8": "5.1.0",
     "archunit": "2.5.4",
     "axe-core": "4.14.0",
     "fast-check": "4.10.2",
+    "happy-dom": "21.0.4",
     "kubb": "5.15.3",
     "typescript": "5.9.3",
     "vite": "7.3.8",

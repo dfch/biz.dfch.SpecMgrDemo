@@ -20,11 +20,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ErrorCodeTest {
 
     /**
-     * The five codes of the contract, with the value of each one.
+     * The seven codes of the contract, with the value of each one.
      */
     static Stream<Arguments> codes() {
         return Stream.of(
             Arguments.of(ErrorCode.NOT_FOUND, "not_found"),
+            Arguments.of(ErrorCode.METHOD_NOT_ALLOWED, "method_not_allowed"),
+            Arguments.of(ErrorCode.NOT_ACCEPTABLE, "not_acceptable"),
             Arguments.of(ErrorCode.VALIDATION_FAILED, "validation_failed"),
             Arguments.of(ErrorCode.RATE_LIMITED, "rate_limited"),
             Arguments.of(ErrorCode.INTERNAL_ERROR, "internal_error"),
@@ -39,8 +41,8 @@ class ErrorCodeTest {
     }
 
     @Test
-    void theListHasTheFiveCodes() {
-        assertEquals(5, ErrorCode.values().length);
+    void theListHasTheSevenCodes() {
+        assertEquals(7, ErrorCode.values().length);
     }
 
     @Test

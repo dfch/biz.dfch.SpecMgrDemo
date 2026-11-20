@@ -180,8 +180,9 @@ if [[ -n "${maven_root}" ]]; then
     goal="org.cyclonedx:cyclonedx-maven-plugin:${plugin_version}:makeAggregateBom"
     log "Backend: ${pom_file} with ${mvnw_file}, cyclonedx-maven-plugin ${plugin_version}"
     rm -f "${pom_dir}/target/bom.json" # no old file can pass for the new one
+    backend_maven_args "${pom_dir}" # the property build.info.commit (the value of the build, Task 200.120)
     # G2: load the plugin (skip), then compare the jar with the checksum, then make the SBOM.
-    (cd "${pom_dir}" && ./mvnw --batch-mode --file pom.xml "-Dmaven.repo.local=${repo_local}" "${goal}" -Dcyclonedx.skip=true)
+    (cd "${pom_dir}" && ./mvnw --batch-mode --file pom.xml "-Dmaven.repo.local=${repo_local}" "${MAVEN_BUILD_ARGS[@]}" "${goal}" -Dcyclonedx.skip=true)
     [[ -f "${plugin_jar}" ]] || die "The plugin jar is not at ${plugin_jar} after Maven loaded it."
     actual_sha="$(sha256sum "${plugin_jar}" | cut -d' ' -f1)"
     [[ "${actual_sha}" == "${plugin_sha}" ]] \
@@ -189,7 +190,7 @@ if [[ -n "${maven_root}" ]]; then
     log "sha256 of the plugin jar is the value of CYCLONEDX_MAVEN_PLUGIN_SHA256"
     (
         cd "${pom_dir}"
-        ./mvnw --batch-mode --file pom.xml "-Dmaven.repo.local=${repo_local}" "${goal}" \
+        ./mvnw --batch-mode --file pom.xml "-Dmaven.repo.local=${repo_local}" "${MAVEN_BUILD_ARGS[@]}" "${goal}" \
             -DoutputFormat=json -DoutputName=bom -DschemaVersion=1.6
     )
     [[ -f "${pom_dir}/target/bom.json" ]] || die "Maven did not make ${pom_dir}/target/bom.json"

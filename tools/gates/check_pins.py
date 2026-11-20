@@ -148,13 +148,15 @@ against the file, before the plugin generates).
 
 The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; REQ-009, ACC-011; the test tools of
 feat-7-verification-architecture-tools, Phase 110, the mutation tool Stryker, Phase 120, and the architecture tool
-ArchUniTS, Phase 130; the coverage provider @vitest/coverage-v8, Phase 140): the Zod generator Kubb,
-Zod and TypeScript, the test tools Vitest, Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
+ArchUniTS, Phase 130; the coverage provider @vitest/coverage-v8, Phase 140; the packages of the user interface of
+feat-9-walking-skeleton, Phase 300: React, react-dom, the types of React, i18next, react-i18next, the four packages of
+OpenTelemetry for the browser and happy-dom): the Zod generator Kubb, Zod and TypeScript, the test tools Vitest,
+Playwright (@playwright/test), axe-core, fast-check and Vite (the pin of
 the peer that vitest and the tree of Kubb take as a dependency or a peer; without the pin, the resolution of pnpm
 brings the tree of vite 8 with the package lightningcss, MPL-2.0, not in the permitted list), and the mutation tool
 Stryker (the package @stryker-mutator/core, the stryker binary, and the plugin @stryker-mutator/vitest-runner that
 runs Vitest as the test runner; the peer of the plugin is vitest >=2.0.0). <project-root>/frontend has package.json,
-pnpm-workspace.yaml and pnpm-lock.yaml. The module has fifteen direct packages (FRONTEND_PACKAGES below), each with
+pnpm-workspace.yaml and pnpm-lock.yaml. The module has twenty-six direct packages (FRONTEND_PACKAGES below), each with
 a version key and an integrity key in tools/versions.env. The check is on if the folder has one of the three files (a
 folder with none of them is "no pnpm module"), and it fails closed. The script stops for each of these:
 
@@ -164,11 +166,12 @@ folder with none of them is "no pnpm module"), and it fails closed. The script s
     `pnpmfile.cjs`, `.yarnrc`, `.yarnrc.yml`, `yarn.lock`, `package-lock.json`, `bunfig.toml`), or one of the three files is missing;
   * pnpm-workspace.yaml is not exactly `packages: ["."]` (a key such as `overrides`, `catalog` or `registry` changes the install);
   * package.json has a key that is not in FRONTEND_PACKAGE_JSON_KEYS (this stops optionalDependencies, peerDependencies,
-    overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly Zod in the exact version of versions.env, or
-    its `devDependencies` is not exactly the other fourteen packages in the exact versions of versions.env;
+    overrides, `pnpm` and `packageManager`), its `dependencies` is not exactly the nine runtime packages (Zod, React, react-dom,
+    i18next, react-i18next and the four packages of OpenTelemetry) in the exact versions of versions.env, or its
+    `devDependencies` is not exactly the other seventeen packages in the exact versions of versions.env;
   * the lock file: the same checks as for the lock file of cdxgen (one YAML document, no key twice, `lockfileVersion` 9.x,
     only the known top-level keys, an integrity value for each package and no source other than the registry), the importer `.`
-    does not have each of the fifteen packages with `specifier` and `version` as in versions.env (the version can have a suffix in
+    does not have each of the twenty-six packages with `specifier` and `version` as in versions.env (the version can have a suffix in
     brackets for the peer dependencies), or `packages` has no entry of a package in that version with the integrity value of
     versions.env.
 
@@ -195,23 +198,29 @@ no entry in frontend/package.json and no integrity key.
 The test tools of the Maven module (feat-7-verification-architecture-tools, Phase 110, 120, 130 and 140; REQ-001,
 REQ-002, REQ-003, ACC-011): JUnit, Testcontainers (the core, the JUnit module and the PostgreSQL module), the JDBC driver, jqwik,
 the test runner maven-surefire-plugin, the mutation tool PIT (the plugin org.pitest:pitest-maven and its plugin
-dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), and the architecture tools ArchUnit (the
+dependency org.pitest:pitest-junit5-plugin, the JUnit5 support of PIT), the core plugin maven-resources-plugin
+(MAVEN_RESOURCES_PLUGIN_VERSION, feat-9-walking-skeleton, Task 200.120), and the architecture tools ArchUnit (the
 artifacts com.tngtech.archunit:archunit and com.tngtech.archunit:archunit-junit5), the reader of the workspace
 structurizr-client (com.structurizr:structurizr-client) and the coverage tool JaCoCo (the plugin
-org.jacoco:jacoco-maven-plugin, Phase 140). The jars of Spring Modulith (the artifact
-org.springframework.modulith:spring-modulith-core and the jar org.springframework.boot:spring-boot) were in the
-module for the hard-coded rule R1 of feat-7; Phase 160 of feat-50-structurizr-model-rules removes them from the
-pom.xml and the keys from tools/versions.env (the test code does not use them any more: no pin for a dependency
-that is not there). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
+org.jacoco:jacoco-maven-plugin, Phase 140). The jar spring-modulith-core and the test dependency of the jar
+spring-boot were in the module for the hard-coded rules of feat-7; Phase 160 of feat-50-structurizr-model-rules
+removes them from the pom.xml and the keys from tools/versions.env (the test code does not use them any more: no
+pin for a dependency that is not there). The pin SPRING_BOOT_VERSION (feat-9-walking-skeleton, Phase 200) is tied
+to the property `spring-boot.version` of the pom.xml and to the version of the starters
+org.springframework.boot:spring-boot-starter-web and spring-boot-starter-log4j2 (MAVEN_COMPILE_DEPENDENCIES and
+MAVEN_VERSION_PROPERTIES below; the starters are in the scope compile, and the check of the scope does not apply
+to them; the jar org.springframework.boot:spring-boot comes through the starter, and backend/pom.xml has no
+declaration of the jar). <project-root>/backend has the pom.xml with the test tools in <scope>test</scope>
 (the cyclonedx plugin keeps the test scope out of the SBOM; the plugin and the plugin dependency are in <build><plugins>
-and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES and MAVEN_TEST_PLUGINS
-below). The check is always on, and it fails closed. The script stops for each of these:
+and have no scope). tools/versions.env has the version of each tool (MAVEN_TEST_DEPENDENCIES,
+MAVEN_COMPILE_DEPENDENCIES, MAVEN_TEST_PLUGINS and MAVEN_VERSION_PROPERTIES below). The check is always on, and it
+fails closed. The script stops for each of these:
 
-  * a key of MAVEN_TEST_DEPENDENCIES or MAVEN_TEST_PLUGINS is missing in tools/versions.env, or the version is not an
-    exact version;
-  * a pom.xml has one of the test dependencies (or the plugin) with a version that is not the version of
+  * a key of MAVEN_TEST_DEPENDENCIES, MAVEN_COMPILE_DEPENDENCIES, MAVEN_TEST_PLUGINS or MAVEN_VERSION_PROPERTIES is
+    missing in tools/versions.env, or the version is not an exact version;
+  * a pom.xml has one of the test or compile dependencies (or the plugin) with a version that is not the version of
     tools/versions.env (the version can be a `${property}` of the same pom.xml), with no version, or with a version
-    that this script cannot resolve;
+    that this script cannot resolve, or has a property of MAVEN_VERSION_PROPERTIES with another value;
   * a test dependency in the direct `<dependencies>` section of a pom.xml has a `<scope>` that is not `test`, or has
     no `<scope>` at all (the default of Maven is `compile`): the test tools must stay out of the SBOM (the cyclonedx
     plugin has `includeTestScope`, the default false). A plugin dependency (for example pitest-junit5-plugin, the
@@ -266,13 +275,17 @@ TOOL_INPUTS: dict[str, dict[str, str]] = {
     "extractions/setup-just": {"just-version": "JUST_VERSION"},
 }
 # Other inputs that must have a fixed value.
-FIXED_INPUTS: dict[str, dict[str, str]] = {"actions/setup-java": {"distribution": "temurin"}}
+FIXED_INPUTS: dict[str, dict[str, str]] = {
+    "actions/setup-java": {"distribution": "temurin"}
+}
 
 USES_LINE = re.compile(r"^\s*(?:-\s+)?uses:\s*(\S+)[ \t]*(?:#(.*))?$")
 USES_VALUE = re.compile(
     r"(?P<name>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?P<path>(?:/[A-Za-z0-9_./-]+)?)@(?P<sha>[0-9a-f]{40})"
 )
-COMMENT = re.compile(r"\s*(?P<name>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+) (?P<tag>v[0-9]+(?:\.[0-9]+){0,2})\s*")
+COMMENT = re.compile(
+    r"\s*(?P<name>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+) (?P<tag>v[0-9]+(?:\.[0-9]+){0,2})\s*"
+)
 VERSION_KEY = re.compile(r"(^|[-_])version([-_]|$)", re.IGNORECASE)
 
 # The folders that the search for pom.xml and for the wrapper does not enter (see the header). The names
@@ -315,7 +328,13 @@ CDXGEN = PnpmTool(
     "cyclonedx-maven-plugin.sha256",
     "CYCLONEDX_MAVEN_PLUGIN_SHA256",
 )
-SPECTRAL = PnpmTool("Lint tool", "Spectral", "@stoplight/spectral-cli", "SPECTRAL_VERSION", "SPECTRAL_INTEGRITY")
+SPECTRAL = PnpmTool(
+    "Lint tool",
+    "Spectral",
+    "@stoplight/spectral-cli",
+    "SPECTRAL_VERSION",
+    "SPECTRAL_INTEGRITY",
+)
 # The files that tools/sbom/ may have. A settings file (.npmrc, pnpm-workspace.yaml, .pnpmfile.cjs, ...) could
 # change where pnpm gets the packages, so each other file stops the check (node_modules is the install). The file
 # cyclonedx-maven-plugin.sha256 is the second place of the pin of the jar of the SBOM plugin
@@ -383,9 +402,34 @@ MAVEN_TEST_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
     ("com.structurizr", "structurizr-client", "STRUCTURIZR_VERSION"),
 )
 MAVEN_TEST_PLUGINS: tuple[tuple[str, str, str], ...] = (
-    ("org.apache.maven.plugins", "maven-surefire-plugin", "MAVEN_SUREFIRE_PLUGIN_VERSION"),
+    (
+        "org.apache.maven.plugins",
+        "maven-surefire-plugin",
+        "MAVEN_SUREFIRE_PLUGIN_VERSION",
+    ),
+    # The core plugin of the resources (feat-9-walking-skeleton, Task 200.120): the version that the pinned Maven
+    # binds, as for the plugin surefire; no checksum (the Maven Wrapper checks the Maven binary).
+    (
+        "org.apache.maven.plugins",
+        "maven-resources-plugin",
+        "MAVEN_RESOURCES_PLUGIN_VERSION",
+    ),
     ("org.pitest", "pitest-maven", "PIT_VERSION"),
     ("org.jacoco", "jacoco-maven-plugin", "JACOCO_VERSION"),
+)
+# The dependencies of the module in the scope compile (the starters of Spring Boot, feat-9-walking-skeleton, Phase 200): the
+# version must be the one of tools/versions.env, but the scope is not `test` (the starters ship with the service, and
+# the check of the scope above does not apply). The jar org.springframework.boot:spring-boot comes through the
+# starter and has no declaration in the pom.xml, so the starters and the property below are the tie of
+# SPRING_BOOT_VERSION.
+MAVEN_COMPILE_DEPENDENCIES: tuple[tuple[str, str, str], ...] = (
+    ("org.springframework.boot", "spring-boot-starter-web", "SPRING_BOOT_VERSION"),
+    ("org.springframework.boot", "spring-boot-starter-log4j2", "SPRING_BOOT_VERSION"),
+)
+# The properties of a pom.xml that have the version of a pin, as (property, version key). A pom.xml that has the
+# property must have the value of tools/versions.env (a pom.xml without the property is no problem).
+MAVEN_VERSION_PROPERTIES: tuple[tuple[str, str], ...] = (
+    ("spring-boot.version", "SPRING_BOOT_VERSION"),
 )
 
 
@@ -400,30 +444,114 @@ class FrontendPackage(NamedTuple):
 
 # The pnpm module frontend/ (feat-6-contracts-openapi-pipeline, Task 120.110; the test tools of
 # feat-7-verification-architecture-tools, Phase 110; the mutation tool Stryker, Phase 120; the
-# architecture tool ArchUniTS, Phase 130).
+# architecture tool ArchUniTS, Phase 130; the packages of the user interface of feat-9-walking-skeleton,
+# Phase 300).
 # @kubb/core has the version of `kubb`.
 FRONTEND_PACKAGES = (
     FrontendPackage("kubb", "devDependencies", "KUBB_VERSION", "KUBB_INTEGRITY"),
-    FrontendPackage("@kubb/core", "devDependencies", "KUBB_VERSION", "KUBB_CORE_INTEGRITY"),
-    FrontendPackage("@kubb/plugin-zod", "devDependencies", "KUBB_PLUGIN_ZOD_VERSION", "KUBB_PLUGIN_ZOD_INTEGRITY"),
-    FrontendPackage("@kubb/plugin-ts", "devDependencies", "KUBB_PLUGIN_TS_VERSION", "KUBB_PLUGIN_TS_INTEGRITY"),
+    FrontendPackage(
+        "@kubb/core", "devDependencies", "KUBB_VERSION", "KUBB_CORE_INTEGRITY"
+    ),
+    FrontendPackage(
+        "@kubb/plugin-zod",
+        "devDependencies",
+        "KUBB_PLUGIN_ZOD_VERSION",
+        "KUBB_PLUGIN_ZOD_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@kubb/plugin-ts",
+        "devDependencies",
+        "KUBB_PLUGIN_TS_VERSION",
+        "KUBB_PLUGIN_TS_INTEGRITY",
+    ),
     FrontendPackage("zod", "dependencies", "ZOD_VERSION", "ZOD_INTEGRITY"),
-    FrontendPackage("typescript", "devDependencies", "TYPESCRIPT_VERSION", "TYPESCRIPT_INTEGRITY"),
+    FrontendPackage(
+        "typescript", "devDependencies", "TYPESCRIPT_VERSION", "TYPESCRIPT_INTEGRITY"
+    ),
     FrontendPackage("vitest", "devDependencies", "VITEST_VERSION", "VITEST_INTEGRITY"),
-    FrontendPackage("@playwright/test", "devDependencies", "PLAYWRIGHT_VERSION", "PLAYWRIGHT_INTEGRITY"),
-    FrontendPackage("axe-core", "devDependencies", "AXE_CORE_VERSION", "AXE_CORE_INTEGRITY"),
-    FrontendPackage("fast-check", "devDependencies", "FAST_CHECK_VERSION", "FAST_CHECK_INTEGRITY"),
+    FrontendPackage(
+        "@playwright/test",
+        "devDependencies",
+        "PLAYWRIGHT_VERSION",
+        "PLAYWRIGHT_INTEGRITY",
+    ),
+    FrontendPackage(
+        "axe-core", "devDependencies", "AXE_CORE_VERSION", "AXE_CORE_INTEGRITY"
+    ),
+    FrontendPackage(
+        "fast-check", "devDependencies", "FAST_CHECK_VERSION", "FAST_CHECK_INTEGRITY"
+    ),
     FrontendPackage("vite", "devDependencies", "VITE_VERSION", "VITE_INTEGRITY"),
-    FrontendPackage("@stryker-mutator/core", "devDependencies", "STRYKER_VERSION", "STRYKER_INTEGRITY"),
+    FrontendPackage(
+        "@stryker-mutator/core",
+        "devDependencies",
+        "STRYKER_VERSION",
+        "STRYKER_INTEGRITY",
+    ),
     FrontendPackage(
         "@stryker-mutator/vitest-runner",
         "devDependencies",
         "STRYKER_VITEST_RUNNER_VERSION",
         "STRYKER_VITEST_RUNNER_INTEGRITY",
     ),
-    FrontendPackage("archunit", "devDependencies", "ARCHUNIT_TS_VERSION", "ARCHUNIT_TS_INTEGRITY"),
     FrontendPackage(
-        "@vitest/coverage-v8", "devDependencies", "VITEST_COVERAGE_V8_VERSION", "VITEST_COVERAGE_V8_INTEGRITY"
+        "archunit", "devDependencies", "ARCHUNIT_TS_VERSION", "ARCHUNIT_TS_INTEGRITY"
+    ),
+    FrontendPackage(
+        "@vitest/coverage-v8",
+        "devDependencies",
+        "VITEST_COVERAGE_V8_VERSION",
+        "VITEST_COVERAGE_V8_INTEGRITY",
+    ),
+    FrontendPackage("react", "dependencies", "REACT_VERSION", "REACT_INTEGRITY"),
+    FrontendPackage(
+        "react-dom", "dependencies", "REACT_DOM_VERSION", "REACT_DOM_INTEGRITY"
+    ),
+    FrontendPackage(
+        "@types/react",
+        "devDependencies",
+        "TYPES_REACT_VERSION",
+        "TYPES_REACT_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@types/react-dom",
+        "devDependencies",
+        "TYPES_REACT_DOM_VERSION",
+        "TYPES_REACT_DOM_INTEGRITY",
+    ),
+    FrontendPackage("i18next", "dependencies", "I18NEXT_VERSION", "I18NEXT_INTEGRITY"),
+    FrontendPackage(
+        "react-i18next",
+        "dependencies",
+        "REACT_I18NEXT_VERSION",
+        "REACT_I18NEXT_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/api",
+        "dependencies",
+        "OPENTELEMETRY_API_VERSION",
+        "OPENTELEMETRY_API_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/sdk-trace-web",
+        "dependencies",
+        "OPENTELEMETRY_SDK_TRACE_WEB_VERSION",
+        "OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/exporter-trace-otlp-http",
+        "dependencies",
+        "OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION",
+        "OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY",
+    ),
+    FrontendPackage(
+        "@opentelemetry/resources",
+        "dependencies",
+        "OPENTELEMETRY_RESOURCES_VERSION",
+        "OPENTELEMETRY_RESOURCES_INTEGRITY",
+    ),
+    FrontendPackage(
+        "happy-dom", "devDependencies", "HAPPY_DOM_VERSION", "HAPPY_DOM_INTEGRITY"
     ),
 )
 # The keys that package.json of frontend/ may have. `scripts` does not change the install (the gates use --ignore-scripts).
@@ -539,31 +667,47 @@ def read_allowed(path: Path) -> dict[str, tuple[str, str]]:
     for number, line in enumerate(lines, start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        match = re.fullmatch(r"(\S+/\S+) (v[0-9]+(?:\.[0-9]+){0,2}) ([0-9a-f]{40})", line.strip())
+        match = re.fullmatch(
+            r"(\S+/\S+) (v[0-9]+(?:\.[0-9]+){0,2}) ([0-9a-f]{40})", line.strip()
+        )
         if not match:
-            raise GateError(f"{path}, line {number}: the form is not `<owner>/<name> <tag> <sha>`")
+            raise GateError(
+                f"{path}, line {number}: the form is not `<owner>/<name> <tag> <sha>`"
+            )
         allowed[match.group(1)] = (match.group(2), match.group(3))
     if not allowed:
         raise GateError(f"{path} has no action")
     return allowed
 
 
-def check_use(location: str, text: str, comment: str | None, allowed: dict[str, tuple[str, str]]) -> list[str]:
+def check_use(
+    location: str, text: str, comment: str | None, allowed: dict[str, tuple[str, str]]
+) -> list[str]:
     """Check one `uses:` value and its comment. Return the problems."""
     value = USES_VALUE.fullmatch(text)
     if not value:
-        return [f"{location}: `uses: {text}` is not `<owner>/<name>@<40 hexadecimal characters>`"]
+        return [
+            f"{location}: `uses: {text}` is not `<owner>/<name>@<40 hexadecimal characters>`"
+        ]
     name, sha = value.group("name"), value.group("sha")
     if value.group("path"):
-        return [f"{location}: `uses: {text}` has a path in the action. The table has the action {name} only"]
+        return [
+            f"{location}: `uses: {text}` has a path in the action. The table has the action {name} only"
+        ]
     if comment is None:
-        return [f"{location}: `uses: {text}` has no comment `# {name} <tag>` on the same line"]
+        return [
+            f"{location}: `uses: {text}` has no comment `# {name} <tag>` on the same line"
+        ]
     match = COMMENT.fullmatch(comment)
     if not match or match.group("name") != name:
-        return [f"{location}: the comment `#{comment}` must be `# {name} <tag>` (a release tag such as v7.0.1)"]
+        return [
+            f"{location}: the comment `#{comment}` must be `# {name} <tag>` (a release tag such as v7.0.1)"
+        ]
     tag = match.group("tag")
     if name not in allowed:
-        return [f"{location}: the action {name} is not in the table of allowed actions (the license table)"]
+        return [
+            f"{location}: the action {name} is not in the table of allowed actions (the license table)"
+        ]
     if allowed[name] != (tag, sha):
         return [
             f"{location}: {name} is {tag} {sha}, but the table has {allowed[name][0]} {allowed[name][1]}",
@@ -571,7 +715,9 @@ def check_use(location: str, text: str, comment: str | None, allowed: dict[str, 
     return []
 
 
-def check_inputs(location: str, name: str, with_block: Any, versions: dict[str, str]) -> list[str]:
+def check_inputs(
+    location: str, name: str, with_block: Any, versions: dict[str, str]
+) -> list[str]:
     """Check the inputs of an action step against tools/versions.env."""
     problems: list[str] = []
     inputs = with_block if isinstance(with_block, dict) else {}
@@ -582,9 +728,13 @@ def check_inputs(location: str, name: str, with_block: Any, versions: dict[str, 
             continue
         value = inputs.get(input_name)
         if value is None:
-            problems.append(f"{location}: {name} has no input `{input_name}` (it must be {versions[key]})")
+            problems.append(
+                f"{location}: {name} has no input `{input_name}` (it must be {versions[key]})"
+            )
         elif not isinstance(value, str):
-            problems.append(f"{location}: the input `{input_name}` must be a text in quotes ({value!r})")
+            problems.append(
+                f"{location}: the input `{input_name}` must be a text in quotes ({value!r})"
+            )
         elif value != versions[key]:
             problems.append(
                 f"{location}: `{input_name}` is {value}, but {key} in tools/versions.env is {versions[key]}"
@@ -594,19 +744,26 @@ def check_inputs(location: str, name: str, with_block: Any, versions: dict[str, 
             problems.append(f"{location}: `{input_name}` of {name} must be {expected}")
     for input_name in inputs:
         if VERSION_KEY.search(str(input_name)) and input_name not in tool_inputs:
-            problems.append(f"{location}: the input `{input_name}` of {name} has a version that the gate cannot check")
+            problems.append(
+                f"{location}: the input `{input_name}` of {name} has a version that the gate cannot check"
+            )
     return problems
 
 
 def check_file(
-    path: Path, workflow: dict[Any, Any], versions: dict[str, str], allowed: dict[str, tuple[str, str]]
+    path: Path,
+    workflow: dict[Any, Any],
+    versions: dict[str, str],
+    allowed: dict[str, tuple[str, str]],
 ) -> tuple[int, list[str]]:
     """Check one workflow file. Return the number of `uses:` steps and the problems."""
     problems: list[str] = []
 
     # The text check: each `uses:` line, with its comment.
     from_text: list[tuple[str, str | None, int]] = []
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
         match = USES_LINE.match(line)
         if match:
             from_text.append((match.group(1), match.group(2), number))
@@ -616,9 +773,17 @@ def check_file(
     for job_id, job in iter_jobs(path, workflow):
         for index, step in enumerate(iter_steps(path, job_id, job), start=1):
             if "uses" in step:
-                from_yaml.append((f"job '{job_id}', step {index}", str(step["uses"]), step.get("with")))
+                from_yaml.append(
+                    (
+                        f"job '{job_id}', step {index}",
+                        str(step["uses"]),
+                        step.get("with"),
+                    )
+                )
 
-    if Counter(text for text, _, _ in from_text) != Counter(uses for _, uses, _ in from_yaml):
+    if Counter(text for text, _, _ in from_text) != Counter(
+        uses for _, uses, _ in from_yaml
+    ):
         problems.append(
             f"{path}: the `uses:` entries in the text and in the YAML are not the same. "
             "Write each `uses: <owner>/<name>@<sha> # <owner>/<name> <tag>` on one line"
@@ -630,7 +795,9 @@ def check_file(
     for where, uses, with_block in from_yaml:
         value = USES_VALUE.fullmatch(uses)
         if value:
-            problems += check_inputs(f"{path}, {where}", value.group("name"), with_block, versions)
+            problems += check_inputs(
+                f"{path}, {where}", value.group("name"), with_block, versions
+            )
     return len(from_yaml), problems
 
 
@@ -639,7 +806,12 @@ def find_files(root: Path, name: str) -> list[Path]:
     found: list[Path] = []
     for folder, dirs, files in os.walk(root):
         relative = Path(folder).relative_to(root)
-        dirs[:] = sorted(d for d in dirs if d not in EXCLUDED_NAMES and (relative / d).as_posix() not in EXCLUDED_PATHS)
+        dirs[:] = sorted(
+            d
+            for d in dirs
+            if d not in EXCLUDED_NAMES
+            and (relative / d).as_posix() not in EXCLUDED_PATHS
+        )
         if name in files:
             found.append(relative / name)
     return sorted(found)
@@ -667,7 +839,11 @@ def check_maven(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
         return "", ["MAVEN_VERSION is not in tools/versions.env"]
     version = versions["MAVEN_VERSION"]
     poms = find_files(root, "pom.xml")
-    wrappers = [path for path in find_files(root, "maven-wrapper.properties") if path.parts[-3:] == WRAPPER_FILE.parts]
+    wrappers = [
+        path
+        for path in find_files(root, "maven-wrapper.properties")
+        if path.parts[-3:] == WRAPPER_FILE.parts
+    ]
     if not poms and not wrappers:
         return "no Maven project (no pom.xml and no Maven Wrapper)", []
     problems: list[str] = []
@@ -676,7 +852,9 @@ def check_maven(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
             f"Maven: {', '.join(str(p) for p in poms)} exists, but no {WRAPPER_FILE} (the Maven Wrapper). "
             f"Add the wrapper for Maven {version}: CI has no Maven setup action and must not use the Maven of the runner"
         )
-    url_pattern = re.compile(r"/apache-maven-" + re.escape(version) + r"-bin\.(zip|tar\.gz)")
+    url_pattern = re.compile(
+        r"/apache-maven-" + re.escape(version) + r"-bin\.(zip|tar\.gz)"
+    )
     for wrapper in wrappers:
         properties = read_properties(root / wrapper)
         url = properties.get("distributionUrl")
@@ -689,10 +867,18 @@ def check_maven(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
             )
         checksum = properties.get("distributionSha256Sum")
         if checksum is None:
-            problems.append(f"Maven: {wrapper} has no `distributionSha256Sum` (the sha256 of the Maven download)")
+            problems.append(
+                f"Maven: {wrapper} has no `distributionSha256Sum` (the sha256 of the Maven download)"
+            )
         elif not re.fullmatch(r"[0-9a-fA-F]{64}", checksum):
-            problems.append(f"Maven: {wrapper}: `distributionSha256Sum` is not a sha256 value ({checksum!r})")
-    note = f"Maven Wrapper: {len(wrappers)} file(s), Maven {version}" if not problems else ""
+            problems.append(
+                f"Maven: {wrapper}: `distributionSha256Sum` is not a sha256 value ({checksum!r})"
+            )
+    note = (
+        f"Maven Wrapper: {len(wrappers)} file(s), Maven {version}"
+        if not problems
+        else ""
+    )
     return note, problems
 
 
@@ -700,7 +886,9 @@ class _UniqueKeyLoader(yaml.SafeLoader):
     """A YAML loader that stops for a key that is there two times (the standard loader keeps the last one)."""
 
 
-def _construct_unique_mapping(loader: _UniqueKeyLoader, node: yaml.MappingNode, deep: bool = False) -> dict[Any, Any]:
+def _construct_unique_mapping(
+    loader: _UniqueKeyLoader, node: yaml.MappingNode, deep: bool = False
+) -> dict[Any, Any]:
     seen: set[Any] = set()
     for key_node, _ in node.value:
         key = loader.construct_object(key_node, deep=deep)
@@ -712,7 +900,9 @@ def _construct_unique_mapping(loader: _UniqueKeyLoader, node: yaml.MappingNode, 
     return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
 
 
-_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping)
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping
+)
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -729,7 +919,9 @@ def check_package_json(tool: PnpmTool, path: Path, version: str) -> list[str]:
     """Check the package.json of a pnpm tool: the one dependency in the exact version, and no other key that matters."""
     where = f"{tool.label}: {path}"
     try:
-        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+        data = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object
+        )
     except (OSError, ValueError) as error:
         return [f"{where} cannot be read as JSON: {error}"]
     if not isinstance(data, dict):
@@ -746,7 +938,9 @@ def check_package_json(tool: PnpmTool, path: Path, version: str) -> list[str]:
         problems.append(f"{where} has no `dependencies` object with {tool.package}")
     else:
         for name in sorted(set(dependencies) - {tool.package}):
-            problems.append(f"{where} has the dependency {name}. The only dependency is {tool.package}")
+            problems.append(
+                f"{where} has the dependency {name}. The only dependency is {tool.package}"
+            )
         if tool.package not in dependencies:
             problems.append(f"{where} has no dependency {tool.package}")
         elif dependencies[tool.package] != version:
@@ -769,7 +963,9 @@ def check_lock(tool: PnpmTool, path: Path, version: str, integrity: str) -> list
     """Check the pnpm-lock.yaml of a pnpm tool (see the header). Return the problems."""
     where = f"{tool.label}: {path}"
     try:
-        documents = list(yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+        documents = list(
+            yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+        )
     except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
         return [f"{where} cannot be read as YAML: {error}"]
     if len(documents) != 1:
@@ -783,7 +979,9 @@ def check_lock(tool: PnpmTool, path: Path, version: str, integrity: str) -> list
     problems: list[str] = []
     lock_version = lock.get("lockfileVersion")
     if not isinstance(lock_version, str) or not lock_version.startswith("9."):
-        problems.append(f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`")
+        problems.append(
+            f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`"
+        )
     for key in sorted(set(lock) - LOCK_KEYS, key=str):
         problems.append(
             f"{where} has the top-level key `{key}`, which the check does not know (known: {sorted(LOCK_KEYS)})"
@@ -802,26 +1000,42 @@ def check_lock(tool: PnpmTool, path: Path, version: str, integrity: str) -> list
         else:
             for key in snapshots:
                 if str(key).split("(", 1)[0] not in packages:
-                    problems.append(f"{where}: `snapshots` has {key!r}, which is not in `packages`")
+                    problems.append(
+                        f"{where}: `snapshots` has {key!r}, which is not in `packages`"
+                    )
     return problems
 
 
-def _check_importers(tool: PnpmTool, where: str, importers: Any, version: str) -> list[str]:
+def _check_importers(
+    tool: PnpmTool, where: str, importers: Any, version: str
+) -> list[str]:
     """Exactly one importer `.` with exactly one direct dependency: the tool, in the version of versions.env."""
     if not isinstance(importers, dict) or set(importers) != {"."}:
         found = sorted(importers, key=str) if isinstance(importers, dict) else importers
-        return [f"{where}: `importers` must have exactly one importer `.` (it has {found!r})"]
+        return [
+            f"{where}: `importers` must have exactly one importer `.` (it has {found!r})"
+        ]
     importer = importers["."]
     if not isinstance(importer, dict) or set(importer) != {"dependencies"}:
         found = sorted(importer, key=str) if isinstance(importer, dict) else importer
-        return [f"{where}: the importer `.` must have `dependencies` and nothing else (it has {found!r})"]
+        return [
+            f"{where}: the importer `.` must have `dependencies` and nothing else (it has {found!r})"
+        ]
     dependencies = importer["dependencies"]
     if not isinstance(dependencies, dict) or set(dependencies) != {tool.package}:
-        found = sorted(dependencies, key=str) if isinstance(dependencies, dict) else dependencies
-        return [f"{where}: the importer `.` must have exactly one dependency, {tool.package} (it has {found!r})"]
+        found = (
+            sorted(dependencies, key=str)
+            if isinstance(dependencies, dict)
+            else dependencies
+        )
+        return [
+            f"{where}: the importer `.` must have exactly one dependency, {tool.package} (it has {found!r})"
+        ]
     entry = dependencies[tool.package]
     if not isinstance(entry, dict) or set(entry) != {"specifier", "version"}:
-        return [f"{where}: the dependency {tool.package} of the importer must have `specifier` and `version`"]
+        return [
+            f"{where}: the dependency {tool.package} of the importer must have `specifier` and `version`"
+        ]
     return [
         f"{where}: the importer has {tool.package} `{field}` {entry[field]!r}, but {tool.version_key} in "
         f"tools/versions.env is {version}"
@@ -830,7 +1044,9 @@ def _check_importers(tool: PnpmTool, where: str, importers: Any, version: str) -
     ]
 
 
-def _check_packages(tool: PnpmTool, where: str, packages: dict[Any, Any], version: str, integrity: str) -> list[str]:
+def _check_packages(
+    tool: PnpmTool, where: str, packages: dict[Any, Any], version: str, integrity: str
+) -> list[str]:
     """Each package has a registry source and an integrity value. The tool has the values of versions.env."""
     problems: list[str] = []
     tool_keys = []
@@ -848,8 +1064,12 @@ def _check_packages(tool: PnpmTool, where: str, packages: dict[Any, Any], versio
             problems.append(f"{where}: the package {key} has no `resolution`")
         elif "integrity" not in resolution:
             problems.append(f"{where}: the package {key} has no integrity value")
-        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(resolution["integrity"]):
-            problems.append(f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512")
+        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(
+            resolution["integrity"]
+        ):
+            problems.append(
+                f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512"
+            )
         elif set(resolution) != {"integrity"}:
             others = sorted(set(resolution) - {"integrity"}, key=str)
             problems.append(
@@ -862,7 +1082,11 @@ def _check_packages(tool: PnpmTool, where: str, packages: dict[Any, Any], versio
             f"({tool.version_key} in tools/versions.env). It has {tool_keys}"
         )
     else:
-        resolution = packages[expected_key].get("resolution") if isinstance(packages[expected_key], dict) else None
+        resolution = (
+            packages[expected_key].get("resolution")
+            if isinstance(packages[expected_key], dict)
+            else None
+        )
         found = resolution.get("integrity") if isinstance(resolution, dict) else None
         if found != integrity:
             problems.append(
@@ -872,13 +1096,18 @@ def _check_packages(tool: PnpmTool, where: str, packages: dict[Any, Any], versio
     return problems
 
 
-def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_pnpm_tool(
+    tool: PnpmTool, tool_dir: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the pnpm project of a tool (cdxgen: feat-16-cdxgen-lockfile; Spectral: feat-6, Task 110.110).
 
     Return a message for the log and the problems.
     """
     problems: list[str] = []
-    version, integrity = versions.get(tool.version_key, ""), versions.get(tool.integrity_key, "")
+    version, integrity = (
+        versions.get(tool.version_key, ""),
+        versions.get(tool.integrity_key, ""),
+    )
     for key in (tool.version_key, tool.integrity_key):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
@@ -893,7 +1122,9 @@ def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) ->
             "but it must be a sha512 integrity value of npm"
         )
     if not tool_dir.is_dir():
-        problems.append(f"{tool.label}: the folder {tool_dir} (the lock file of {tool.name}) does not exist")
+        problems.append(
+            f"{tool.label}: the folder {tool_dir} (the lock file of {tool.name}) does not exist"
+        )
         return "", problems
     for name in sorted(path.name for path in tool_dir.iterdir()):
         if name not in PNPM_TOOL_FILES:
@@ -912,12 +1143,16 @@ def check_pnpm_tool(tool: PnpmTool, tool_dir: Path, versions: dict[str, str]) ->
     problems += check_lock(tool, lock, version, integrity)
     note = f"{tool.label}: {tool_dir}: {tool.package} {version}, package.json and lock file as in tools/versions.env"
     if tool.jar_sha_file and tool.jar_sha_key:
-        problems += check_jar_sha_file(tool.label, tool_dir / tool.jar_sha_file, tool.jar_sha_key, versions)
+        problems += check_jar_sha_file(
+            tool.label, tool_dir / tool.jar_sha_file, tool.jar_sha_key, versions
+        )
         note += f", and the sha256 of the plugin jar in {tool.jar_sha_file} as in tools/versions.env"
     return ("" if problems else note), problems
 
 
-def check_jar_sha_file(label: str, path: Path, key: str, versions: dict[str, str]) -> list[str]:
+def check_jar_sha_file(
+    label: str, path: Path, key: str, versions: dict[str, str]
+) -> list[str]:
     """The second place of the pin of the jar of a Maven plugin (ACC-011): the file has the value of <key>.
 
     The file has exactly one line, a sha256 value (64 lower case hexadecimal characters). <label> is the start of
@@ -935,28 +1170,45 @@ def check_jar_sha_file(label: str, path: Path, key: str, versions: dict[str, str
             )
         ]
     if not path.is_file():
-        return [f"{where} does not exist (it is the second place of {key}, the sha256 of the plugin jar)"]
+        return [
+            f"{where} does not exist (it is the second place of {key}, the sha256 of the plugin jar)"
+        ]
     try:
-        lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        lines = [
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
     except (OSError, UnicodeDecodeError) as error:
         return [f"cannot read {where}: {error}"]
     if len(lines) != 1 or not SHA256_VALUE.fullmatch(lines[0]):
-        return [f"{where} has one line with the sha256 value only (64 lower case hexadecimal characters)"]
+        return [
+            f"{where} has one line with the sha256 value only (64 lower case hexadecimal characters)"
+        ]
     if lines[0] != value:
-        return [f"{where} has the sha256 {lines[0]} for the plugin jar, but {key} in tools/versions.env is {value}"]
+        return [
+            f"{where} has the sha256 {lines[0]} for the plugin jar, but {key} in tools/versions.env is {value}"
+        ]
     return []
 
 
-def check_release_checksum(tool: ReleaseChecksumTool, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_release_checksum(
+    tool: ReleaseChecksumTool, tool_dir: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the pin of a release file with a vendor file of checksums (see the header). Return a message and the problems."""
     label = tool.label
     problems: list[str] = []
-    version, sha256 = versions.get(tool.version_key, ""), versions.get(tool.sha256_key, "")
+    version, sha256 = (
+        versions.get(tool.version_key, ""),
+        versions.get(tool.sha256_key, ""),
+    )
     for key in (tool.version_key, tool.sha256_key):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
     if version and not EXACT_VERSION.fullmatch(version):
-        problems.append(f"{tool.version_key} in tools/versions.env is {version!r}, but it must be an exact version")
+        problems.append(
+            f"{tool.version_key} in tools/versions.env is {version!r}, but it must be an exact version"
+        )
     if sha256 and not SHA256_VALUE.fullmatch(sha256):
         problems.append(
             f"{tool.sha256_key} in tools/versions.env is {sha256!r}, "
@@ -966,9 +1218,13 @@ def check_release_checksum(tool: ReleaseChecksumTool, tool_dir: Path, versions: 
         return "", problems
     path = tool_dir / tool.checksums_file
     if not tool_dir.is_dir():
-        return "", [f"{label}: the folder {tool_dir} (the checksums of the release of {tool.name}) does not exist"]
+        return "", [
+            f"{label}: the folder {tool_dir} (the checksums of the release of {tool.name}) does not exist"
+        ]
     if not path.is_file():
-        return "", [f"{label}: {path} does not exist (it is the checksum file of the release of {tool.name})"]
+        return "", [
+            f"{label}: {path} does not exist (it is the checksum file of the release of {tool.name})"
+        ]
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError) as error:
@@ -980,13 +1236,19 @@ def check_release_checksum(tool: ReleaseChecksumTool, tool_dir: Path, versions: 
             continue
         match = CHECKSUM_LINE.fullmatch(line)
         if not match:
-            problems.append(f"{label}: {path}, line {number}: the form is not `<sha256 value>  <file name>`")
+            problems.append(
+                f"{label}: {path}, line {number}: the form is not `<sha256 value>  <file name>`"
+            )
         elif match.group(2) == asset:
             found.append(match.group(1))
     if not found:
-        problems.append(f"{label}: {path} has no line for {asset}. {tool.version_key} in tools/versions.env is {version}")
+        problems.append(
+            f"{label}: {path} has no line for {asset}. {tool.version_key} in tools/versions.env is {version}"
+        )
     elif len(found) > 1:
-        problems.append(f"{label}: {path} has {len(found)} lines for {asset}, but it must have one")
+        problems.append(
+            f"{label}: {path} has {len(found)} lines for {asset}, but it must have one"
+        )
     elif found[0] != sha256:
         problems.append(
             f"{label}: {path} has the sha256 {found[0]} for {asset}, "
@@ -1001,7 +1263,9 @@ def check_oasdiff(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[s
     return check_release_checksum(OASDIFF, tool_dir, versions)
 
 
-def check_security_tools(tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_security_tools(
+    tool_dir: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the pins of OSV-Scanner and gitleaks (see the header). Return a message for the log and the problems."""
     notes: list[str] = []
     problems: list[str] = []
@@ -1022,7 +1286,9 @@ def _resolve_pom_value(text: str, properties: dict[str, str]) -> str | None:
     return None if "${" in text else text
 
 
-def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_generator_plugin(
+    root: Path, tool_dir: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the pin of the generator plugin (see the header). Return a message for the log and the problems.
 
     tool_dir is the folder that has the file GENERATOR_SHA_FILE, the second place of the pin of the jar
@@ -1030,7 +1296,10 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
     """
     label = "Generator plugin"
     problems: list[str] = []
-    version, sha256 = versions.get(GENERATOR_VERSION_KEY, ""), versions.get(GENERATOR_SHA256_KEY, "")
+    version, sha256 = (
+        versions.get(GENERATOR_VERSION_KEY, ""),
+        versions.get(GENERATOR_SHA256_KEY, ""),
+    )
     for key in (GENERATOR_VERSION_KEY, GENERATOR_SHA256_KEY):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
@@ -1055,7 +1324,10 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
         project = tree.getroot()
         properties_node = project.find(f"{POM_NAMESPACE}properties")
         properties = (
-            {child.tag.removeprefix(POM_NAMESPACE): (child.text or "") for child in properties_node}
+            {
+                child.tag.removeprefix(POM_NAMESPACE): (child.text or "")
+                for child in properties_node
+            }
             if properties_node is not None
             else {}
         )
@@ -1066,7 +1338,9 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
                 continue
             raw = plugin.findtext(f"{POM_NAMESPACE}version")
             if raw is None or not raw.strip():
-                problems.append(f"{label}: {pom} has the plugin {GENERATOR_ARTIFACT_ID} with no <version>")
+                problems.append(
+                    f"{label}: {pom} has the plugin {GENERATOR_ARTIFACT_ID} with no <version>"
+                )
                 continue
             found = _resolve_pom_value(raw, properties)
             if found is None:
@@ -1082,7 +1356,9 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
             else:
                 checked.append(str(pom))
     # The version and the sha256 are in the right form here, or the problems above stopped.
-    problems += check_jar_sha_file(label, tool_dir / GENERATOR_SHA_FILE, GENERATOR_SHA256_KEY, versions)
+    problems += check_jar_sha_file(
+        label, tool_dir / GENERATOR_SHA_FILE, GENERATOR_SHA256_KEY, versions
+    )
     note = (
         f"{label}: {', '.join(checked)}: {GENERATOR_ARTIFACT_ID} {version}, the version of tools/versions.env"
         if checked
@@ -1092,7 +1368,9 @@ def check_generator_plugin(root: Path, tool_dir: Path, versions: dict[str, str])
     return ("" if problems else note), problems
 
 
-def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_maven_test_pins(
+    root: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the pin of the test tools of the Maven module (see the header). Return a note and the problems.
 
     A pom.xml that has none of the test tools is no problem for this check (as for the generator plugin). A test
@@ -1103,7 +1381,19 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
     """
     label = "Maven test pins"
     problems: list[str] = []
-    for _group, _artifact, key in (*MAVEN_TEST_DEPENDENCIES, *MAVEN_TEST_PLUGINS):
+    for key in sorted(
+        {
+            *(
+                k
+                for _g, _a, k in (
+                    *MAVEN_TEST_DEPENDENCIES,
+                    *MAVEN_COMPILE_DEPENDENCIES,
+                    *MAVEN_TEST_PLUGINS,
+                )
+            ),
+            *(k for _p, k in MAVEN_VERSION_PROPERTIES),
+        }
+    ):
         if key not in versions:
             problems.append(f"{key} is not in tools/versions.env")
         elif not EXACT_VERSION.fullmatch(versions[key]):
@@ -1122,20 +1412,32 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
         project = tree.getroot()
         properties_node = project.find(f"{POM_NAMESPACE}properties")
         properties = (
-            {child.tag.removeprefix(POM_NAMESPACE): (child.text or "") for child in properties_node}
+            {
+                child.tag.removeprefix(POM_NAMESPACE): (child.text or "")
+                for child in properties_node
+            }
             if properties_node is not None
             else {}
         )
-        for group, artifact, key in MAVEN_TEST_DEPENDENCIES:
+        for group, artifact, key in (
+            *MAVEN_TEST_DEPENDENCIES,
+            *MAVEN_COMPILE_DEPENDENCIES,
+        ):
             for dependency in project.iter(f"{POM_NAMESPACE}dependency"):
                 if (
-                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
-                    or dependency.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip()
+                    != group
+                    or dependency.findtext(
+                        f"{POM_NAMESPACE}artifactId", default=""
+                    ).strip()
+                    != artifact
                 ):
                     continue
                 raw = dependency.findtext(f"{POM_NAMESPACE}version")
                 if raw is None or not raw.strip():
-                    problems.append(f"{label}: {pom} has the dependency {artifact} with no <version>")
+                    problems.append(
+                        f"{label}: {pom} has the dependency {artifact} with no <version>"
+                    )
                     continue
                 version = _resolve_pom_value(raw, properties)
                 if version is None:
@@ -1156,15 +1458,25 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
         # stops the check. A plugin dependency (for example pitest-junit5-plugin) is no test
         # dependency of the module, has no scope, and is no problem.
         dependencies_node = project.find(f"{POM_NAMESPACE}dependencies")
-        direct_dependencies = [child for child in dependencies_node] if dependencies_node is not None else []
+        direct_dependencies = (
+            [child for child in dependencies_node]
+            if dependencies_node is not None
+            else []
+        )
         for group, artifact, key in MAVEN_TEST_DEPENDENCIES:
             for dependency in direct_dependencies:
                 if (
-                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
-                    or dependency.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                    dependency.findtext(f"{POM_NAMESPACE}groupId", default="").strip()
+                    != group
+                    or dependency.findtext(
+                        f"{POM_NAMESPACE}artifactId", default=""
+                    ).strip()
+                    != artifact
                 ):
                     continue
-                scope = (dependency.findtext(f"{POM_NAMESPACE}scope", default="") or "").strip()
+                scope = (
+                    dependency.findtext(f"{POM_NAMESPACE}scope", default="") or ""
+                ).strip()
                 if scope == "test":
                     continue
                 if scope:
@@ -1181,13 +1493,17 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
         for group, artifact, key in MAVEN_TEST_PLUGINS:
             for plugin in project.iter(f"{POM_NAMESPACE}plugin"):
                 if (
-                    plugin.findtext(f"{POM_NAMESPACE}groupId", default="").strip() != group
-                    or plugin.findtext(f"{POM_NAMESPACE}artifactId", default="").strip() != artifact
+                    plugin.findtext(f"{POM_NAMESPACE}groupId", default="").strip()
+                    != group
+                    or plugin.findtext(f"{POM_NAMESPACE}artifactId", default="").strip()
+                    != artifact
                 ):
                     continue
                 raw = plugin.findtext(f"{POM_NAMESPACE}version")
                 if raw is None or not raw.strip():
-                    problems.append(f"{label}: {pom} has the plugin {artifact} with no <version>")
+                    problems.append(
+                        f"{label}: {pom} has the plugin {artifact} with no <version>"
+                    )
                     continue
                 version = _resolve_pom_value(raw, properties)
                 if version is None:
@@ -1202,6 +1518,16 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
                     )
                 else:
                     checked.append(f"{pom}: the plugin {artifact} {version}")
+        for property_name, key in MAVEN_VERSION_PROPERTIES:
+            if property_name in properties:
+                found = properties[property_name].strip()
+                if found != versions[key]:
+                    problems.append(
+                        f"{label}: {pom} has the property {property_name} {found}, "
+                        f"but {key} in tools/versions.env is {versions[key]}"
+                    )
+                else:
+                    checked.append(f"{pom}: the property {property_name} {found}")
     note = (
         f"{label}: {', '.join(checked)}, the versions of tools/versions.env"
         if checked
@@ -1210,12 +1536,17 @@ def check_maven_test_pins(root: Path, versions: dict[str, str]) -> tuple[str, li
     return ("" if problems else note), problems
 
 
-def _frontend_versions(versions: dict[str, str]) -> tuple[dict[str, tuple[str, str]], list[str]]:
+def _frontend_versions(
+    versions: dict[str, str],
+) -> tuple[dict[str, tuple[str, str]], list[str]]:
     """The version and the integrity value of each direct package of frontend/, and the problems of versions.env."""
     problems: list[str] = []
     result: dict[str, tuple[str, str]] = {}
     for package in FRONTEND_PACKAGES:
-        version, integrity = versions.get(package.version_key, ""), versions.get(package.integrity_key, "")
+        version, integrity = (
+            versions.get(package.version_key, ""),
+            versions.get(package.integrity_key, ""),
+        )
         for key in (package.version_key, package.integrity_key):
             if key not in versions:
                 problems.append(f"{key} is not in tools/versions.env")
@@ -1231,10 +1562,14 @@ def _frontend_versions(versions: dict[str, str]) -> tuple[dict[str, tuple[str, s
     return result, sorted(set(problems))
 
 
-def _check_frontend_package_json(path: Path, expected: dict[str, tuple[str, str]]) -> list[str]:
+def _check_frontend_package_json(
+    path: Path, expected: dict[str, tuple[str, str]]
+) -> list[str]:
     where = f"Frontend: {path}"
     try:
-        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+        data = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object
+        )
     except (OSError, ValueError) as error:
         return [f"{where} cannot be read as JSON: {error}"]
     if not isinstance(data, dict):
@@ -1252,7 +1587,9 @@ def _check_frontend_package_json(path: Path, expected: dict[str, tuple[str, str]
             problems.append(f"{where} has no `{section}` object")
             continue
         for name in sorted(set(found) - set(wanted)):
-            problems.append(f"{where}: `{section}` has {name}. It has only {sorted(wanted)}")
+            problems.append(
+                f"{where}: `{section}` has {name}. It has only {sorted(wanted)}"
+            )
         for name, package in sorted(wanted.items()):
             if name not in found:
                 problems.append(f"{where}: `{section}` has no {name}")
@@ -1267,18 +1604,24 @@ def _check_frontend_package_json(path: Path, expected: dict[str, tuple[str, str]
 def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> list[str]:
     where = f"Frontend: {path}"
     try:
-        documents = list(yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+        documents = list(
+            yaml.load_all(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+        )
     except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
         return [f"{where} cannot be read as YAML: {error}"]
     if len(documents) != 1:
-        return [f"{where} has {len(documents)} YAML documents, but it must have exactly one"]
+        return [
+            f"{where} has {len(documents)} YAML documents, but it must have exactly one"
+        ]
     lock = documents[0]
     if not isinstance(lock, dict):
         return [f"{where} is not a YAML mapping"]
     problems: list[str] = []
     lock_version = lock.get("lockfileVersion")
     if not isinstance(lock_version, str) or not lock_version.startswith("9."):
-        problems.append(f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`")
+        problems.append(
+            f"{where}: `lockfileVersion` is {lock_version!r}, but it must be a text that starts with `9.`"
+        )
     for key in sorted(set(lock) - LOCK_KEYS, key=str):
         problems.append(
             f"{where} has the top-level key `{key}`, which the check does not know (known: {sorted(LOCK_KEYS)})"
@@ -1286,9 +1629,16 @@ def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> li
     importers = lock.get("importers")
     if not isinstance(importers, dict) or set(importers) != {"."}:
         found = sorted(importers, key=str) if isinstance(importers, dict) else importers
-        problems.append(f"{where}: `importers` must have exactly one importer `.` (it has {found!r})")
-    elif not isinstance(importers["."], dict) or not set(importers["."]) <= {"dependencies", "devDependencies"}:
-        problems.append(f"{where}: the importer `.` must have `dependencies` and `devDependencies` and nothing else")
+        problems.append(
+            f"{where}: `importers` must have exactly one importer `.` (it has {found!r})"
+        )
+    elif not isinstance(importers["."], dict) or not set(importers["."]) <= {
+        "dependencies",
+        "devDependencies",
+    }:
+        problems.append(
+            f"{where}: the importer `.` must have `dependencies` and `devDependencies` and nothing else"
+        )
     else:
         importer = importers["."]
         for package in FRONTEND_PACKAGES:
@@ -1333,8 +1683,12 @@ def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> li
             problems.append(f"{where}: the package {key} has no `resolution`")
         elif "integrity" not in resolution:
             problems.append(f"{where}: the package {key} has no integrity value")
-        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(resolution["integrity"]):
-            problems.append(f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512")
+        elif not isinstance(resolution["integrity"], str) or not INTEGRITY.fullmatch(
+            resolution["integrity"]
+        ):
+            problems.append(
+                f"{where}: the package {key} has an integrity value that is not sha256, sha384 or sha512"
+            )
         elif set(resolution) != {"integrity"}:
             others = sorted(set(resolution) - {"integrity"}, key=str)
             problems.append(
@@ -1344,9 +1698,13 @@ def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> li
         version, integrity = expected[package.name]
         key = f"{package.name}@{version}"
         if key not in packages:
-            problems.append(f"{where}: `packages` has no {key} ({package.version_key} in tools/versions.env)")
+            problems.append(
+                f"{where}: `packages` has no {key} ({package.version_key} in tools/versions.env)"
+            )
             continue
-        resolution = packages[key].get("resolution") if isinstance(packages[key], dict) else None
+        resolution = (
+            packages[key].get("resolution") if isinstance(packages[key], dict) else None
+        )
         found = resolution.get("integrity") if isinstance(resolution, dict) else None
         if found != integrity:
             problems.append(
@@ -1359,7 +1717,9 @@ def _check_frontend_lock(path: Path, expected: dict[str, tuple[str, str]]) -> li
         else:
             for key in snapshots:
                 if str(key).split("(", 1)[0] not in packages:
-                    problems.append(f"{where}: `snapshots` has {key!r}, which is not in `packages`")
+                    problems.append(
+                        f"{where}: `snapshots` has {key!r}, which is not in `packages`"
+                    )
     return problems
 
 
@@ -1367,7 +1727,10 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
     """Check the pnpm module frontend/ (see the header). Return a message for the log and the problems."""
     folder = root / "frontend"
     if not any((folder / name).exists() for name in FRONTEND_FILES):
-        return "no pnpm module frontend/ (no package.json, no pnpm-workspace.yaml and no pnpm-lock.yaml)", []
+        return (
+            "no pnpm module frontend/ (no package.json, no pnpm-workspace.yaml and no pnpm-lock.yaml)",
+            [],
+        )
     expected, problems = _frontend_versions(versions)
     for name in sorted(path.name for path in folder.iterdir()):
         if name in FRONTEND_FORBIDDEN_FILES:
@@ -1376,13 +1739,20 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
             )
     for name in FRONTEND_FILES:
         if not (folder / name).is_file():
-            problems.append(f"Frontend: {folder / name} does not exist (the module needs {', '.join(FRONTEND_FILES)})")
+            problems.append(
+                f"Frontend: {folder / name} does not exist (the module needs {', '.join(FRONTEND_FILES)})"
+            )
     if problems:
         return "", problems
     try:
-        workspace = yaml.load((folder / "pnpm-workspace.yaml").read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+        workspace = yaml.load(
+            (folder / "pnpm-workspace.yaml").read_text(encoding="utf-8"),
+            Loader=_UniqueKeyLoader,
+        )
     except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
-        return "", [f"Frontend: {folder / 'pnpm-workspace.yaml'} cannot be read as YAML: {error}"]
+        return "", [
+            f"Frontend: {folder / 'pnpm-workspace.yaml'} cannot be read as YAML: {error}"
+        ]
     if workspace != {"packages": ["."]}:
         problems.append(
             f'Frontend: {folder / "pnpm-workspace.yaml"} is {workspace!r}, but it must be exactly `packages: ["."]` '
@@ -1393,8 +1763,8 @@ def check_frontend(root: Path, versions: dict[str, str]) -> tuple[str, list[str]
     note = (
         f"Frontend: {folder}: Kubb, Zod, TypeScript and the test tools "
         "(Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool "
-        "ArchUniTS and the coverage provider of Vitest (@vitest/coverage-v8), package.json and lock file as in "
-        "tools/versions.env"
+        "ArchUniTS, the coverage provider of Vitest (@vitest/coverage-v8) and the packages of the user interface "
+        "(React, i18next, OpenTelemetry, happy-dom), package.json and lock file as in tools/versions.env"
     )
     return ("" if problems else note), problems
 
@@ -1423,7 +1793,9 @@ def check_caniuse_lite(root: Path, versions: dict[str, str]) -> tuple[str, list[
     if not lock.is_file():
         return f"{label}: no pnpm module frontend/ (no lock file to tie)", []
     try:
-        documents = list(yaml.load_all(lock.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader))
+        documents = list(
+            yaml.load_all(lock.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+        )
     except (OSError, yaml.YAMLError, TypeError, ValueError) as error:
         return "", [f"{label}: {lock} cannot be read as YAML: {error}"]
     if len(documents) != 1 or not isinstance(documents[0], dict):
@@ -1448,7 +1820,10 @@ def check_caniuse_lite(root: Path, versions: dict[str, str]) -> tuple[str, list[
         )
     if problems:
         return "", problems
-    return f"{label}: {lock}: caniuse-lite {version}, the version of tools/versions.env", []
+    return (
+        f"{label}: {lock}: caniuse-lite {version}, the version of tools/versions.env",
+        [],
+    )
 
 
 def _normalize_name(name: str) -> str:
@@ -1475,12 +1850,17 @@ def _python_lock_entries(path: Path) -> tuple[list[tuple[int, str, str]], list[s
         else:
             joined = line
         if joined.endswith("\\"):
-            pending = (pending[0] if pending is not None else number, joined[:-1].rstrip())
+            pending = (
+                pending[0] if pending is not None else number,
+                joined[:-1].rstrip(),
+            )
             continue
         logical.append((pending[0] if pending is not None else number, joined))
         pending = None
     if pending is not None:
-        problems.append(f"Python lock: {path}, line {pending[0]}: the file ends after a backslash")
+        problems.append(
+            f"Python lock: {path}, line {pending[0]}: the file ends after a backslash"
+        )
     for number, line in logical:
         text = line.strip()
         if not text or text.startswith("#"):
@@ -1488,14 +1868,20 @@ def _python_lock_entries(path: Path) -> tuple[list[tuple[int, str, str]], list[s
         requirement, separator, hashes = text.partition(" --hash=")
         match = LOCK_REQUIREMENT.fullmatch(requirement)
         hash_values = ("--hash=" + hashes).split() if separator else []
-        if not match or not hash_values or not all(LOCK_HASH.fullmatch(value) for value in hash_values):
+        if (
+            not match
+            or not hash_values
+            or not all(LOCK_HASH.fullmatch(value) for value in hash_values)
+        ):
             problems.append(
                 f"Python lock: {path}, line {number}: {text[:90]!r} is not an exact pin `name==version` with "
                 "`--hash=sha256:<64 hexadecimal characters>` values (a package with no hash, a range, a URL, a path, "
                 "a VCS source, an editable entry and an option are not allowed)"
             )
             continue
-        entries.append((number, _normalize_name(match.group("name")), match.group("version")))
+        entries.append(
+            (number, _normalize_name(match.group("name")), match.group("version"))
+        )
     if len(problems) > MAX_LOCK_PROBLEMS:
         # One broken entry can make a problem for each of its hash lines. The first ones are enough to find the place.
         hidden = len(problems) - MAX_LOCK_PROBLEMS
@@ -1505,11 +1891,15 @@ def _python_lock_entries(path: Path) -> tuple[list[tuple[int, str, str]], list[s
     return entries, problems
 
 
-def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, list[str]]:
+def check_python_locks(
+    lock_dir: Path, versions: dict[str, str]
+) -> tuple[str, list[str]]:
     """Check the lock files of the Python tools (feat-22-python-tools-lockfile). Return a message and the problems."""
     problems: list[str] = []
     if not lock_dir.is_dir():
-        return "", [f"Python lock: the folder {lock_dir} (the lock files of the Python tools) does not exist"]
+        return "", [
+            f"Python lock: the folder {lock_dir} (the lock files of the Python tools) does not exist"
+        ]
     for name in sorted(path.name for path in lock_dir.iterdir()):
         if name not in PYTHON_LOCK_FILES:
             problems.append(
@@ -1523,7 +1913,9 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
         if not version:
             problems.append(f"{key} is not in tools/versions.env")
         elif not EXACT_VERSION.fullmatch(version):
-            problems.append(f"{key} in tools/versions.env is {version!r}, but it must be an exact version")
+            problems.append(
+                f"{key} in tools/versions.env is {version!r}, but it must be an exact version"
+            )
         if not path.is_file():
             problems.append(f"Python lock: {path} does not exist")
             continue
@@ -1532,7 +1924,9 @@ def check_python_locks(lock_dir: Path, versions: dict[str, str]) -> tuple[str, l
         total += len(entries)
         if not entries and not found:
             problems.append(f"Python lock: {path} has no package")
-        tool_versions = sorted({entry_version for _, entry, entry_version in entries if entry == package})
+        tool_versions = sorted(
+            {entry_version for _, entry, entry_version in entries if entry == package}
+        )
         if not tool_versions:
             if entries:
                 problems.append(f"Python lock: {path} has no entry of {package}")
@@ -1573,13 +1967,21 @@ def main(argv: list[str]) -> int:
         print(f"Lint tool pin: {note or str(len(lint_problems)) + ' problem(s)'}")
         problems += lint_problems
         note, breaking_problems = check_oasdiff(Path(argv[8]), versions)
-        print(f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}")
+        print(
+            f"Breaking-changes tool pin: {note or str(len(breaking_problems)) + ' problem(s)'}"
+        )
         problems += breaking_problems
         note, security_problems = check_security_tools(Path(argv[10]), versions)
-        print(f"Security tool pin: {note or str(len(security_problems)) + ' problem(s)'}")
+        print(
+            f"Security tool pin: {note or str(len(security_problems)) + ' problem(s)'}"
+        )
         problems += security_problems
-        note, generator_problems = check_generator_plugin(Path(argv[4]), Path(argv[9]), versions)
-        print(f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}")
+        note, generator_problems = check_generator_plugin(
+            Path(argv[4]), Path(argv[9]), versions
+        )
+        print(
+            f"Generator plugin pin: {note or str(len(generator_problems)) + ' problem(s)'}"
+        )
         problems += generator_problems
         note, test_pin_problems = check_maven_test_pins(Path(argv[4]), versions)
         print(f"Maven test pins: {note or str(len(test_pin_problems)) + ' problem(s)'}")

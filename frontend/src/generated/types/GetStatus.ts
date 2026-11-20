@@ -16,6 +16,24 @@ export type GetStatusStatus200 = Status;
  * @description An error, as RFC 9457 (Problem Details) describes it.
  * @type object
  */
+export type GetStatusStatus404 = Problem;
+
+/**
+ * @description An error, as RFC 9457 (Problem Details) describes it.
+ * @type object
+ */
+export type GetStatusStatus405 = Problem;
+
+/**
+ * @description An error, as RFC 9457 (Problem Details) describes it.
+ * @type object
+ */
+export type GetStatusStatus406 = Problem;
+
+/**
+ * @description An error, as RFC 9457 (Problem Details) describes it.
+ * @type object
+ */
 export type GetStatusStatus429 = Problem;
 
 /**
@@ -39,6 +57,9 @@ export type GetStatusOptions = {
 
 export type GetStatusResponses = {
   '200': GetStatusStatus200;
+  '404': GetStatusStatus404;
+  '405': GetStatusStatus405;
+  '406': GetStatusStatus406;
   '429': GetStatusStatus429;
   '500': GetStatusStatus500;
   '503': GetStatusStatus503;

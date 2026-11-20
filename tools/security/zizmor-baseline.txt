@@ -1,0 +1,14 @@
+# The baseline of zizmor (feat-9-walking-skeleton, Task 500.110, REQ-006). The state of the feature on 2026-11-18:
+# 0 findings, so this file has no line. The 11 findings of 2026-11-17 (all of the severity Medium, the confidence Low, all of
+# the audit `artipacked`: a step of `actions/checkout` in .github/workflows/ci.yml that does not set `persist-credentials: false`)
+# are fixed: the 11 checkouts of the jobs of feat-7 have the key `persist-credentials: false` (the decision of the owner of
+# 2026-11-18, the plan of feat-9, option A). 0 High.
+#
+# One line for each finding: the audit, the file, and the place in the file (the path of the keys and the indexes of the
+# YAML, so a change of the line numbers does not change the line): `<audit> <file> <place>`.
+#
+# The rules of the level gate (tools/security/README.md, tools/gates/security_threshold.py):
+#   - A finding that is not in this file stops the gate (a new finding).
+#   - A finding with the severity High stops the gate in each case. This file must have no line of this level.
+#   - A line of this file that has no finding any more is a warning: delete the line (the baseline gets smaller).
+# CODEOWNERS covers /tools/, so the owner reviews each change of this file.

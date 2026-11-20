@@ -61,12 +61,16 @@
 #     ACC-011): the version of each test dependency (JUnit, Testcontainers, the JDBC driver, jqwik, the plugin
 #     dependency pitest-junit5-plugin of the mutation tool PIT, and the architecture tools archunit and
 #     archunit-junit5 and structurizr-client) and of the plugins (the test runner maven-surefire-plugin, the
-#     mutation tool pitest-maven and the coverage tool jacoco-maven-plugin) in each pom.xml must be the version
-#     of the key of the versions file (JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION,
-#     PIT_JUNIT5_PLUGIN_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, ARCHUNIT_VERSION, STRUCTURIZR_VERSION
-#     and JACOCO_VERSION). The jars of Spring Modulith (spring-modulith-core, spring-boot) were removed in
-#     Phase 160 of feat-50-structurizr-model-rules (the test code does not use them any more; no pin for a
-#     dependency that is not there). Each test dependency in the direct
+#     core plugin maven-resources-plugin, the mutation tool pitest-maven and the coverage tool
+#     jacoco-maven-plugin) in each pom.xml must be the version of the key of the versions file (JUNIT_VERSION,
+#     TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
+#     MAVEN_SUREFIRE_PLUGIN_VERSION, MAVEN_RESOURCES_PLUGIN_VERSION, PIT_VERSION, ARCHUNIT_VERSION,
+#     STRUCTURIZR_VERSION and JACOCO_VERSION). The jars of Spring Modulith (spring-modulith-core) and the test
+#     dependency of the jar spring-boot were removed in Phase 160 of feat-50-structurizr-model-rules (the test
+#     code does not use them any more; no pin for a dependency that is not there). The key SPRING_BOOT_VERSION is
+#     the version of the starters spring-boot-starter-web and spring-boot-starter-log4j2 (the scope compile,
+#     feat-9-walking-skeleton, Phase 200) and of the property spring-boot.version of the pom. Each test
+#     dependency in the direct
 #     <dependencies> section of a pom.xml must have <scope>test</scope> (a scope that is absent is the default
 #     compile of Maven, and stops the check: the cyclonedx plugin keeps the test scope out of the SBOM; a
 #     plugin dependency has no scope and is no problem).

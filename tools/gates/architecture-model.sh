@@ -114,12 +114,14 @@ surefire_summary() {
 
 # backend_comparison <backend dir> <workspace file>: run the comparison test of the backend side
 # (the classes are compiled by the run; the generation is skipped, the generated code is
-# committed). Capture the output and the exit code (run_output, run_code).
+# committed). Capture the output and the exit code (run_output, run_code). The property
+# build.info.commit (the value of the build, Task 200.120) is the one of the directory.
 backend_comparison() {
     local dir="$1" file="$2"
+    backend_maven_args "${dir}"
     set +e
     run_output="$(cd "${dir}" && ./mvnw --batch-mode --no-transfer-progress test -Dcodegen.skip=true \
-        -Dtest=ModelComparisonTest "-Dmodel.workspace.path=${file}" 2>&1)"
+        -Dtest=ModelComparisonTest "-Dmodel.workspace.path=${file}" "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
     run_code=$?
     set -e
 }

@@ -2,9 +2,25 @@
 <!--
   The Maven module of the backend (feat-6-contracts-openapi-pipeline, Tasks 105.100 and 120.100).
 
-  This module has no product code. It has the Spring server interfaces that the plugin openapi-generator-maven-plugin
-  makes from contracts/openapi.yaml, and the libraries that this generated code needs to compile. Build with ./mvnw:
-  the Maven Wrapper (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+  This module has the Spring server interfaces that the plugin openapi-generator-maven-plugin makes from
+  contracts/openapi.yaml, and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code that
+  implements the two operations (the package biz.dfch.specmgrdemo.app, the main class, the controllers, the state
+  checker, the error handling and the OpenTelemetry filter). Build with ./mvnw: the Maven Wrapper
+  (.mvn/wrapper/maven-wrapper.properties) pins the Maven version of tools/versions.env.
+
+  The values of the build for the operation GET /info (feat-9-walking-skeleton, Task 200.120): the resource
+  src/main/resources/build-info.properties is a template with the two placeholders ${build.info.version} and
+  ${build.info.commit}. The execution default-resources of the core plugin maven-resources-plugin (the version is
+  named here, as for each other plugin) filters the template into target/classes/build-info.properties. The property
+  build.info.version is the constant of the pom (0.2.0, the version of the contract, and not a value of git). The
+  property build.info.commit has the default unknown in the pom, and each just recipe that starts Maven replaces it
+  with the value of git rev-parse HEAD of the work tree (the function backend_maven_args of tools/gates/_lib.sh; the
+  value has the suffix -dirty if the work tree has a change that is not committed). The service does not start with
+  the default unknown or with a placeholder that the filter did not replace (the class BuildInfoProvider), so a run
+  of the service or of its tests needs the property: use the recipes of the justfile, or give
+  -Dbuild.info.commit=$(git rev-parse HEAD).
+  The unit tests load the values of the build from a resource of the test classpath (a configurable resource name of
+  the class BuildInfoProvider), so the test changes the value of the build and sees the change of the response (ACC-003).
 
   The plugin has two executions (see the <build> section):
     - spring-interfaces, bound to the phase generate-sources. It writes the Java code to src/generated/java, and
@@ -20,14 +36,47 @@
    The libraries (the license of each one is in the plan of feat-6-contracts-openapi-pipeline):
       - NO bill of materials (BOM) is imported. A BOM can bring jakarta.annotation-api in again (EPL-2.0 OR GPL-2.0
         with Classpath-exception), and the owner decided on 2026-11-04 to use org.apache.tomcat:tomcat-annotations-api
-        for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact at 10.1.55, so the version of
-        the artifact is named here (10.1.61). The scope of the artifact is provided (the annotation has SOURCE
+        for jakarta.annotation.Generated. The Spring Boot BOM manages that artifact too (11.0.27), so the version of
+        the artifact is named here (11.0.29, the Jakarta Annotations 3.0 of the Tomcat 11.0.x line). The scope of the artifact is provided (the annotation has SOURCE
         retention), so it stays off the runtime class path. `./mvnw dependency:tree` must not show jakarta.annotation-api.
-     - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
-       swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
+      - The generator options annotationLibrary=none, documentationProvider=none and openApiNullable=false remove
+        swagger-annotations-jakarta and jackson-databind-nullable. The generated code does not need them.
 
-   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The module has no
-   product code, so the tests exercise the generated code (the example module). The license of each tool is in the
+    The libraries of the walking skeleton (feat-9-walking-skeleton, Phase 200; the license of each one is in the
+    license table of the plan):
+      - Spring Boot (org.springframework.boot:spring-boot-starter-web, the 4.0.x line, the version 4.0.9 with the
+        Spring Framework 7.0.10; the rework of 2026-11-17, because the Spring Framework 6.2.19 of the Spring Boot
+        3.5.x line has two findings that are Critical without a fix): the web service (the embedded Tomcat 11, the
+        Jackson 3 (the packages tools.jackson) of spring-boot-starter-jackson, spring-webmvc). NO BOM is imported, as
+        above: the version is named here. Two exclusions of the starter (the owner's decisions, the plan records them):
+        * spring-boot-starter-logging is excluded: it brings logback (EPL-2.0 OR LGPL-2.1, and the single-license
+          form of the SBOM is not in the permitted list), and the logging implementation is spring-boot-starter-log4j2
+          (the artifacts log4j-slf4j2-impl, log4j-core, log4j-jul and log4j-api, each Apache-2.0, the version
+          2.25.5 that the declaration direct names - the version without the finding of the OSV data, REQ-008).
+        The embedded Tomcat: the starter brings it at the version 11.0.27, and the declaration direct names the
+        version 11.0.29 (the last version of the 11.0.x line, with no finding in the OSV data, REQ-008).
+        * jakarta.annotation:jakarta.annotation-api is excluded: the owner decided on 2026-11-04 (the finding F1 of
+          feat-6-contracts-openapi-pipeline) that the module must not have this artifact (EPL-2.0 OR GPL-2.0 with
+          Classpath-exception); the annotation jakarta.annotation.Generated comes from org.apache.tomcat:
+          tomcat-annotations-api above. The exclusions of the starter log4j2 are the same two.
+      - The slf4j API (org.slf4j:slf4j-api, the 2.x line, the version 2.0.20 that Spring Boot 4.0.9
+        manages): the declaration is direct (and not transitive), because the test tool testcontainers has the
+        slf4j-api 1.7.36 as its dependency (the depth 2), and the bridge has it as the depth 3 (the starter, the
+        bridge, the API). The resolution of Maven gives the nearest dependency (the 1.7.36), and the bridge of the
+        2.x line finds no provider. The MIT of the API is in the permitted list.
+        `./mvnw dependency:tree` must not show jakarta.annotation-api, and the SBOM must not have logback.
+      - OpenTelemetry (io.opentelemetry:opentelemetry-sdk and io.opentelemetry:opentelemetry-exporter-otlp, the
+        version 1.68.0, each Apache-2.0, the dependencies are Apache-2.0 too, the plan records the rows): the SDK of
+        the signal trace (the one server span per request in the filter of the package app, DEC e3eadec0-a6ea-4efe-
+        8e6d-fd19287122fa), and the exporter OTLP/HTTP (the artifact opentelemetry-exporter-otlp is the HTTP
+        exporter of the 1.x line, the sender okhttp, and not the gRPC tree). The exporter is built in the
+        configuration of the application only if the endpoint of the environment variable OTEL_EXPORTER_OTLP_ENDPOINT
+        (or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) is set; with no endpoint the SDK runs with no processor, and the
+        trace identifier of each request is still real (the app starts and serves, and the feature gives no collector).
+
+   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The tests exercise
+   the generated code and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code of the
+   package app. The license of each tool is in the
    license table of the plan; the two tools of the class Review (JUnit and jqwik, both EPL-2.0) have the deviation
    DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the register of the approved deviations, accepted 2026-11-09). Every
    test tool is in <scope>test</scope>, so the cyclonedx plugin (includeTestScope, the default false) keeps them out
@@ -48,8 +97,8 @@
       - PIT (org.pitest:pitest-maven, the build plugin, and org.pitest:pitest-junit5-plugin, the JUnit5 support of
         PIT as a dependency of the plugin): the mutation tests (the recipe mutation-backend). The versions are the
         ones of tools/versions.env (PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION). The configuration restricts the run to
-        the generated model code (targetClasses) and to the unit tests of the generated code (targetTests, the class
-        that is not successful and the integration test are no target tests), and it makes the HTML and the XML
+        the generated model code and the package app (targetClasses) and to the unit tests of the generated code and
+        of the package app (targetTests, the class that is not successful and the integration test are no target tests), and it makes the HTML and the XML
         report in target/pit-reports (the folder is in .gitignore through target/). The plugin has no execution
         bound to a phase: the recipe starts the goal mutationCoverage after the phase test-compile in one run of
         ./mvnw (the generator execution of the phase generate-sources adds src/generated/java as a compile source
@@ -64,32 +113,42 @@
         makes a report and no threshold is set (REQ-006, the walking skeleton sets the threshold from the
         measured baseline).
 
-    The architecture tools (feat-7-verification-architecture-tools, Phase 130, Tasks 130.100 and 130.120; DEC
-    9edc1071-4fd0-48b6-a037-1a4cb2331f73). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
+    The architecture tools (feat-50-structurizr-model-rules, Phase 130 and 140; the hard-coded rules of
+    feat-7-verification-architecture-tools are removed, and the rules are the ones the model gives, DEC
+    e85e9685-0787-4dff-9ee5-9d46670e9ee4). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
     out of the SBOM, as for the test tools above. The versions are the ones of tools/versions.env (ARCHUNIT_VERSION
     and STRUCTURIZR_VERSION; just check-pins compares them, check_pins.py: check_maven_test_pins). The jars of
-    Spring Modulith (spring-modulith-core and spring-boot) were in the module for the hard-coded rule R1 of feat-7;
-    the rule is removed in Phase 130 of feat-50 (the runner derives the rules from the model, ArchUnit only), and
-    Phase 160 of feat-50 removes the jars and their pins (no pin for a dependency that is not there, the
-    one-source-of-truth goal).
+    Spring Modulith (spring-modulith-core) and the test dependency of the jar spring-boot were in the module for
+    the hard-coded rules of feat-7; the rules are removed in Phase 130 of feat-50 (the runner derives the rules
+    from the model, ArchUnit only), and Phase 160 of feat-50 removes the jars and their pins (no pin for a
+    dependency that is not there, the one-source-of-truth goal). The jar org.springframework.boot:spring-boot is
+    in the module in the scope compile through the starter spring-boot-starter-web of the walking skeleton (the
+    service ships it, so the jar is in the SBOM): that is a product dependency (the libraries of the walking
+    skeleton above), and not an architecture tool.
       - ArchUnit (com.tngtech.archunit:archunit and archunit-junit5): the rules the model gives (the runner
         ModelRuleRunnerTest, the recipe architecture-backend), and the source of the package dependencies of the
         comparison with the model (the analyzer ModelComparisonTest, the recipe architecture-model).
       - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
-        (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The module has no product code
-        and no other reader of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
+        (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The test code has no other
+        reader of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
         (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
         module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
         in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
 
-
-    The test classes are in src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and
-    120) and in src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of the phase 130: the
-    module structure R1, the layer rule R2 and the comparison with the model of the recipe architecture-model). A
-    class whose name has no suffix `Test` (or `IT` for the integration tests) is a case that is not successful
-    (ACC-002 of the plan): the default run of surefire does not start it, and the recipes run it separately and stop
-    for it (tools/gates/test-*-*.sh and tools/gates/architecture-*.sh). The suffix IT keeps the integration tests
-    out of the unit run.
+    The product code of the walking skeleton is in src/main/java/biz/dfch/specmgrdemo/app/ (feat-9-walking-skeleton,
+    Phase 200): the main class, the two controllers, the check of the state, the handler of the error, the filter
+    and the configuration of OpenTelemetry (the header comment above gives the libraries). The test classes are in
+    src/test/java/biz/dfch/specmgrdemo/app/ (the unit tests and the integration tests of the walking skeleton), in
+    src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and 120) and in
+    src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of feat-50-structurizr-model-rules,
+    Phase 130 and 140: the runner of the rules the model gives ModelRuleRunnerTest, the comparison with the model
+    of the recipe architecture-model ModelComparisonTest, the shared reading and derivation ModelRules, and the case
+    that is not successful BrokenModelRule). The test resources
+    are in src/test/resources/ (the two files build-info-test.properties and build-info-test-changed.properties,
+    the seam of the unit test of the value of the build). A class whose name has no suffix `Test` (or `IT` for the
+    integration tests) is a case that is not successful (ACC-002 of the plan): the default run of surefire does not
+    start it, and the recipes run it separately and stop for it (tools/gates/test-*-*.sh and
+    tools/gates/architecture-*.sh). The suffix IT keeps the integration tests out of the unit run.
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -102,7 +161,7 @@
   <packaging>jar</packaging>
 
   <name>biz.dfch.SpecMgrDemo backend</name>
-  <description>The Java backend. This module has no product code. It has the generated Spring server interfaces.</description>
+  <description>The Java backend: the generated Spring server interfaces and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code that implements the two operations (the package biz.dfch.specmgrdemo.app).</description>
 
   <licenses>
     <license>
@@ -121,10 +180,39 @@
     <!-- The generator. tools/versions.env has the same version (OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION). -->
     <openapi-generator.version>7.27.0</openapi-generator.version>
     <!-- The libraries that the generated code needs. Each version is named here, and no BOM gives one. -->
-    <spring.version>6.2.19</spring.version>
-    <jakarta-validation.version>3.0.2</jakarta-validation.version>
+    <spring.version>7.0.10</spring.version>
+    <jakarta-validation.version>3.1.1</jakarta-validation.version>
     <jackson-annotations.version>2.21</jackson-annotations.version>
-    <tomcat-annotations-api.version>10.1.61</tomcat-annotations-api.version>
+    <tomcat-annotations-api.version>11.0.29</tomcat-annotations-api.version>
+    <!-- The libraries of the walking skeleton (feat-9-walking-skeleton, Phase 200). Each version is named here,
+         and no BOM gives one (the header comment gives the exclusions of the starters). Spring Boot is the 4.0.x
+         line, the version 4.0.9 (the rework of 2026-11-17: the line 3.5.x has the Spring Framework 6.2.19, and
+         the artifact spring-webmvc 6.2.19 has two findings that are Critical without a fix in the 6.2.x line; the
+         Spring Boot 4.0.9 has the Spring Framework 7.0.10, the version without a finding of the OSV data). The
+         version is the same as the pin SPRING_BOOT_VERSION of tools/versions.env (just check-pins compares the
+         property and the two starters with it), and the Spring Framework
+         version of the property spring.version (7.0.10) is the one that the starter names. -->
+    <spring-boot.version>4.0.9</spring-boot.version>
+    <!-- The embedded Tomcat (the artifacts of the starter-tomcat-runtime that the starter web brings in, at the
+         version 11.0.27 of the starter). The declaration direct (the depth 1) gives the version 11.0.29, the last
+         version of the 11.0.x line on Maven Central (checked on 2026-11-17, the OSV data has no finding for it,
+         REQ-008). -->
+    <tomcat-embed.version>11.0.29</tomcat-embed.version>
+    <!-- The log4j2 (the artifacts of the starter log4j2 that the starter brings in, at the version 2.24.3).
+         The declaration direct gives the version 2.25.5: the OSV data has findings (Medium) for the 2.24.3,
+         and the version 2.25.5 is the version without them (the same reasoning, REQ-008). The four
+         artifacts must be the same version (the line of log4j2). -->
+    <log4j2.version>2.25.5</log4j2.version>
+    <opentelemetry.version>1.68.0</opentelemetry.version>
+    <!-- The core plugin maven-resources-plugin (the version that the pinned Maven 3.10.0 binds, see the license
+         table of the plan): it filters the template src/main/resources/build-info.properties (the header comment).
+         tools/versions.env has the same version (MAVEN_RESOURCES_PLUGIN_VERSION, just check-pins compares it). -->
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <!-- The values of the build for the operation GET /info (Task 200.120, the header comment). The version is the
+         constant of the project (0.2.0, the version of the contract), and not a value of git. The commit has the
+         default unknown, and each just recipe that starts Maven replaces it with git rev-parse HEAD. -->
+    <build.info.version>0.2.0</build.info.version>
+    <build.info.commit>unknown</build.info.commit>
     <!-- The test tools (feat-7-verification-architecture-tools, Phase 110). Each version is the one of
          tools/versions.env (just check-pins compares them). The scope of every test tool is test. -->
     <junit.version>5.14.4</junit.version>
@@ -176,7 +264,7 @@
       <artifactId>jackson-annotations</artifactId>
       <version>${jackson-annotations.version}</version>
     </dependency>
-    <!-- jakarta.annotation.Generated (Jakarta Annotations 2.1) in place of jakarta.annotation-api. Decision of the
+    <!-- jakarta.annotation.Generated (Jakarta Annotations 3.0, the 11.0.x line of Tomcat) in place of jakarta.annotation-api. Decision of the
           owner of 2026-11-04. The version is named here, and no BOM gives it. The scope is provided: the annotation
           has SOURCE retention (it is read at compile time only), so the jar stays off the runtime class path, and a
           later Spring Boot starter cannot bring jakarta.annotation-api in again with a duplicate class. -->
@@ -185,6 +273,106 @@
       <artifactId>tomcat-annotations-api</artifactId>
       <version>${tomcat-annotations-api.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <!-- The web service of the walking skeleton (feat-9-walking-skeleton, Task 200.110, the header comment gives
+         the exclusions): the embedded Tomcat, the Jackson and spring-webmvc. The version is named, no BOM. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>${spring-boot.version}</version>
+      <exclusions>
+        <!-- The logging starter brings logback (EPL-2.0 OR LGPL-2.1): not in the permitted list. The
+             implementation is the starter log4j2 below (the owner's decision, the plan records it). -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+        <!-- The finding F1 of feat-6 (the owner, 2026-11-04): the module must not have jakarta.annotation-api. -->
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- The logging implementation in place of logback (the header comment): the artifacts log4j-slf4j2-impl,
+         log4j-core, log4j-jul and log4j-api, each Apache-2.0. The exclusions are the two of the starter web. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-log4j2</artifactId>
+      <version>${spring-boot.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- The slf4j API (the header comment): the bridge log4j-slf4j2-impl of the starter log4j2 needs the 2.x
+         line of the API. Without the declaration direct, the resolution of Maven gives the 1.7.36 of the test
+         tool testcontainers (the nearest dependency wins, the depth 2 against the depth 3), and the bridge
+         finds no provider of the 2.x line. The version is the one that the bridge names (the POM of
+         Spring Boot 4.0.9 manages 2.0.20, and the bridge log4j-slf4j2-impl 2.25.5 needs the 2.x line). -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.20</version>
+    </dependency>
+    <!-- The embedded Tomcat at the version without the finding of the OSV data (the property and the comment
+         above, REQ-008): the three artifacts of the starter-tomcat, the version direct. -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-el</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-websocket</artifactId>
+      <version>${tomcat-embed.version}</version>
+    </dependency>
+    <!-- The log4j2 at the version without the finding of the OSV data (the property and the comment above,
+         REQ-008): the four artifacts of the starter log4j2, the version direct, the same version for each. -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jul</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
+      <version>${log4j2.version}</version>
+    </dependency>
+    <!-- OpenTelemetry (feat-9-walking-skeleton, Task 200.110, DEC e3eadec0-a6ea-4efe-8e6d-fd19287122fa): the SDK
+         of the signal trace (the one server span per request, the header comment). Each artifact is Apache-2.0. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+      <version>${opentelemetry.version}</version>
+    </dependency>
+    <!-- The exporter OTLP/HTTP (the artifact is the HTTP exporter of the 1.x line, the sender okhttp, and not the
+         gRPC tree; the header comment gives the behavior with and without the endpoint of the environment). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+      <version>${opentelemetry.version}</version>
     </dependency>
     <!-- The test tools (the scope test keeps them out of the SBOM, see the header comment). -->
     <!-- JUnit 5 (EPL-2.0, the deviation DEC 93a6d588-e002-4daf-9a47-45e2d77786e9). The 5.x line: jqwik needs the
@@ -245,17 +433,67 @@
       <scope>test</scope>
     </dependency>
     <!-- structurizr-client (Apache-2.0): the reader of the workspace of model/ (the JSON reader and the model
-         classes). The comparison test of the recipe architecture-model (Task 130.120). -->
+          classes). The comparison test of the recipe architecture-model (Task 130.120). -->
     <dependency>
       <groupId>com.structurizr</groupId>
       <artifactId>structurizr-client</artifactId>
       <version>${structurizr.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- The test tools of the walking skeleton (feat-9-walking-skeleton, Phase 200; the scope test keeps them out
+          of the SBOM, as for the tools above). -->
+    <!-- spring-test (Apache-2.0): the MockMvc and the mock objects of the unit tests (the standalone setup, and not
+          a context of Spring Boot). The version is the one of the module (spring.version, the same as the starters).
+          The extension SpringExtension of the artifact is not used: it needs JUnit Jupiter 6 (the method
+          computeIfAbsent of the store), and the module has JUnit Jupiter 5.14.4 (the integration tests start the
+          service with SpringApplication, the class RunningService of the tests, and not with @SpringBootTest). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>${spring.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- json-path (Apache-2.0): the assertions on the JSON of the responses of the unit tests (the library of the
+          method jsonPath of MockMvc, that the artifact spring-test references at run time). -->
+    <dependency>
+      <groupId>com.jayway.jsonpath</groupId>
+      <artifactId>json-path</artifactId>
+      <version>2.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- opentelemetry-sdk-testing (Apache-2.0): the in-memory exporter of the unit test of the filter (one server
+          span per request, the kind SERVER and the name of the operation). -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <version>${opentelemetry.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
+    <!-- The resources of the module (feat-9-walking-skeleton, Task 200.120): the list of the model (and not a
+         configuration of the plugin, that the parameter resources of the mojo resources of
+         maven-resources-plugin 3.5.0 reads as read-only), with the filtering of the execution default-resources
+         on: the file src/main/resources/build-info.properties is filtered into target/classes/build-info.properties
+         with the two properties build.info.version and build.info.commit (the header comment). A value of the
+         property that the build does not replace stays the default of the pom (the version 0.2.0, the commit
+         unknown). The list of the test resources (the default src/test/resources) is not changed. -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
+      <!-- The core plugin for the resources (feat-9-walking-skeleton, Task 200.120). The version is the one that
+           the pinned Maven 3.10.0 binds (the license table of the plan); the configuration is the list of the
+           resources of the model above (the parameter is read-only in the version 3.5.0). -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven-resources-plugin.version}</version>
+      </plugin>
       <!-- The test runner (feat-7-verification-architecture-tools, Phase 110). The version is the one of
            tools/versions.env (MAVEN_SUREFIRE_PLUGIN_VERSION). The default includes of surefire (Test*, *Test,
            *Tests, *TestCase) keep the cases that are not successful (the classes without a suffix, see the header)
@@ -271,13 +509,15 @@
             of ./mvnw (./mvnw test-compile org.pitest:pitest-maven:<PIT_VERSION>:mutationCoverage
             -Dcodegen.skip=true). The phase is necessary: the generator execution of the phase generate-sources
             adds src/generated/java as a compile source root, and the goal skips a project with no compile source
-            root. PIT mutates the compiled classes of the module (target/classes, the generated code; the module
-            has no product code) and runs the target tests on each mutant.
+            root. PIT mutates the compiled classes of the module (target/classes: the generated model code and the
+            product code of the package app) and runs the target tests on each mutant.
            The configuration keeps the run small and deterministic (the plan records it, Result of the Phase 120):
-           - targetClasses: the generated model code only. The package biz.dfch.specmgrdemo.api has the interface
-             StatusApi, and an interface has no bytecode with logic, so there is no mutant in it.
-           - targetTests: the unit tests of the generated code only. The class that is not successful (no suffix
-             Test) and the integration test (the suffix IT, it needs the Docker daemon) are no target tests.
+           - targetClasses: the generated model code and the product code of the package app. The package
+             biz.dfch.specmgrdemo.api has the interface StatusApi, and an interface has no bytecode with logic, so
+             there is no mutant in it.
+           - targetTests: the unit tests of the generated code and of the package app. The class that is not
+             successful (no suffix Test) and the integration test (the suffix IT, it needs the Docker daemon) are no
+             target tests.
             - outputFormats: the HTML report (the default folder target/pit-reports) and the XML report
               (mutations.xml, the deterministic source the recipe asserts on for the surviving mutants).
            The JUnit5 support of PIT (the JUnit engine of the JUnit Platform and the jqwik engine) is the plugin
@@ -290,10 +530,12 @@
         <configuration>
           <targetClasses>
             <param>biz.dfch.specmgrdemo.model.*</param>
+            <param>biz.dfch.specmgrdemo.app.*</param>
           </targetClasses>
           <targetTests>
             <param>biz.dfch.specmgrdemo.testtools.ErrorCodeTest</param>
             <param>biz.dfch.specmgrdemo.testtools.ErrorCodePropertyTest</param>
+            <param>biz.dfch.specmgrdemo.app.*Test</param>
           </targetTests>
           <outputFormats>
             <outputFormat>HTML</outputFormat>
@@ -360,7 +602,7 @@
                 <interfaceOnly>true</interfaceOnly>
                 <skipDefaultInterface>true</skipDefaultInterface>
                 <hideGenerationTimestamp>true</hideGenerationTimestamp>
-                <useSpringBoot3>true</useSpringBoot3>
+                <useSpringBoot4>true</useSpringBoot4>
                 <sourceFolder>java</sourceFolder>
                 <annotationLibrary>none</annotationLibrary>
                 <documentationProvider>none</documentationProvider>

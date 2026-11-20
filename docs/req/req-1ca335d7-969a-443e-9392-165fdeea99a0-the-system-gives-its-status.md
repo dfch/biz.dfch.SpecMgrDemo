@@ -2,9 +2,9 @@
 classification: null
 created: '2026-11-04T19:43:07.634+01:00'
 id: 1ca335d7-969a-443e-9392-165fdeea99a0
-status: draft
+status: accepted
 type: req
-updated: '2026-11-04T19:43:07.634+01:00'
+updated: '2026-11-15T21:50:00.000+01:00'
 version: 1.0.0
 ---
 
@@ -58,4 +58,8 @@ FEAT feat-6-contracts-openapi-pipeline (GitHub issue #6). The owner chose the ex
 
 ## More Information
 
-This is the first requirement of the project. It is the example for the contract pipeline. The verification case record and the entry in a SYSRS (steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519) are not yet written.
+This is the first requirement of the project. It is the example for the contract pipeline. The verification case record (VCR 4f98618c-4291-4d60-995f-1fd8a60b9bfd: Verification of the Status Operation) and the entry in the SYSRS (SYSRS 9ad2f5cd-546f-4560-acef-3eac0f974486: System Requirements Specification: SpecMgrDemo) are written in FEAT feat-9-walking-skeleton (steps 4 and 5 of SOP 95b6735b-03b8-47a0-92aa-7934a4ff1519).
+
+## Notes
+
+The status is `accepted` on 2026-11-15. The owner gives the permission in the planning of FEAT feat-9-walking-skeleton (the task 100.110 of the plan). The statement and the description are not changed.

@@ -32,6 +32,27 @@
 # violations of the page, the test of Playwright fails (exit code not 0), and the output names the
 # violations.
 #
+# Part 1 has the end-to-end test of the walking skeleton too (feat-9-walking-skeleton, Phase 400, Task 400.110,
+# REQ-005): the file e2e/service.spec.ts opens the page of the REAL service, the backend of the build and the BUILT
+# bundle of the frontend (`vite build` into a temporary folder, served by `vite preview`, which sends /status and
+# /info to the backend; review N6b). The second webServer of playwright.config.ts starts both with the
+# script e2e/service.mjs (random ports, no collector: the variables OTEL_* of the backend and VITE_OTEL_* of the
+# frontend are empty, and the script removes the temporary folder and stops both processes). The spec has the
+# accessibility check of the real page with axe-core too, in English and in German (not only the fixtures), and a
+# test that the page is the bundle of the build. The backend starts with `./mvnw test -Dtest=ServiceForE2e` in backend/ (the class
+# ServiceForE2e of the tests starts the app with the class RunningService, no new tool: the module has no
+# executable jar), so the part 1 needs JDK 21 and the network for the first run (Maven Central) as the recipes of
+# the backend have. The script gives the property build.info.commit (the function backend_maven_args of _lib.sh)
+# in the variable E2E_MAVEN_ARGS, so the commit of GET /info is the commit of the work tree. The test with the
+# name `vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the user interface shows the notice of the license` is the
+# criterion AC-002 of the verification case record of the operation GET /info.
+#
+# Before part 1 the script runs the check of the patterns that read a printed line of a child process
+# (`node --test e2e/lines.check.mjs`, the patterns of e2e/lines.mjs: the line of the backend in the output of Maven and
+# the line `wait.stdout` of Playwright). The check feeds the patterns with the output cut at every place, also inside the
+# port, and a pattern must not give a part of the port (CI run 44296180544 of feat-9: the port 3 instead of 35127,
+# ECONNREFUSED of the preview proxy, 5 failed tests). It is no test of Playwright (the name has no part `.spec.`).
+#
 # The script needs Node and pnpm (install_frontend in _lib.sh installs the module from the lock file
 # with `pnpm install --frozen-lockfile --ignore-scripts`, and stops if an installed package has
 # another version than the key of tools/versions.env) and the network for the first run (the npm
@@ -47,6 +68,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 [[ -d "$1" ]] || die "The folder of the pnpm module does not exist: $1"
 frontend_dir="$(cd "$1" && pwd)"
 install_frontend "${frontend_dir}"
+backend_dir="${frontend_dir}/../backend"
+[[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable (the end-to-end test starts the backend)"
+backend_maven_args "${backend_dir}" # the property build.info.commit (Task 200.120); the directory is resolved before the cd
+E2E_MAVEN_ARGS="${MAVEN_BUILD_ARGS[*]:-}"
+export E2E_MAVEN_ARGS
 cd "${frontend_dir}"
 
 passed=0
@@ -77,6 +103,21 @@ else
 fi
 
 echo
+echo "== the patterns that read a printed line of a child process (the output cut inside the port)"
+set +e
+run_output="$(node --test e2e/lines.check.mjs 2>&1)"
+run_code=$?
+set -e
+if [[ ${run_code} -eq 0 ]]; then
+    echo "ok   the patterns of e2e/lines.mjs accept a line only when its line break has arrived (the output cut at every place)"
+    passed=$((passed + 1))
+else
+    echo "FAIL the check e2e/lines.check.mjs is not green (exit code ${run_code})"
+    printf '%s\n' "${run_output}" | tail -n 30 | sed -e 's/^/     | /'
+    failed=$((failed + 1))
+fi
+
+echo
 echo "== the case that is successful (Playwright and axe-core)"
 set +e
 run_output="$(pnpm exec playwright test --reporter=line 2>&1)"
@@ -93,6 +134,24 @@ else
         passed=$((passed + 1))
     else
         echo "FAIL the summary of the run has a failed test: ${summary}"
+        failed=$((failed + 1))
+    fi
+    if [[ "${run_output}" == *"vcr:eb8a7f16-880d-42b7-9852-37c96175d344 the user interface shows the notice of the license"* \
+        && "${run_output}" == *"the user interface shows the state of the system"* \
+        && "${run_output}" == *"in the second language"* ]]; then
+        echo "ok   the run has the end-to-end tests of the real service (the notice with the vcr: name, the state, and the second language)"
+        passed=$((passed + 1))
+    else
+        echo "FAIL the run has not the three end-to-end tests of the real service"
+        failed=$((failed + 1))
+    fi
+    if [[ "${run_output}" == *"the service gives the built bundle of the frontend"* \
+        && "${run_output}" == *"the real page has no accessibility violations in English"* \
+        && "${run_output}" == *"the real page has no accessibility violations in German"* ]]; then
+        echo "ok   the run has the test of the built bundle and the axe-core check of the real page (English and German)"
+        passed=$((passed + 1))
+    else
+        echo "FAIL the run has not the test of the built bundle and the two axe-core checks of the real page"
         failed=$((failed + 1))
     fi
     if [[ "${run_output}" == *"the good page has no violations"* && "${run_output}" == *"the bad page reports the violations"* ]]; then

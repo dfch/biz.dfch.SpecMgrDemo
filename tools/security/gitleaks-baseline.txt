@@ -1,0 +1,12 @@
+# The baseline of gitleaks (feat-9-walking-skeleton, Task 500.110, REQ-006). The state of the feature on 2026-11-17:
+# 0 findings (the files and the history of the pull request), so this file has no line.
+#
+# One line for each finding: the fingerprint of gitleaks, as the report of the tool shows it
+# (`<file>:<rule>:<line>` for the files, `<commit>:<file>:<rule>:<line>` for the history). The line never has the secret.
+#
+# gitleaks gives no severity, so each finding has the level Unrated, and this file is the only rule of the level gate:
+#   - A finding that is not in this file stops the gate (a new finding, a secret).
+#   - A line of this file that has no finding any more is a warning: delete the line.
+# A false positive does not belong here. The place for it is the allowlist of tools/security/gitleaks.toml (one entry with
+# a description, CODEOWNERS covers it). A secret that is real must be revoked first; a line here is for a finding that the
+# owner accepts for a reason that the plan names. CODEOWNERS covers /tools/, so the owner reviews each change of this file.

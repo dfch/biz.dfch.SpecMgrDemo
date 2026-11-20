@@ -31,6 +31,12 @@
 #     job: it is the hosted default setup of GitHub (no workflow file, REQ-006). The checkouts do not
 #     keep the credentials of the token. The owner makes the new jobs required checks of the rulesets (branch-protection.md,
 #     the steps of Task 140.130).
+#   - feat-9-walking-skeleton (Task 500.120) made vuln-scan, secret-scan and workflow-scan blocking gates with a level
+#     gate and a baseline file for each (tools/security/*-baseline.txt): a finding that is Critical or High stops the job
+#     (exit code 1), a finding that is not in the baseline stops the job, and a line of the baseline that has no finding
+#     any more is a warning. A failure of the tool still stops the job. The job secret-scan has astral-sh/setup-uv now
+#     (the level gate runs in a Python environment that uv makes). The jobs are the same, so the names of the checks are the
+#     same. The steps for the owner for the CodeQL rule of the ruleset are in branch-protection.md (Task 500.140).
 #   - feat-50-structurizr-model-rules added the job check-model-generated (Task 160.100). The recipe makes the JSON of
 #     the model again from the DSL in a temporary folder with the pinned container (the image is pulled by its digest
 #     on the runner) and stops for a JSON that is not up to date. The make-recipe generate-model has no job (the house
@@ -305,6 +311,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -322,6 +330,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -339,6 +349,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -354,16 +366,24 @@ jobs:
   # chromium browser for the pinned version into the user cache of the runner (no right is necessary, about
   # 126 MB on a fresh runner - the timeout is the long one for the download), and starts it headless (the
   # runner image has the shared libraries of a headless chromium; the first real run of the job is the
-  # verification, an open item of the plan).
+  # verification, an open item of the plan). Since feat-9-walking-skeleton (Phase 400) the job runs the
+  # end-to-end test of the real service too: the backend (./mvnw of backend/, so the job needs Java, as the other
+  # jobs of the backend do) and the development server of Vite on random ports, with no collector.
   test-e2e:
     name: test-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13+9"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
         with:
           node-version: "26.13.0"
@@ -380,6 +400,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -396,6 +418,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -415,6 +439,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -432,6 +458,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -451,6 +479,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -468,6 +498,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -490,6 +522,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
@@ -508,8 +542,10 @@ jobs:
           version: "12.16.1"
       - run: just architecture-model
 
-  # The jobs of feat-8-traceability-security-gates (Task 140.100, ACC-001): gate 2 and the three reports of gate 9. Each
-  # starts one recipe. CodeQL has no job (the hosted default setup of GitHub, no workflow file).
+  # The jobs of feat-8-traceability-security-gates (Task 140.100, ACC-001): gate 2 and the three scans of gate 9. Each
+  # starts one recipe. Since feat-9-walking-skeleton (Task 500.120) the three scans are blocking gates (the level gate
+  # with a baseline file for each, tools/security/README.md). CodeQL has no job (the hosted default setup of GitHub, no
+  # workflow file; the rule `code_scanning` of the ruleset is the native check, branch-protection.md).
   # Gate 2, the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference with no
   # target, an `x-specmgr-req` that is not a REQ, an identifier of the model or of a test with no document, and an
   # approved REQ with no VCR. It runs in the hash-locked environment of specmgr (`uv`), reads files only, and needs no history.
@@ -529,7 +565,8 @@ jobs:
           version: "0.13.7"
       - run: just traceability
 
-  # Report: the known vulnerabilities in the dependencies (OSV-Scanner on the SBOM files of `just sbom`, no threshold).
+  # Gate: the known vulnerabilities in the dependencies (OSV-Scanner on the SBOM files of `just sbom`, the level gate with
+  # tools/security/osv-baseline.txt: a finding that is Critical or High, or a new finding, stops the job).
   # The job uses the network (the binary of OSV-Scanner from GitHub with a sha256, the packages of the SBOM, and the query
   # to api.osv.dev), so the timeout is the long one of the SBOM jobs (license-check). The recipe makes the SBOM first, so the
   # job needs the same tools as license-check (Java for the Maven Wrapper, Node and pnpm for cdxgen, uv). The conditions of the
@@ -561,9 +598,11 @@ jobs:
           version: "12.16.1"
       - run: just vuln-scan
 
-  # Report: secrets in the files and in the history of the pull request (gitleaks, no threshold). The recipe scans the commits
+  # Gate: secrets in the files and in the history of the pull request (gitleaks, the level gate with
+  # tools/security/gitleaks-baseline.txt: a finding that is not in the baseline stops the job). The recipe scans the commits
   # of <base>..HEAD and stops for a shallow clone that has no merge base, so the checkout has `fetch-depth: 0` (as in
-  # commit-check). The download of gitleaks (a sha256 is compared) needs the network.
+  # commit-check). The download of gitleaks (a sha256 is compared) needs the network. The level gate runs in a Python
+  # environment that `uv` makes (no package is installed), so the job has astral-sh/setup-uv.
   secret-scan:
     name: secret-scan
     runs-on: ubuntu-latest
@@ -576,9 +615,13 @@ jobs:
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # extractions/setup-just v4.0.0
         with:
           just-version: "1.59.0"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # astral-sh/setup-uv v10.3.3
+        with:
+          version: "0.13.7"
       - run: just secret-scan
 
-  # Report: the workflow files (zizmor, `--offline`, no threshold). zizmor comes from the hash-locked environment (`uv`).
+  # Gate: the workflow files (zizmor, `--offline`, the level gate with tools/security/zizmor-baseline.txt: a finding with the
+  # severity High, or a new finding, stops the job). zizmor comes from the hash-locked environment (`uv`).
   workflow-scan:
     name: workflow-scan
     runs-on: ubuntu-latest
