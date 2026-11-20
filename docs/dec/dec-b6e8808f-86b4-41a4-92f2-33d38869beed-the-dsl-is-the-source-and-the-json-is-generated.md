@@ -4,7 +4,7 @@ created: '2026-11-17T11:02:06.338+01:00'
 id: b6e8808f-86b4-41a4-92f2-33d38869beed
 status: draft
 type: dec
-updated: '2026-11-17T11:02:06.338+01:00'
+updated: '2026-11-20T12:30:53.684+01:00'
 version: 1.0.0
 ---
 
@@ -95,6 +95,10 @@ The verification of Phase 100 (2026-11-17) gives these facts.
 ## Updates
 
 <!-- Newest entry first -- prepend new entries directly below this comment. -->
+
+### 2026-11-20 10:45:00.000Z - The count of the inspection of the committed model changes with the merge of feat-9 into the model (Task 120.110 of feat-50-structurizr-model-rules)
+
+The committed model grew with the execution of Task 120.110 (the merge of feat-9-walking-skeleton into dev made the deferral condition of the task met, and the components `app`, `client`, `i18n`, `telemetry` and `ui` and the 15 relations of feat-9 joined the model). The growth changes the count of the recorded inspection (the top-level property `structurizr.inspection.error` of the generated JSON): the value 29 (before the growth 14, the entry of 2026-11-19). The count is stable over two runs of the generation (the gate `just check-model-generated` makes the JSON twice, and the two runs are the same). The composition of the 29 (the command `inspect` names the causes): the recorded deployment limit of this decision (the deployment node `host` and the Deployment view are empty in the interchange, the two containments are not serialized), the components of the container `backend` (`api`, `model`, `app`) and the node `host` that are not on a view, and the relations of the model without a technology (19 relations with the grown model, 4 before the growth). The gate `just check-model-generated` asserts the value 29 in the committed file (a changed count stops the gate, and the message names the expected and the found value), the probe case of the test of the gate (`test-check-model-generated-gate`) expects the count 31 of the fresh generation with the probe node `host2` (the recorded value 29), and the records of `model/README.md` and of the plan of feat-50-structurizr-model-rules are updated in the same change. The Decision Outcome of this decision stays true (the JSON is the interchange that the pinned container makes from the DSL; the count is a stable property of the state of the model and of the pinned tool, and it is recorded per the house pattern of dated Updates entries).
 
 ### 2026-11-19 22:30:00.000Z - The limit of the pinned exporter for the deployment content (the fix pass of the post-implementation review of feat-50-structurizr-model-rules)
 

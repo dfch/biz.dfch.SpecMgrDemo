@@ -17,10 +17,10 @@
 #   4. It stops (exit code 1) if the result differs from <model dir>/workspace.json (the committed
 #      file). The message names the difference (the diff from the committed file to the new generation).
 #   5. It stops (exit code 1) if the committed file carries another value for the top-level property
-#      structurizr.inspection.error than the recorded value 14 (the stable consequence of the limit of
-#      the pinned exporter for the deployment content: the record is in model/README.md and in the
-#      Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed). The message names the expected and
-#      the found value.
+#      structurizr.inspection.error than the recorded value 29 (the stable consequence of the limit of
+#      the pinned exporter for the deployment content and of the state of the model (the record is in
+#      model/README.md and in the Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed)). The
+#      message names the expected and the found value.
 #
 # The flow on a developer machine is: change model/workspace.dsl, `just generate-model`, `git add`,
 # `git commit`, `just check-model-generated`. A change of the model or of the tool that changes the
@@ -99,11 +99,14 @@ log "PASS. model/workspace.json is the JSON that the pinned container makes from
 # The recorded value of the count of the inspection (the top-level property structurizr.inspection.error
 # of the JSON): the stable consequence of the limit of the pinned exporter for the deployment content
 # (the DSL names the two containments of the node host, and the exporter does not serialize them into
-# the JSON). The record is in model/README.md and in the Updates entry of DEC
+# the JSON) and of the state of the model (the components of the container backend and the node host
+# are not on a view, and the relations of the model have no technology - the count of 29 is stable over
+# two runs of the generation since the components of feat-9 joined the model in Task 120.110). The
+# record is in model/README.md and in the Updates entry of DEC
 # b6e8808f-86b4-41a4-92f2-33d38869beed. A changed count (a tool change or a model change that
 # worsens or fixes the inspection) stops the gate, and the message names the expected and the found
 # value (the form of the line is the stable two-space form that the pinned exporter writes).
-expected_inspection_error='14'
+expected_inspection_error='29'
 found_inspection_error="$(sed -n -E 's/^[[:space:]]*"structurizr\.inspection\.error" : "([0-9]+)".*/\1/p' "${model_dir}/workspace.json" | head -n 1)"
 if [[ -z "${found_inspection_error}" ]]; then
     stop "the committed file has no top-level property structurizr.inspection.error in the recorded form (the property is written by the pinned exporter; the recorded value is ${expected_inspection_error}): the record is in model/README.md and in the Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed"

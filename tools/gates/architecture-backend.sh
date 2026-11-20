@@ -18,8 +18,8 @@
 # as the comparison), and builds the ArchUnit rules at test time: one dynamic test per derived
 # rule. The derived rules (the groups 1 and 2 of the canonical section): the forbidden
 # dependencies (every ordered pair of distinct mapped components that has no relation in the
-# model; today: exactly one pair, the component model must not depend on the component api, the
-# direction of the code is api -> model) and the cycle rule (the slices of the mapped components,
+# model; today: the three pairs api -> app, model -> api and model -> app, the direction of the
+# code is api -> model, app -> api and app -> model) and the cycle rule (the slices of the mapped components,
 # one slice per component, the most specific entry of code.package, are free of cycles). The
 # classes: the base package of the container's code.root, the test classes excluded by the import
 # option DoNotIncludeTests (the same option as the comparison). A violation that ArchUnit reports
@@ -29,10 +29,10 @@
 # Part 2, the case that is not successful of the forbidden dependencies (ACC-006, the Broken*
 # pattern): the class BrokenModelRule (no suffix Test, so the default run of part 1 does not start
 # it, and the committed run is green) derives the same way: it reads the workspace, takes the
-# relations of the model between the mapped components of the container backend (today exactly
-# one: api -> model), and builds for each of them the ArchUnit rule that FORBIDS it (the
-# component api must not depend on the component model). The code has the direction of the
-# modelled relation (the generated interface StatusApi references the classes of the model), so
+# relations of the model between the mapped components of the container backend (today: api ->
+# model, app -> api and app -> model), and builds for each of them the ArchUnit rule that FORBIDS
+# it. The code has the direction of the modelled relation (the generated interfaces reference the
+# classes of the model, and the controllers of app implement the generated interfaces of api), so
 # the rule is violated deterministically, and ArchUnit names the violating dependency in the
 # report (the method getStatus() of the interface StatusApi, with the return type of the model
 # class Status). The script runs the class with -Dtest=BrokenModelRule and stops for it: the run
@@ -110,10 +110,10 @@ else
     if [[ "${run_output}" == *"the model gives"* && "${run_output}" == *"forbidden pair(s)"* && "${run_output}" == *"cycle rule for the container backend"* ]]; then
         echo "ok   the report names the derived rule count (the forbidden pairs and the cycle rule)"
         passed=$((passed + 1))
-        printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^\[INFO\] *//' | sed -e 's/^/     | /'
+        printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^\[INFO\] *//' | sed -e 's/^/     | /' || true
     else
         echo "FAIL the run has not the report of the derived rule count:"
-        printf '%s\n' "${run_output}" | grep -E "Tests run|the model gives" | head -n 5 | sed -e 's/^/     | /'
+        printf '%s\n' "${run_output}" | grep -E "Tests run|the model gives" | head -n 5 | sed -e 's/^/     | /' || true
         failed=$((failed + 1))
     fi
 fi
@@ -126,10 +126,10 @@ if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenModelRule"* && "${run_outp
     echo "ok   the run stops for the violated rule, and ArchUnit names the violating dependency"
     passed=$((passed + 1))
     # The report of the run (the line of the violated rule and the dependency that ArchUnit names).
-    printf '%s\n' "${run_output}" | grep -E "Architecture Violation|Method <|depending on" | head -n 3 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "Architecture Violation|Method <|depending on" | head -n 3 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the run of BrokenModelRule gives exit code ${run_code}, and the output has not the violated rule:"
-    printf '%s\n' "${run_output}" | grep -E "Tests run|Architecture Violation|depending" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "Tests run|Architecture Violation|depending" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 
@@ -176,10 +176,10 @@ if [[ ${run_code} -ne 0 && "${run_output}" == *"free of cycles"* && -n "${cycle_
     && "${cycle_block}" == *"Slice api"* && "${cycle_block}" == *"Slice model"* ]]; then
     echo "ok   the run of the copy stops for the cycle, and the report names the slices api and model"
     passed=$((passed + 1))
-    printf '%s\n' "${cycle_block}" | head -n 4 | sed -e 's/^\[ERROR\] *//' | sed -e 's/^/     | /'
+    printf '%s\n' "${cycle_block}" | head -n 4 | sed -e 's/^\[ERROR\] *//' | sed -e 's/^/     | /' || true
 else
     echo "FAIL the run of the copy gives exit code ${run_code}, and the output has not the cycle of the slices api and model:"
-    printf '%s\n' "${run_output}" | grep -E "Tests run|Cycle detected|free of cycles" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "Tests run|Cycle detected|free of cycles" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 

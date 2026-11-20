@@ -127,10 +127,10 @@ console.log(pairs + ' ' + (pairs + 1));
         if [[ "${run_output}" == *"the model gives ${expected_pairs} forbidden pair(s) and 1 cycle rule for the container frontend (${expected_rules} rule(s))"* ]]; then
             echo "ok   the report names the derived rule count of the model (the ${expected_pairs} forbidden pair(s), and the cycle rule)"
             passed=$((passed + 1))
-            printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^/     | /'
+            printf '%s\n' "${run_output}" | grep -F "the model gives" | head -n 1 | sed -e 's/^/     | /' || true
         else
             echo "FAIL the run has not the report of the derived rule count of the model (the ${expected_pairs} forbidden pair(s), and the cycle rule):"
-            printf '%s\n' "${run_output}" | grep -E "the model gives|FAIL" | head -n 5 | sed -e 's/^/     | /'
+            printf '%s\n' "${run_output}" | grep -E "the model gives|FAIL" | head -n 5 | sed -e 's/^/     | /' || true
             failed=$((failed + 1))
         fi
     fi
@@ -184,7 +184,7 @@ else
         if [[ -n "${import_line}" ]]; then
             echo "ok   the run stops for the modelled relation ${relation}, and ArchUniTS names at least one violating import"
             passed=$((passed + 1))
-            printf '%s\n' "${block}" | head -n 3 | sed -e 's/^/     | /'
+            printf '%s\n' "${block}" | head -n 3 | sed -e 's/^/     | /' || true
         else
             echo "FAIL the run of runner.broken.mjs has not the violated rule and the named import of the relation ${relation}:"
             printf '%s\n' "${run_output}" | tail -n 10 | sed -e 's/^/     | /'
@@ -233,7 +233,7 @@ if [[ ${run_code} -eq 1 && -n "${cycle_block}" \
     printf '%s\n' "${cycle_block}" | sed -e 's/^/     | /'
 else
     echo "FAIL the run of the copy gives exit code ${run_code}, and the output has not the cycle of the two scratch files:"
-    printf '%s\n' "${run_output}" | grep -E "FAIL|have no dependency cycle" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "FAIL|have no dependency cycle" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 

@@ -273,10 +273,10 @@ backend_comparison "${work}/a-backend/backend" "${work}/a-backend/model/workspac
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the package biz.dfch.specmgrdemo.model has no component in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the package without a component"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -E "AssertionFailedError|FAIL" | head -n 2 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "AssertionFailedError|FAIL" | head -n 2 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the message of the package without a component:"
-    printf '%s\n' "${run_output}" | grep -E "Tests run|AssertionFailedError|has no component" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "Tests run|AssertionFailedError|has no component" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 echo "-- the frontend side (the component zod of the container frontend is removed from the copy of the workspace)"
@@ -287,10 +287,10 @@ frontend_comparison "${work}/a-frontend/frontend" "${work}/a-frontend/model/work
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the unit zod of the frontend has no component in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the unit without a component"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -E "FAIL" | head -n 2 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "FAIL" | head -n 2 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the message of the unit without a component:"
-    printf '%s\n' "${run_output}" | grep -E "FAIL|has no component" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "FAIL|has no component" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 
@@ -304,10 +304,10 @@ backend_comparison "${work}/b-backend/backend" "${work}/b-backend/model/workspac
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the dependency biz.dfch.specmgrdemo.api -> biz.dfch.specmgrdemo.model is not in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the dependency that is not in the model"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -E "AssertionFailedError|FAIL" | head -n 2 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "AssertionFailedError|FAIL" | head -n 2 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the message of the dependency that is not in the model:"
-    printf '%s\n' "${run_output}" | grep -E "Tests run|AssertionFailedError|is not in the model" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "Tests run|AssertionFailedError|is not in the model" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 echo "-- the frontend side (the dependency test -> zod is removed from the copy of the workspace)"
@@ -318,10 +318,10 @@ frontend_comparison "${work}/b-frontend/frontend" "${work}/b-frontend/model/work
 if [[ ${run_code} -ne 0 && "${run_output}" == *"the dependency test -> zod of the frontend is not in the model"* ]]; then
     echo "ok   the comparison is not successful, and the message names the dependency that is not in the model"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -E "FAIL" | head -n 2 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "FAIL" | head -n 2 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the message of the dependency that is not in the model:"
-    printf '%s\n' "${run_output}" | grep -E "FAIL|is not in the model" | head -n 5 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -E "FAIL|is not in the model" | head -n 5 | sed -e 's/^/     | /' || true
     failed=$((failed + 1))
 fi
 
@@ -408,7 +408,7 @@ frontend_comparison "${work}/ignore-none/frontend" "${work}/ignore-none/model/wo
 if [[ ${run_code} -eq 2 && "${run_output}" == *"no unit for it"* ]]; then
     echo "ok   the file that lies directly in src/generated and that no entry of code.ignore names stops the run (the rule of thumb)"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | head -n 2 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | head -n 2 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the rule-of-thumb message of the file directly in src/generated:"
     printf '%s\n' "${run_output}" | tail -n 5 | sed -e 's/^/     | /'
@@ -429,7 +429,7 @@ frontend_comparison "${work}/ignore-entry/frontend" "${work}/ignore-entry/model/
 if [[ ${run_code} -eq 0 && "${run_output}" == *"PASS the workspace"* && "${run_output}" == *"1 file(s) in code.ignore"* ]]; then
     echo "ok   the same file that an entry of code.ignore names is examined not at all (the comparison is green, the PASS line names the ignored count)"
     passed=$((passed + 1))
-    printf '%s\n' "${run_output}" | grep -F "PASS the workspace" | head -n 1 | sed -e 's/^/     | /'
+    printf '%s\n' "${run_output}" | grep -F "PASS the workspace" | head -n 1 | sed -e 's/^/     | /' || true
 else
     echo "FAIL the comparison of the copy gives exit code ${run_code}, and the output has not the PASS line with the ignored count:"
     printf '%s\n' "${run_output}" | tail -n 5 | sed -e 's/^/     | /'
