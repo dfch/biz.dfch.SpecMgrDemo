@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# feat-48-pre-commit-hooks, Task 110.100 (REQ-003, REQ-004)
+#
+# Git hook: pre-commit. It runs before a commit and stops the commit on the
+# first failing gate.
+#
+# It is a thin shell: it calls the just recipes only (the one entry point,
+# feat-5 REQ-002, REQ-009) and has no gate logic of its own. The six fast
+# gates, in the order of REQ-003: commit-check, validate, lint, check-pins,
+# check-workflows, check-sudo. No slow or network gate runs here (REQ-004).
+#
+# Bypass: git commit --no-verify. The environment marker SKIP_HOOKS_FOR_BULK
+# (set and non-empty) makes this hook skip all gates and exit 0 (Task 120.110,
+# DEC cc4449cd-78fb-452a-904f-7efda89cf004, the bulk commits of the coding
+# agent only). The details are in tools/hooks/README.md and in the engineering
+# handbook (TXT eff55a59-137b-40b0-8f7b-44c349aa923a).
+
+set -euo pipefail
+
+if [[ -n "${SKIP_HOOKS_FOR_BULK:-}" ]]; then
+    echo "[pre-commit] SKIP: SKIP_HOOKS_FOR_BULK is set (non-empty); this hook skips all gates and exits 0." >&2
+    echo "  bulk commits of the coding agent (DEC cc4449cd), not for a normal commit, pre-push re-checks the base" >&2
+    exit 0
+fi
+
+if ! command -v just >/dev/null 2>&1; then
+    echo "[pre-commit] ERROR: just is not on PATH. The hooks need the pinned version of just (see just verify-tools)." >&2
+    exit 1
+fi
+
+just commit-check
+just validate
+just lint
+just check-pins
+just check-workflows
+just check-sudo

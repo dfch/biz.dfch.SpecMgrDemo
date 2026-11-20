@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# feat-48-pre-commit-hooks, Task 110.110 (REQ-003, DEC a56f231b-d063-4bef-bbc8-3deb4daff76e)
+#
+# Git hook: commit-msg. It runs after the pre-commit hook, git gives the path
+# of the message file as the first argument, and the hook stops the commit if
+# the subject line of the commit in progress does not follow Conventional
+# Commits with the feature scope (type(feat-N): subject). A merge in progress
+# is exempt: the commit-check gate skips merge commits (git log --no-merges).
+#
+# It is a thin shell: it extracts the subject line (the first line of the
+# file that is not a comment and not blank; that is plumbing, not gate
+# logic) and hands it to the just recipe commit-message-check, which applies
+# the rule through the commit-check gate script. A comment line has a # as
+# its first non-blank character. If the file has no subject line, git rejects
+# the empty message itself, and this hook exits 0 (it adds no rule here).
+#
+# Bypass: git commit --no-verify. The environment marker SKIP_HOOKS_FOR_BULK
+# (set and non-empty) makes this hook skip all gates and exit 0 (Task 120.110,
+# DEC cc4449cd-78fb-452a-904f-7efda89cf004, the bulk commits of the coding
+# agent only). The details are in tools/hooks/README.md and in the engineering
+# handbook (TXT eff55a59-137b-40b0-8f7b-44c349aa923a).
+
+set -euo pipefail
+
+if [[ -n "${SKIP_HOOKS_FOR_BULK:-}" ]]; then
+    echo "[commit-msg] SKIP: SKIP_HOOKS_FOR_BULK is set (non-empty); this hook skips all gates and exits 0." >&2
+    echo "  bulk commits of the coding agent (DEC cc4449cd), not for a normal commit, pre-push re-checks the base" >&2
+    exit 0
+fi
+
+if ! command -v just >/dev/null 2>&1; then
+    echo "[commit-msg] ERROR: just is not on PATH. The hooks need the pinned version of just (see just verify-tools)." >&2
+    exit 1
+fi
+
+[[ $# -eq 1 ]] || { echo "[commit-msg] ERROR: usage: commit-msg <message-file>" >&2; exit 1; }
+message_file="$1"
+
+# A merge in progress is exempt: the commit-check gate skips merge commits (git log --no-merges), so the same rule
+# exempts them, and the hook adds no verdict of its own. --git-path is the worktree-safe form of the check (a plain
+# .git/MERGE_HEAD path breaks in a linked work tree, where .git is a file).
+if [[ -f "$(git rev-parse --git-path MERGE_HEAD)" ]]; then
+    exit 0
+fi
+
+subject=""
+while IFS= read -r line || [[ -n "${line}" ]]; do
+    # Remove the leading blanks to see the first non-blank character of the line.
+    without_prefix="${line#"${line%%[![:space:]]*}"}"
+    if [[ -z "${without_prefix}" || "${without_prefix:0:1}" == "#" ]]; then
+        continue
+    fi
+    subject="${line}"
+    break
+done < "${message_file}"
+
+if [[ -z "${subject}" ]]; then
+    exit 0
+fi
+
+just commit-message-check "${subject}"
