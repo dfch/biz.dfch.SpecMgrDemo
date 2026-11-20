@@ -54,6 +54,8 @@ backend_dir="$1"
 [[ -f "${backend_dir}/pom.xml" ]] || die "${backend_dir}/pom.xml does not exist"
 [[ -x "${backend_dir}/mvnw" ]] || die "${backend_dir}/mvnw does not exist or is not executable"
 
+backend_maven_args "${backend_dir}" # the property build.info.commit (the value of the build, Task 200.120; the
+# directory is resolved before the cd, so the call is here)
 cd "${backend_dir}"
 
 work="$(mktemp -d)"
@@ -76,7 +78,7 @@ mvn_run() {
 }
 
 echo "== the cases that are successful (Spring Modulith R1, ArchUnit R2)"
-mvn_run test -Dcodegen.skip=true -Dtest='ModuleStructureTest,LayerRuleTest'
+mvn_run test -Dcodegen.skip=true -Dtest='ModuleStructureTest,LayerRuleTest' "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 ]]; then
     echo "FAIL the run of the architecture tests is not green (exit code ${run_code})"
     printf '%s\n' "${run_output}" | tail -n 40 | sed -e 's/^/     | /'
@@ -102,7 +104,7 @@ fi
 
 echo
 echo "== the case that is not successful (ACC-002)"
-mvn_run test -Dcodegen.skip=true -Dtest=BrokenLayerRule
+mvn_run test -Dcodegen.skip=true -Dtest=BrokenLayerRule "${MAVEN_BUILD_ARGS[@]}"
 if [[ ${run_code} -ne 0 && "${run_output}" == *"BrokenLayerRule"* && "${run_output}" == *"Architecture Violation"* \
     && "${run_output}" == *"biz.dfch.specmgrdemo.api.StatusApi.getStatus()"* && "${run_output}" == *"biz.dfch.specmgrdemo.model.Status"* ]]; then
     echo "ok   the run stops for the violated layer rule, and ArchUnit names the violating dependency"
@@ -134,9 +136,10 @@ public final class Extra {
   }
 }
 EOF
+backend_maven_args "${work}/copy/backend" # the commit of the copy (the value of the build, Task 200.120)
 set +e
 run_output="$(cd "${work}/copy/backend" && ./mvnw --batch-mode --no-transfer-progress test -Dcodegen.skip=true \
-    -Dtest=ModuleStructureTest 2>&1)"
+    -Dtest=ModuleStructureTest "${MAVEN_BUILD_ARGS[@]}" 2>&1)"
 run_code=$?
 set -e
 # The line of the report: the AssertionFailedError of the test, with the message of the test and

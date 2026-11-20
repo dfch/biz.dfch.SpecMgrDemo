@@ -12,11 +12,13 @@
  *
  * The units of the frontend (the rule of thumb of Task 130.110, the same for the recipe
  * architecture-frontend): a unit is a folder that contains TypeScript source - the top-level
- * folders of frontend/src (today: test), the folders of frontend/src/generated that contain
- * TypeScript source (today: types and zod; the generator makes two independent artifacts, so the
- * folders of the generated code are the units and not the folder generated), and the TypeScript
- * files that lie directly in frontend/src form the unit root (today: mutation-example.ts). The
- * name of a unit is the identifier of its component in the model (the rule of DEC 9edc1071).
+ * folders of frontend/src (today: client, i18n, telemetry, ui and test), the folders of
+ * frontend/src/generated that contain TypeScript source (today: types and zod; the generator makes
+ * two independent artifacts, so the folders of the generated code are the units and not the folder
+ * generated), and the TypeScript files that lie directly in frontend/src form the unit root (today:
+ * main.tsx and mutation-example.ts). A TypeScript file is a file .ts or .tsx (a declaration file
+ * .d.ts is no source). The name of a unit is the identifier of its component in the model (the rule
+ * of DEC 9edc1071).
  *
  * The imports of each file are read with the compiler of the pinned package typescript (the devDependency
  * of the module): the import declarations and the export-from declarations. A specifier that starts
@@ -63,6 +65,9 @@ function stop(message) {
   process.exit(2)
 }
 
+/** True for a TypeScript source file: .ts or .tsx, and not a declaration file (.d.ts). */
+const isTsSource = (name) => (name.endsWith('.ts') || name.endsWith('.tsx')) && !name.endsWith('.d.ts')
+
 /** The TypeScript files of the folder (recursively), as paths relative to the frontend folder. */
 function listTsFiles(dir, base) {
   let result = []
@@ -70,7 +75,7 @@ function listTsFiles(dir, base) {
     const path = join(dir, entry)
     if (statSync(path).isDirectory()) {
       result = result.concat(listTsFiles(path, base))
-    } else if (entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
+    } else if (isTsSource(entry)) {
       result.push(toPosix(relative(base, path)))
     }
   }
@@ -95,13 +100,13 @@ function discoverUnits() {
 
   for (const entry of readdirSync(srcDir)) {
     const path = join(srcDir, entry)
-    if (statSync(path).isFile() && entry.endsWith('.ts') && !entry.endsWith('.d.ts')) {
+    if (statSync(path).isFile() && isTsSource(entry)) {
       addFile('root', toPosix(relative(frontendDir, path)))
     } else if (statSync(path).isDirectory()) {
       if (entry === 'generated') {
         for (const generatedEntry of readdirSync(path)) {
           const generatedPath = join(path, generatedEntry)
-          if (statSync(generatedPath).isFile() && generatedEntry.endsWith('.ts') && !generatedEntry.endsWith('.d.ts')) {
+          if (statSync(generatedPath).isFile() && isTsSource(generatedEntry)) {
             stop(`the file src/generated/${generatedEntry} is a TypeScript source that lies directly in the folder generated. The rule of thumb has no unit for it (the units are the folders of the generated code). Add the unit to the plan and to the model, or move the file`)
           }
           if (statSync(generatedPath).isDirectory()) {
@@ -133,14 +138,14 @@ function readImports(units) {
   }
   const absFiles = files.map((file) => resolve(frontendDir, file))
 
-  const program = ts.createProgram(absFiles, { noEmit: true, allowJs: false, skipLibCheck: true })
+  const program = ts.createProgram(absFiles, { noEmit: true, allowJs: false, skipLibCheck: true, jsx: ts.JsxEmit.ReactJSX })
   const dependencies = []
 
   const resolveInternal = (fromFile, specifier) => {
     // fromFile is relative to the frontend folder: the resolution is against the frontend folder,
     // and not against the working directory of the run.
     const candidate = resolve(frontendDir, dirname(fromFile), specifier)
-    for (const suffix of ['', '.ts', join('index', 'ts')]) {
+    for (const suffix of ['', '.ts', '.tsx', join(sep, 'index.ts'), join(sep, 'index.tsx')]) {
       const path = candidate + suffix
       if (existsSync(path) && statSync(path).isFile()) {
         const target = toPosix(relative(frontendDir, path))

@@ -6,16 +6,23 @@
 #
 #   source "$(dirname "${BASH_SOURCE[0]}")/_security.sh"
 #
-# It sources _lib.sh. It has two parts:
+# It sources _lib.sh. It has three parts:
 #
 #   1. The function that separates a finding from a failure of the tool (security_classify, run_security_tool).
-#   2. The install of the two binaries OSV-Scanner and gitleaks, with the sha256 check (install_osv_scanner,
+#   2. The level gate for the findings (security_level_gate).
+#   3. The install of the two binaries OSV-Scanner and gitleaks, with the sha256 check (install_osv_scanner,
 #      install_gitleaks). zizmor is a Python package, and make_python_env (in _lib.sh) installs it from its lock file.
 #
-# The three security tools run as REPORTS with no threshold (REQ-005). A finding is part of the report, and the gate
-# ends with exit code 0. A failure of the tool (no network, a file that cannot be read, a wrong configuration, a
-# missing binary, a download with another checksum) ends the gate with a non-zero exit code. The gate must never pass
-# because the tool did not run: a report with no finding and a tool that did not run look the same to a reader.
+# The three security tools were REPORTS with no threshold in feat-8 (REQ-005). Since feat-9-walking-skeleton (Phase 500,
+# REQ-006) they are BLOCKING gates with a level gate (security_level_gate below, security_threshold.py): a finding
+# that is Critical or High stops in each case, a finding that is not in the baseline file stops, and a line of the baseline
+# that has no finding any more is a warning. A failure of the tool (no network, a file that cannot be read, a wrong
+# configuration, a missing binary, a download with another checksum) ends the gate with a non-zero exit code. The gate
+# must never pass because the tool did not run: a report with no finding and a tool that did not run look the same to a
+# reader.
+#
+# run_security_tool: the same as in feat-8, a failure of the tool stops in each case. A finding is only a finding
+# there: the decision is the next step (security_level_gate).
 
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
@@ -107,7 +114,7 @@ run_security_tool() {
             log "${label}: no finding (exit code ${code})."
             ;;
         finding)
-            log "${label}: FINDINGS (exit code ${code}). The output above is the report. The gate does not stop for a finding (no threshold)."
+            log "${label}: FINDINGS (exit code ${code}). The output above is the report. The level gate decides next (tools/security/README.md)."
             ;;
         failure)
             echo "[$(basename "${0}")] FAILURE OF THE TOOL: ${label} ended with exit code ${code}. The finding codes of the tool are: ${finding_codes}. This is not a finding, so the gate stops." >&2
@@ -115,6 +122,52 @@ run_security_tool() {
             ;;
     esac
     return 0
+}
+
+# security_level_gate <label> <tool: osv | gitleaks | zizmor> <baseline file> <report file>...
+#
+# The level gate (feat-9-walking-skeleton, Task 500.120, REQ-006, ACC-007). It starts security_threshold.py with the
+# Python of the environment (GATE_PYTHON: the caller makes it with make_python_bare_env or make_python_env, before
+# it runs the tool), the baseline file and the report file(s) of the tool, and it writes the output of the script (the
+# findings with the level, and the verdict). The rules are in the text of security_threshold.py:
+#   exit code 0 of the script   the gate passes: no new finding, no finding that is Critical or High (an old line of the
+#                               baseline is a warning)
+#   exit code 1                 the gate stops: a new finding, or a finding that is Critical or High (a baseline that has
+#                               a line of such a finding is an error of the feature)
+#   exit code 2                 an input that cannot be used (a baseline or a report that is missing or cannot be
+#                               read, a line with a wrong form): it is a failure of the tool, and the gate stops
+#   each other exit code        a failure of the script (exit code 3 for a bug, or a signal or a crash of Python): it
+#                               is NOT a finding (the exit code 1 is the finding), and the gate stops with its own message
+# It returns 0 for a pass and 1 for each stop. The caller runs this function only if run_security_tool did not
+# end with a failure of the tool, and the caller ends with exit code 1 after it returns 1.
+security_level_gate() {
+    local label="$1" tool="$2" baseline="$3" code errexit=0
+    [[ $# -ge 4 ]] || die "security_level_gate: usage: security_level_gate <label> <tool> <baseline file> <report file>..."
+    shift 3
+    [[ -n "${GATE_PYTHON:-}" && -x "${GATE_PYTHON}" ]] || die "security_level_gate: no Python for the level gate (GATE_PYTHON)"
+    [[ "$-" == *e* ]] && errexit=1
+    set +e
+    "${GATE_PYTHON}" "${GATES_DIR}/security_threshold.py" "${tool}" "${baseline}" "$@"
+    code=$?
+    [[ ${errexit} -eq 1 ]] && set -e
+    case "${code}" in
+        0)
+            log "${label}: THRESHOLD PASS. No new finding and no finding that is Critical or High (the baseline is ${baseline})."
+            return 0
+            ;;
+        1)
+            echo "[$(basename "${0}")] THRESHOLD STOP: ${label} has a new finding (it is not in the baseline ${baseline}), or a finding that is Critical or High. See the lines above." >&2
+            return 1
+            ;;
+        2)
+            echo "[$(basename "${0}")] FAILURE OF THE LEVEL GATE: the baseline ${baseline} or the report of ${label} cannot be used (exit code ${code}). This is not a pass, so the gate stops." >&2
+            return 1
+            ;;
+        *)
+            echo "[$(basename "${0}")] FAILURE OF THE LEVEL GATE: the level gate script ended with the unexpected exit code ${code} (a failure of the script, not a finding and not an unusable input; the lines above may have the reason). This is not a pass, so the gate stops." >&2
+            return 1
+            ;;
+    esac
 }
 
 # _fetch_verified <label> <sha key> <url> <expected sha256> <destination file>

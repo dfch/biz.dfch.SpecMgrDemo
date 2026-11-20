@@ -47,3 +47,6 @@ frontend/coverage/
 # The failure database of jqwik (the run of a property that is not successful writes it)
 # (feat-7-verification-architecture-tools, Phase 110)
 backend/.jqwik-database
+
+# Output of the build of the frontend (feat-9-walking-skeleton, Phase 300)
+frontend/dist/

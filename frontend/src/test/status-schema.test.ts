@@ -22,9 +22,11 @@ describe('the generated Zod schemas', () => {
     expect(parsed.success).toBe(false)
   })
 
-  it('has the five error codes of the contract', () => {
+  it('has the seven error codes of the contract', () => {
     expect([...errorCodeSchema.options].sort()).toEqual([
       'internal_error',
+      'method_not_allowed',
+      'not_acceptable',
       'not_found',
       'rate_limited',
       'service_unavailable',

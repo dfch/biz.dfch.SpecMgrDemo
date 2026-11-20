@@ -414,8 +414,12 @@ wf_case ampnpm 1 "job 'architecture-model' lacks the required action(s) pnpm/act
 # an extra action in a job of feat-7
 wf_case nutbnode 1 "job 'test-unit-backend' has the action(s) actions/setup-node, which are not in required-setup.txt" "test-unit-backend: an extra action (Node)" \
     's|^      - run: just test-unit-backend$|      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0\n        with:\n          node-version: "26.13.0"\n&|'
-wf_case e2ejava 1 "job 'test-e2e' has the action(s) actions/setup-java, which are not in required-setup.txt" "test-e2e: an extra action (Java)" \
-    's|^      - run: just test-e2e$|      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # actions/setup-java v6.1.0\n        with:\n          distribution: temurin\n          java-version: "21.0.13+9"\n&|'
+wf_case e2ejava 1 "job 'test-e2e' lacks the required action(s) actions/setup-java" "test-e2e: setup-java removed (only in this job; the end-to-end test of the real service starts the backend, feat-9-walking-skeleton, Phase 400)" \
+    "$(job_range test-e2e test-e2e){/actions\/setup-java@/,/java-version:/d}"
+wf_case e2eupload 1 "job 'test-e2e' has the action(s) actions/upload-artifact, which are not in required-setup.txt" "test-e2e: an extra action (the upload of an artifact, the reports are console reports)" \
+    's|^      - run: just test-e2e$|      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2\n        with:\n          name: x\n          path: build/\n&|'
+wf_case secretuv 1 "job 'secret-scan' lacks the required action(s) astral-sh/setup-uv" "secret-scan: setup-uv removed (only in this job; the level gate of the three security recipes runs in a Python environment that uv makes, feat-9-walking-skeleton, Phase 500)" \
+    "$(job_range secret-scan secret-scan){/astral-sh\/setup-uv@/,/version: \"0.13.7\"/d}"
 wf_case amupload 1 "job 'architecture-model' has the action(s) actions/upload-artifact, which are not in required-setup.txt" "architecture-model: an extra action (the upload of an artifact, the reports are console reports)" \
     's|^      - run: just architecture-model$|      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2\n        with:\n          name: x\n          path: build/\n&|'
 # an if where the gate does not allow it (the only if is for the SBOM upload of license-check). The
@@ -527,6 +531,8 @@ pin_case testgatesjava 1 "\`java-version\` is 21," "test-gates job: the Java ver
 pin_case nutbjava 1 "\`java-version\` is 21," "test-unit-backend job: the Java version is not the one of versions.env" "$(job_range test-unit-backend test-unit-backend)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
 pin_case nutfnode 1 "\`node-version\` is 24.0.0" "test-unit-frontend job: the Node version is not the one of versions.env" "$(job_range test-unit-frontend test-unit-frontend)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
 pin_case e2enode 1 "\`node-version\` is 24.0.0" "test-e2e job: the Node version is not the one of versions.env" "$(job_range test-e2e test-e2e)s#node-version: \"$(version_of NODE_VERSION)\"#node-version: \"24.0.0\"#"
+pin_case e2ejava 1 "\`java-version\` is 21," "test-e2e job: the Java version is not the one of versions.env" "$(job_range test-e2e test-e2e)s#java-version: \"$(version_of JDK_VERSION)\"#java-version: \"21\"#"
+pin_case secretuvver 1 "UV_VERSION in tools/versions.env" "secret-scan job: the uv version is not the one of versions.env (the job has setup-uv since feat-9-walking-skeleton, Phase 500)" "$(job_range secret-scan secret-scan)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
 pin_case mfpnpm 1 "PNPM_VERSION in tools/versions.env" "mutation-frontend job: the pnpm version is not the one of versions.env" "$(job_range mutation-frontend mutation-frontend)s#version: \"$(version_of PNPM_VERSION)\"#version: \"10.0.0\"#"
 pin_case amuvver 1 "UV_VERSION in tools/versions.env" "architecture-model job: the uv version is not the one of versions.env" "$(job_range architecture-model architecture-model)s#version: \"$(version_of UV_VERSION)\"#version: \"0.1.0\"#"
 pin_case mbjustmiss 1 "has no input \`just-version\`" "mutation-backend job: the just version is missing" "$(job_range mutation-backend mutation-backend){/just-version:/d}"
@@ -1422,7 +1428,7 @@ frontend_append_case() {
 fe_new_version="9.9.9"
 fe_new_integrity="${other_integrity}"
 dir="$(mk_frontend_root real)"
-expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool ArchUniTS and the coverage provider of Vitest (@vitest/coverage-v8), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
+expect 0 "Frontend pin: Frontend: ${dir}/frontend: Kubb, Zod, TypeScript and the test tools (Vitest, Playwright, axe-core, fast-check, Vite), the mutation tool Stryker, the architecture tool ArchUniTS, the coverage provider of Vitest (@vitest/coverage-v8) and the packages of the user interface (React, i18next, OpenTelemetry, happy-dom), package.json and lock file as in tools/versions.env" "a copy of the real frontend/ is the one of versions.env" run_frontend_pins "${dir}"
 expect 0 "Frontend pin: Frontend: ${REPO_ROOT}/frontend: Kubb, Zod, TypeScript and the test tools" "the real frontend/ is the one of versions.env" "${GATES_DIR}/check-pins.sh" "${real_versions}" "${work}/wf-real" "${real_allowed}"
 mkdir -p "${work}/feroot-empty/frontend" && echo "# frontend" >"${work}/feroot-empty/frontend/README.md"
 expect 0 "Frontend pin: no pnpm module frontend/" "a folder frontend/ with a README only is no pnpm module" run_frontend_pins "${work}/feroot-empty"
@@ -1434,7 +1440,8 @@ expect 0 "Frontend pin: no pnpm module frontend/" "no folder frontend/" run_fron
 # The test tools of feat-7-verification-architecture-tools (Phase 110): vitest, @playwright/test, axe-core, fast-check.
 # The mutation tool of feat-7-verification-architecture-tools (Phase 120): @stryker-mutator/core and
 # @stryker-mutator/vitest-runner. The coverage provider of feat-7-verification-architecture-tools (Phase 140):
-# @vitest/coverage-v8.
+# @vitest/coverage-v8. The packages of the user interface of feat-9-walking-skeleton (Phase 300): react, react-dom,
+# @types/react, @types/react-dom, i18next, react-i18next, the four packages of OpenTelemetry and happy-dom.
 for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CORE_INTEGRITY" "@kubb/plugin-zod|KUBB_PLUGIN_ZOD_VERSION|KUBB_PLUGIN_ZOD_INTEGRITY" \
     "@kubb/plugin-ts|KUBB_PLUGIN_TS_VERSION|KUBB_PLUGIN_TS_INTEGRITY" "zod|ZOD_VERSION|ZOD_INTEGRITY" "typescript|TYPESCRIPT_VERSION|TYPESCRIPT_INTEGRITY" \
     "vitest|VITEST_VERSION|VITEST_INTEGRITY" "@playwright/test|PLAYWRIGHT_VERSION|PLAYWRIGHT_INTEGRITY" "axe-core|AXE_CORE_VERSION|AXE_CORE_INTEGRITY" \
@@ -1442,7 +1449,15 @@ for entry in "kubb|KUBB_VERSION|KUBB_INTEGRITY" "@kubb/core|KUBB_VERSION|KUBB_CO
     "@stryker-mutator/core|STRYKER_VERSION|STRYKER_INTEGRITY" \
     "@stryker-mutator/vitest-runner|STRYKER_VITEST_RUNNER_VERSION|STRYKER_VITEST_RUNNER_INTEGRITY" \
     "archunit|ARCHUNIT_TS_VERSION|ARCHUNIT_TS_INTEGRITY" \
-    "@vitest/coverage-v8|VITEST_COVERAGE_V8_VERSION|VITEST_COVERAGE_V8_INTEGRITY"; do
+    "@vitest/coverage-v8|VITEST_COVERAGE_V8_VERSION|VITEST_COVERAGE_V8_INTEGRITY" \
+    "react|REACT_VERSION|REACT_INTEGRITY" "react-dom|REACT_DOM_VERSION|REACT_DOM_INTEGRITY" \
+    "@types/react|TYPES_REACT_VERSION|TYPES_REACT_INTEGRITY" "@types/react-dom|TYPES_REACT_DOM_VERSION|TYPES_REACT_DOM_INTEGRITY" \
+    "i18next|I18NEXT_VERSION|I18NEXT_INTEGRITY" "react-i18next|REACT_I18NEXT_VERSION|REACT_I18NEXT_INTEGRITY" \
+    "@opentelemetry/api|OPENTELEMETRY_API_VERSION|OPENTELEMETRY_API_INTEGRITY" \
+    "@opentelemetry/sdk-trace-web|OPENTELEMETRY_SDK_TRACE_WEB_VERSION|OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY" \
+    "@opentelemetry/exporter-trace-otlp-http|OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION|OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY" \
+    "@opentelemetry/resources|OPENTELEMETRY_RESOURCES_VERSION|OPENTELEMETRY_RESOURCES_INTEGRITY" \
+    "happy-dom|HAPPY_DOM_VERSION|HAPPY_DOM_INTEGRITY"; do
     IFS='|' read -r package version_key integrity_key <<<"${entry}"
     version="$(version_of "${version_key}")"
     integrity="$(version_of "${integrity_key}")"
@@ -1472,7 +1487,10 @@ expect 0 "RESULT: PASS" "zod: all three places have the same new version and int
 # The form of the values in versions.env
 for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION KUBB_PLUGIN_TS_VERSION \
     VITEST_VERSION PLAYWRIGHT_VERSION AXE_CORE_VERSION FAST_CHECK_VERSION VITE_VERSION \
-    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION ARCHUNIT_TS_VERSION VITEST_COVERAGE_V8_VERSION; do
+    STRYKER_VERSION STRYKER_VITEST_RUNNER_VERSION ARCHUNIT_TS_VERSION VITEST_COVERAGE_V8_VERSION \
+    REACT_VERSION REACT_DOM_VERSION TYPES_REACT_VERSION TYPES_REACT_DOM_VERSION I18NEXT_VERSION REACT_I18NEXT_VERSION \
+    OPENTELEMETRY_API_VERSION OPENTELEMETRY_SDK_TRACE_WEB_VERSION OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_VERSION \
+    OPENTELEMETRY_RESOURCES_VERSION HAPPY_DOM_VERSION; do
     for range in "^$(version_of "${key}")" "latest" "5"; do
         sed -e "s#^${key}=.*#${key}=${range}#" "${real_versions}" >"${work}/fever-form.env"
         expect 1 "but it must be an exact version (no range, no tag)" "frontend, versions.env: ${key} is not an exact version (${range})" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
@@ -1480,7 +1498,10 @@ for key in KUBB_VERSION ZOD_VERSION TYPESCRIPT_VERSION KUBB_PLUGIN_ZOD_VERSION K
 done
 for key in KUBB_INTEGRITY KUBB_CORE_INTEGRITY ZOD_INTEGRITY TYPESCRIPT_INTEGRITY KUBB_PLUGIN_ZOD_INTEGRITY KUBB_PLUGIN_TS_INTEGRITY \
     VITEST_INTEGRITY PLAYWRIGHT_INTEGRITY AXE_CORE_INTEGRITY FAST_CHECK_INTEGRITY VITE_INTEGRITY \
-    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY ARCHUNIT_TS_INTEGRITY VITEST_COVERAGE_V8_INTEGRITY; do
+    STRYKER_INTEGRITY STRYKER_VITEST_RUNNER_INTEGRITY ARCHUNIT_TS_INTEGRITY VITEST_COVERAGE_V8_INTEGRITY \
+    REACT_INTEGRITY REACT_DOM_INTEGRITY TYPES_REACT_INTEGRITY TYPES_REACT_DOM_INTEGRITY I18NEXT_INTEGRITY REACT_I18NEXT_INTEGRITY \
+    OPENTELEMETRY_API_INTEGRITY OPENTELEMETRY_SDK_TRACE_WEB_INTEGRITY OPENTELEMETRY_EXPORTER_TRACE_OTLP_HTTP_INTEGRITY \
+    OPENTELEMETRY_RESOURCES_INTEGRITY HAPPY_DOM_INTEGRITY; do
     sed -e "s#^${key}=.*#${key}=sha256-abc#" "${real_versions}" >"${work}/fever-form.env"
     expect 1 "but it must be a sha512 integrity value of npm" "frontend, versions.env: ${key} is not a sha512 value" run_frontend_pins "${REPO_ROOT}" "${work}/fever-form.env"
     grep -v "^${key}=" "${real_versions}" >"${work}/fever-missing.env"
@@ -1509,7 +1530,7 @@ expect 1 "CANIUSE_LITE_VERSION is not in tools/versions.env" "frontend, versions
 # package.json
 frontend_file_case pkgrange package.json "but KUBB_VERSION in tools/versions.env is 5.15.3" "package.json: a range (^) and not an exact version" 's#"kubb": "5.15.3"#"kubb": "^5.15.3"#'
 frontend_file_case pkgtag package.json "but TYPESCRIPT_VERSION in tools/versions.env is 5.9.3" "package.json: a tag and not an exact version" 's#"typescript": "5.9.3"#"typescript": "latest"#'
-frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['zod']" "package.json: a dev dependency in dependencies" \
+frontend_file_case pkgdev package.json "\`dependencies\` has typescript. It has only ['@opentelemetry/api', '@opentelemetry/exporter-trace-otlp-http', '@opentelemetry/resources', '@opentelemetry/sdk-trace-web', 'i18next', 'react', 'react-dom', 'react-i18next', 'zod']" "package.json: a dev dependency in dependencies" \
     's#"dependencies": {#"dependencies": {\n    "typescript": "5.9.3",#'
 frontend_file_case pkgmissing package.json "\`devDependencies\` has no typescript" "package.json: a dependency is missing" '/"typescript": "5.9.3"/d'
 frontend_file_case pkgextra package.json "\`devDependencies\` has left-pad. It has only" "package.json: a dependency that is not in the list" 's#"typescript": "5.9.3"#"typescript": "5.9.3",\n    "left-pad": "1.3.0"#'
@@ -1557,15 +1578,24 @@ section "check-pins.sh: the test tools of the Maven module backend/ (feat-7-veri
 # JUnit, Testcontainers (the three modules), the JDBC driver, jqwik and the test runner
 # maven-surefire-plugin, the mutation tool PIT (the plugin pitest-maven and its plugin
 # dependency pitest-junit5-plugin, feat-7-verification-architecture-tools, Phase 120), the
-# architecture tools Spring Modulith (spring-modulith-core and the jar spring-boot that the code
-# of the core needs), ArchUnit (archunit and archunit-junit5) and structurizr-client (feat-7-
-# verification-architecture-tools, Phase 130), and the coverage tool JaCoCo (the plugin
-# jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the properties of
-# backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION,
-# JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
-# SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION, STRUCTURIZR_VERSION and
-# JACOCO_VERSION of versions.env. The messages start with `Maven test pins:`. Each tool has a
-# version key, and each case changes one place only.
+# architecture tools Spring Modulith (spring-modulith-core; the jar spring-boot that the code of
+# the core needs is, since the walking skeleton (feat-9-walking-skeleton, Phase 200), in the scope
+# compile through the starter spring-boot-starter-web, and not a test dependency of the pom - a
+# declaration direct in the scope test would win the resolution of the scope over the dependency of
+# the starter, and the main code would not compile), ArchUnit (archunit and archunit-junit5) and
+# structurizr-client (feat-7-verification-architecture-tools, Phase 130), and the coverage tool
+# JaCoCo (the plugin jacoco-maven-plugin, feat-7-verification-architecture-tools, Phase 140): the
+# properties of backend/pom.xml, and the keys JUNIT_VERSION, TESTCONTAINERS_VERSION,
+# POSTGRESQL_VERSION, JQWIK_VERSION, MAVEN_SUREFIRE_PLUGIN_VERSION, MAVEN_RESOURCES_PLUGIN_VERSION, PIT_VERSION,
+# PIT_JUNIT5_PLUGIN_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION, ARCHUNIT_VERSION,
+# STRUCTURIZR_VERSION and JACOCO_VERSION of versions.env. The messages start with `Maven test
+# pins:`. Each tool has a version key, and each case changes one place only. The jar spring-boot
+# has no dependency in the pom any more (it comes through the starter): the key SPRING_BOOT_VERSION
+# is tied to the property spring-boot.version and to the version of the starters
+# spring-boot-starter-web and spring-boot-starter-log4j2 (the review finding S4a of feat-9: the
+# tie must not be lost), and it has the cases of the one place only in the loop below, and the
+# cases of the property and of the starters (after the loop). The plugin maven-resources-plugin has
+# the key MAVEN_RESOURCES_PLUGIN_VERSION (the review finding S4b).
 real_backend_pom="${REPO_ROOT}/backend/pom.xml"
 junit_version="$(version_of JUNIT_VERSION)"
 tc_version="$(version_of TESTCONTAINERS_VERSION)"
@@ -1614,13 +1644,19 @@ expect 0 "Maven test pins: Maven test pins: backend/pom.xml" "the real backend/p
 
 # Each tool: the two places, each alone (a changed version). The property is the one that the pom.xml
 # uses for the version (the three modules of Testcontainers have the property testcontainers.version).
+# The artifact spring-boot has no entry in the list (the section header, above): the pom has no
+# dependency org.springframework.boot:spring-boot any more (the scope compile through the starter,
+# since the walking skeleton, feat-9-walking-skeleton, Phase 200). The starter spring-boot-starter-web
+# is its entry (the version of the property spring-boot.version).
 for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontainers|TESTCONTAINERS_VERSION|testcontainers.version|dependency" \
     "postgresql|POSTGRESQL_VERSION|postgresql.version|dependency" "jqwik|JQWIK_VERSION|jqwik.version|dependency" \
     "maven-surefire-plugin|MAVEN_SUREFIRE_PLUGIN_VERSION|maven-surefire-plugin.version|plugin" \
+    "maven-resources-plugin|MAVEN_RESOURCES_PLUGIN_VERSION|maven-resources-plugin.version|plugin" \
+    "spring-boot-starter-web|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
+    "spring-boot-starter-log4j2|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
     "pitest-maven|PIT_VERSION|pitest.version|plugin" \
     "pitest-junit5-plugin|PIT_JUNIT5_PLUGIN_VERSION|pitest-junit5-plugin.version|dependency" \
     "spring-modulith-core|SPRING_MODULITH_VERSION|spring-modulith.version|dependency" \
-    "spring-boot|SPRING_BOOT_VERSION|spring-boot.version|dependency" \
     "archunit|ARCHUNIT_VERSION|archunit.version|dependency" \
     "archunit-junit5|ARCHUNIT_VERSION|archunit.version|dependency" \
     "structurizr-client|STRUCTURIZR_VERSION|structurizr.version|dependency" \
@@ -1635,6 +1671,19 @@ for entry in "junit-jupiter|JUNIT_VERSION|junit.version|dependency" "testcontain
         "${artifact}, one place only: pom.xml has another version (the property)" \
         "s#<${property}>${version}<#<${property}>${new_test_version}<#"
 done
+# SPRING_BOOT_VERSION (the review finding S4a): the property spring-boot.version of the pom.xml, alone. The
+# starters have a literal version that is the right one, so only the property is another value.
+spring_boot_version="$(version_of SPRING_BOOT_VERSION)"
+test_pom_case sbproperty 1 "has the property spring-boot.version ${new_test_version}, but SPRING_BOOT_VERSION in tools/versions.env is ${spring_boot_version}" \
+    "SPRING_BOOT_VERSION, one place only: the property spring-boot.version of pom.xml has another value (the starters have the right literal version)" \
+    "s#<spring-boot.version>${spring_boot_version}<#<spring-boot.version>${new_test_version}<#;s#<version>\${spring-boot.version}</version>#<version>${spring_boot_version}</version>#"
+# A starter with a literal version of another value (the property is right)
+test_pom_case sbstarter 1 "has the dependency spring-boot-starter-web ${new_test_version}, but SPRING_BOOT_VERSION in tools/versions.env is ${spring_boot_version}" \
+    "SPRING_BOOT_VERSION, one place only: the starter spring-boot-starter-web has another literal version (the property is right)" \
+    "/<artifactId>spring-boot-starter-web<\/artifactId>/,/<\/dependency>/ s#<version>\${spring-boot.version}</version>#<version>${new_test_version}</version>#"
+# A pom.xml that has no property spring-boot.version and no starter is no problem
+test_pom_case sbnone 0 "RESULT: PASS" "SPRING_BOOT_VERSION: a pom.xml without the property and without the starters passes" \
+    "s#<spring-boot.version>#<other-boot.version>#;s#</spring-boot.version>#</other-boot.version>#;s#<artifactId>spring-boot-starter-web</artifactId>#<artifactId>other-starter-web</artifactId>#;s#<artifactId>spring-boot-starter-log4j2</artifactId>#<artifactId>other-starter-log4j2</artifactId>#"
 # The version in other forms (the property of JUnit is the example)
 test_pom_case literalok 0 "RESULT: PASS" "junit-jupiter: the version is written in the dependency (the same value)" \
     "s#<version>\${junit.version}</version>#<version>${junit_version}</version>#"
@@ -1669,16 +1718,18 @@ sed -i -e 's#<groupId>org.junit.jupiter</groupId>#<groupId>other.junit</groupId>
     -e 's#<groupId>org.pitest</groupId>#<groupId>other.pitest</groupId>#g' \
     -e 's#<groupId>org.springframework.modulith</groupId>#<groupId>other.modulith</groupId>#' \
     -e 's#<groupId>org.springframework.boot</groupId>#<groupId>other.boot</groupId>#' \
+    -e 's#<spring-boot.version>#<other-boot.version>#' -e 's#</spring-boot.version>#</other-boot.version>#' \
     -e 's#<groupId>com.tngtech.archunit</groupId>#<groupId>other.archunit</groupId>#g' \
     -e 's#<groupId>com.structurizr</groupId>#<groupId>other.structurizr</groupId>#' \
     -e 's#<groupId>org.jacoco</groupId>#<groupId>other.jacoco</groupId>#' \
-    -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' "${dir}/backend/pom.xml"
+    -e 's#<artifactId>maven-surefire-plugin</artifactId>#<artifactId>other-plugin</artifactId>#' \
+    -e 's#<artifactId>maven-resources-plugin</artifactId>#<artifactId>other-resources-plugin</artifactId>#' "${dir}/backend/pom.xml"
 expect 0 "Maven test pins: no pom.xml has a test tool" "a pom.xml with no test tool passes (the generator plugin check and the others still run)" run_test_pins "${dir}"
 # A pom.xml that is not XML
 dir="$(mk_test_root notxml)" && echo 'this is not xml' >"${dir}/backend/pom.xml"
 expect 1 "cannot read backend/pom.xml as XML" "maven test pins: a pom.xml that is not XML" run_test_pins "${dir}"
 # The form of the values in versions.env, and a key that is not there
-for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION \
+for key in JUNIT_VERSION TESTCONTAINERS_VERSION POSTGRESQL_VERSION JQWIK_VERSION MAVEN_SUREFIRE_PLUGIN_VERSION MAVEN_RESOURCES_PLUGIN_VERSION \
     PIT_VERSION PIT_JUNIT5_PLUGIN_VERSION SPRING_MODULITH_VERSION SPRING_BOOT_VERSION ARCHUNIT_VERSION STRUCTURIZR_VERSION \
     JACOCO_VERSION; do
     for range in "^$(version_of "${key}")" "latest"; do

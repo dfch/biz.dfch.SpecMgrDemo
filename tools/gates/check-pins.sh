@@ -64,7 +64,7 @@
 #     plugins (the test runner maven-surefire-plugin, the mutation tool pitest-maven and the coverage tool
 #     jacoco-maven-plugin) in each pom.xml must be the version of the key of the versions file
 #     (JUNIT_VERSION, TESTCONTAINERS_VERSION, POSTGRESQL_VERSION, JQWIK_VERSION, PIT_JUNIT5_PLUGIN_VERSION,
-#     MAVEN_SUREFIRE_PLUGIN_VERSION, PIT_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION,
+#     MAVEN_SUREFIRE_PLUGIN_VERSION, MAVEN_RESOURCES_PLUGIN_VERSION, PIT_VERSION, SPRING_MODULITH_VERSION, SPRING_BOOT_VERSION,
 #     ARCHUNIT_VERSION, STRUCTURIZR_VERSION and JACOCO_VERSION). Each test dependency in the direct
 #     <dependencies> section of a pom.xml must have <scope>test</scope> (a scope that is absent is the default
 #     compile of Maven, and stops the check: the cyclonedx plugin keeps the test scope out of the SBOM; a

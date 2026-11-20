@@ -9,10 +9,12 @@
  *   <frontend dir>  the folder of the pnpm module (default: the parent of this script's folder)
  *
  * The units of the frontend (the rule of thumb of the task, documented in the plan): a unit is a
- * folder that contains TypeScript source - the top-level folders of frontend/src (today: test),
- * the folders of frontend/src/generated (today: types and zod), and the files that lie directly in
- * frontend/src (the unit root). The name of a unit is the identifier of its component in the model
- * (the rule of DEC 9edc1071).
+ * folder that contains TypeScript source - the top-level folders of frontend/src (today: client, i18n,
+ * telemetry, ui and test; the code of the walking skeleton, feat-9-walking-skeleton, Phase 300, is in the
+ * first four), the folders of frontend/src/generated (today: types and zod), and the files that lie
+ * directly in frontend/src (the unit root, today main.tsx and mutation-example.ts). A source file is a
+ * file .ts or .tsx. The name of a unit is the identifier of its component in the model (the rule of
+ * DEC 9edc1071).
  *
  * The rules (the successful case; the directions the code has):
  *   R1'  the module structure, the slice form of ArchUniTS: the unit generated has no dependency on
@@ -28,6 +30,11 @@
  *   R3'  the imports rule: the generated code does not import from the unit root (the files that
  *        lie directly in frontend/src). The imports of the generated code are inside the unit and
  *        to the external package zod, and not to a file of the module.
+ *   R4'  the layer rule of the product code (feat-9-walking-skeleton, Phase 300): the units of the
+ *        product code (client, i18n, telemetry and ui) do not depend on the layer of the tests.
+ *   R5'  the layer rule of the user interface (feat-9-walking-skeleton, Phase 300): the unit ui is the
+ *        top layer. The units client, i18n and telemetry do not depend on it. (The dependencies of
+ *        the units are compared with the model by the recipe architecture-model.)
  *
  * A rule whose pattern has no file is not green (the option allowEmptyTests of the check is false
  * by default, and the check gives the violation No files found matching pattern(s)): a unit that
@@ -51,6 +58,11 @@ const here = dirname(fileURLToPath(import.meta.url))
 const frontendDir = resolve(process.argv[2] ?? join(here, '..'))
 const tsconfig = join(frontendDir, 'tsconfig.json')
 
+/** The units of the product code of the walking skeleton (the folders of frontend/src). */
+const productUnits = ['client', 'i18n', 'telemetry', 'ui']
+/** The units that the unit ui uses (the units of the lower layer). */
+const lowerUnits = ['client', 'i18n', 'telemetry']
+
 const rules = [
   {
     name: "R1' the module structure (the slice form): the unit generated has no dependency on the unit test",
@@ -62,8 +74,16 @@ const rules = [
   },
   {
     name: "R3' the imports rule: the generated code does not import from the unit root (the files that lie directly in src/)",
-    checkable: projectFiles(tsconfig).inFolder('src/generated/**').shouldNot().dependOnFiles().inPath('src/*.ts'),
+    checkable: projectFiles(tsconfig).inFolder('src/generated/**').shouldNot().dependOnFiles().inPath('src/*.ts*'),
   },
+  ...productUnits.map((unit) => ({
+    name: `R4' the layer rule of the product code: the unit ${unit} does not depend on the layer of the tests`,
+    checkable: projectFiles(tsconfig).inFolder(`src/${unit}/**`).shouldNot().dependOnFiles().inFolder('src/test/**'),
+  })),
+  ...lowerUnits.map((unit) => ({
+    name: `R5' the layer rule of the user interface: the unit ${unit} does not depend on the unit ui (the top layer)`,
+    checkable: projectFiles(tsconfig).inFolder(`src/${unit}/**`).shouldNot().dependOnFiles().inFolder('src/ui/**'),
+  })),
 ]
 
 try {

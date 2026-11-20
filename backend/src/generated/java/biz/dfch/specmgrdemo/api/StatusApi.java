@@ -29,6 +29,9 @@ public interface StatusApi {
      * Gives the state of the system and the time of the check.
      *
      * @return The system gives its status. (status code 200)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 404)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 405)
+     *         or An error. The body obeys RFC 9457 (Problem Details). (status code 406)
      *         or An error. The body obeys RFC 9457 (Problem Details). (status code 429)
      *         or An error. The body obeys RFC 9457 (Problem Details). (status code 500)
      *         or An error. The body obeys RFC 9457 (Problem Details). (status code 503)

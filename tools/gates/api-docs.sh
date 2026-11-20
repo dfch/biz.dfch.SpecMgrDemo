@@ -34,11 +34,13 @@ plugin_version="$(version_of OPENAPI_GENERATOR_MAVEN_PLUGIN_VERSION)"
 repo_local="${GENERATOR_MAVEN_REPO_LOCAL:-${HOME}/.m2/repository}"
 
 verify_generator_plugin "${backend}"
+backend_maven_args "${backend}" # the property build.info.commit (the value of the build, Task 200.120)
 log "Delete ${output}"
 rm -rf "${output}"
 log "Make the API documentation (execution api-docs, generator html2) in ${output}"
 (
     cd "${backend}" && ./mvnw --batch-mode --no-transfer-progress --file pom.xml "-Dmaven.repo.local=${repo_local}" \
+        "${MAVEN_BUILD_ARGS[@]}" \
         "-Dapi-docs.dir=${output}" "org.openapitools:openapi-generator-maven-plugin:${plugin_version}:generate@api-docs"
 ) || die "Maven did not make the API documentation (see above)."
 [[ -s "${output}/index.html" ]] || die "The generator made no ${output}/index.html."

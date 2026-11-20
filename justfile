@@ -97,7 +97,7 @@ test-breaking-changes-gate:
 generate:
     @{{ just_executable() }} _gate generate.sh 120.120 backend frontend
 
-# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, and tsc --noEmit --strict). The generation is part of the Maven build (ACC-005).
+# Compile the Maven module and the pnpm module with the generated code (./mvnw compile, tsc --noEmit --strict, and the build of the browser bundle with vite build into a temporary folder). The generation is part of the Maven build (ACC-005).
 compile:
     @{{ just_executable() }} _gate compile.sh 120.120 backend frontend
 
@@ -185,19 +185,19 @@ traceability:
 test-traceability-gate:
     @{{ just_executable() }} _gate test-traceability-gate.sh 110.150
 
-# Report: the known vulnerabilities in the dependencies (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). OSV-Scanner reads the SBOM files of `just sbom` (build/sbom/*.cdx.json) and asks api.osv.dev (the network is needed). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (no network, a file that cannot be read, a missing binary, a wrong checksum) stops it (exit code 1). The data of OSV has a deviation in DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (feat-8-traceability-security-gates, Task 120.110).
+# Gate: the known vulnerabilities in the dependencies (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). OSV-Scanner reads the SBOM files of `just sbom` (build/sbom/*.cdx.json) and asks api.osv.dev (the network is needed). The level gate compares the findings with the baseline tools/security/osv-baseline.txt (the OSV identifier and the package, no report text, DEC 93a6d588-e002-4daf-9a47-45e2d77786e9): a finding that is Critical or High stops in each case (exit code 1), a finding that is not in the baseline stops (exit code 1), and a line of the baseline that has no finding any more is a warning (exit code 0). A failure of the tool (no network, a file that cannot be read, a missing binary, a wrong checksum) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.110; feat-9-walking-skeleton, Task 500.120).
 vuln-scan: sbom
-    @{{ just_executable() }} _gate vuln-scan.sh 120.110 "{{ sbom_dir }}"
+    @{{ just_executable() }} _gate vuln-scan.sh 500.120 "{{ sbom_dir }}" tools/security/osv-baseline.txt
 
-# Report: secrets in the files and in the history of the pull request (the commits in <base>..HEAD), with gitleaks (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). The allowlist is tools/security/gitleaks.toml (CODEOWNERS covers it). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (a wrong config, a base that does not exist, a shallow clone with no merge base, a wrong checksum) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.120).
+# Gate: secrets in the files and in the history of the pull request (the commits in <base>..HEAD), with gitleaks (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). The allowlist is tools/security/gitleaks.toml (CODEOWNERS covers it). gitleaks gives no severity, so the level gate uses the baseline tools/security/gitleaks-baseline.txt (the fingerprints) as the only rule: a finding that is not in the baseline stops (exit code 1), a line of the baseline that has no finding any more is a warning (exit code 0). A failure of the tool (a wrong config, a base that does not exist, a shallow clone with no merge base, a wrong checksum) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.120; feat-9-walking-skeleton, Task 500.120).
 secret-scan:
-    @{{ just_executable() }} _gate secret-scan.sh 120.120 "{{ base }}" tools/security/gitleaks.toml
+    @{{ just_executable() }} _gate secret-scan.sh 500.120 "{{ base }}" tools/security/gitleaks.toml tools/security/gitleaks-baseline.txt
 
-# Report: the workflow files with zizmor, offline (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). A finding is part of the report and does not stop the recipe (exit code 0, no threshold, REQ-005). A failure of the tool (a file that cannot be read, no input) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.130).
+# Gate: the workflow files with zizmor, offline (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). The level gate compares the findings with the baseline tools/security/zizmor-baseline.txt (the audit, the file and the place in the file): a finding with the severity High stops in each case (exit code 1), a finding that is not in the baseline stops (exit code 1), and a line of the baseline that has no finding any more is a warning (exit code 0). A failure of the tool (a file that cannot be read, no input) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.130; feat-9-walking-skeleton, Task 500.120).
 workflow-scan:
-    @{{ just_executable() }} _gate workflow-scan.sh 120.130 .github/workflows
+    @{{ just_executable() }} _gate workflow-scan.sh 500.120 tools/security/zizmor-baseline.txt .github/workflows
 
-# Test: the three security recipes and the function that separates a finding from a failure of the tool (ACC-005): each tool with a finding (exit code 0) and with a failure (exit code that is not 0), with stubs of the tool and of the network, and with the real gitleaks, zizmor and OSV-Scanner (feat-8-traceability-security-gates, Tasks 120.100 to 120.130).
+# Test: the three security recipes, the function that separates a finding from a failure of the tool (feat-8 ACC-005) and the level gate with the baseline files (feat-9 ACC-007): each tool with no finding, with a finding of the baseline (exit code 0), with a new finding, with a finding that is Critical or High and with a failure of the tool (exit code 1), and the old line of a baseline (a warning), with stubs of the tool and of the network, and with the real gitleaks, zizmor and OSV-Scanner (feat-8-traceability-security-gates, Tasks 120.100 to 120.130; feat-9-walking-skeleton, Task 500.120).
 test-security-gates:
     @{{ just_executable() }} _gate test-security-gates.sh 120.100
 
