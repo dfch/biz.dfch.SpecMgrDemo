@@ -399,7 +399,7 @@ set +e
 case_output="$("${GATES_DIR}/traceability.sh" "${REPO_ROOT}" 2>&1)"
 case_code=$?
 set -e
-expect_case "the real repository passes (the REQ has the status draft, no VCR is needed)" 0 "RESULT: PASS" "ERRORS (0)" "(the form is the expected form)"
+expect_case "the real repository passes (the two REQ that the model references have the status accepted, each has a VCR, and the references resolve)" 0 "RESULT: PASS" "ERRORS (0)" "(the form is the expected form)"
 set +e
 case_output="$("${GATES_DIR}/traceability.sh" "${work}/err-dangling-reference" 2>&1)"
 case_code=$?
