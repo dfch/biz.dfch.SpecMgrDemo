@@ -4,7 +4,7 @@ created: '2026-11-17T11:26:49.961+01:00'
 id: e85e9685-0787-4dff-9ee5-9d46670e9ee4
 status: draft
 type: dec
-updated: '2026-11-18T05:51:56.518+01:00'
+updated: '2026-11-21T16:58:24.290+01:00'
 version: 1.0.0
 ---
 
@@ -37,6 +37,7 @@ The model uses the conventions of this decision. The mapping of an element to th
 - The gate for the traceability reads `specmgr-refs` (Phase 150, Task 150.100). The old property `specmgr-req` keeps working for one release (Phase 150, Task 150.110), and DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342 is updated in Phase 150, Task 150.120.
 - The components of feat-9-walking-skeleton take the mapping `code.*` when that feature merges (Phase 120 of feat-50-structurizr-model-rules, deferred by the owner decision of 2026-11-17). The conventions of this decision are usable for those components (the component `app` of the backend, and the units `client`, `i18n`, `telemetry` and `ui` of the frontend) without a change (the fit is recorded in Phase 120, Task 120.100, of feat-50-structurizr-model-rules).
 - The element without a mapping is not compared with the code, and the code that no element maps and that no exception names stops the comparison (the closed world, the limit of one source of truth).
+- The closed world covers only the code that carries a `code.*` mapping: a class that lies directly in the `code.root` package of the container (for example `biz.dfch.specmgrdemo` of the backend, the equivalent root of the frontend) and that no component maps is neither checked as unmapped code nor as a source of dependencies (the known limitation, inherited from the analyzer of feat-7-verification-architecture-tools; it is latent today, because no such class exists, and the recommended mitigation is a guard that asserts the root package holds no concrete source class).
 
 ### Confirmation
 
