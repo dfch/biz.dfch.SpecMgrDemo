@@ -23,6 +23,13 @@
  * matches the files of the folder at each depth, and a file entry matches the file) should not
  * depend on the files of the destination component. The cycle rule: the files of all the mapped
  * components (the union of the patterns) have no cycle (the construct haveNoCycles of ArchUniTS).
+ * The project view the checks examine (the TypeScript program and the file graph of the module)
+ * is built once for all the derived rules, and not once per rule (the construct extractGraph of
+ * ArchUniTS, and the projection of the edges of the graph, perEdge for the forbidden pairs and
+ * perInternalEdge for the cycle rule): the check of one rule is the narrowing of the rule on the
+ * shared view (the gathers of the violations, the bodies of the constructs dependOnFiles and
+ * haveNoCycles of ArchUniTS, with the same filters and the same options that the fluent API of
+ * ArchUniTS gives), and the cost of one rule is the check itself.
  * A violation names the imports (the source file and the target file of each dependency, as the
  * rules.mjs of feat-7). A rule whose pattern has no file is not green (the option allowEmptyTests
  * of the check is false by default, and the check gives the violation No files found matching
@@ -43,7 +50,7 @@
 
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { projectFiles } from 'archunit'
+import { RegexFactory, extractGraph, gatherCycleViolations, gatherDependOnFileViolations, perEdge, perInternalEdge, projectEdges } from 'archunit'
 import { allMappedRegExp, componentRegExp, deriveFrontend, forbiddenPairs, readWorkspace } from './workspace.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -55,26 +62,50 @@ const tsconfig = join(frontendDir, 'tsconfig.json')
 const derived = deriveFrontend(readWorkspace(workspacePath))
 const pairs = forbiddenPairs(derived)
 
+// The filters of one rule: the same pathMatcher filters that the fluent API of ArchUniTS makes
+// for the construct inPath (the pattern of the type RegExp of the entries of code.path, the
+// shared module workspace.mjs).
+const pathFilter = (regExp) => RegexFactory.pathMatcher(regExp)
+
+// The check of one rule is the narrowing of the rule on the shared project view (built once in
+// the run below): the gathers are the bodies of the constructs of ArchUniTS, with the same
+// arguments the fluent API gives for the check without options (the option isNegated true: the
+// files of the source component should NOT depend on the files of the destination component, the
+// option allowEmptyTests false: a rule whose pattern has no file is not green).
 const rules = pairs.map(([source, destination]) => ({
   name: `the component ${source} must not depend on the component ${destination} (the model gives no relation ${source} -> ${destination})`,
-  checkable: projectFiles(tsconfig)
-    .inPath(componentRegExp(derived.components.get(source).paths))
-    .shouldNot()
-    .dependOnFiles()
-    .inPath(componentRegExp(derived.components.get(destination).paths)),
+  check: (view) =>
+    gatherDependOnFileViolations(
+      view.edges,
+      [pathFilter(componentRegExp(derived.components.get(source).paths))],
+      [pathFilter(componentRegExp(derived.components.get(destination).paths))],
+      true,
+      false,
+    ),
 }))
 rules.push({
   name: 'the mapped components of the container frontend have no dependency cycle',
-  checkable: projectFiles(tsconfig).inPath(allMappedRegExp(derived)).should().haveNoCycles(),
+  check: (view) => gatherCycleViolations(view.internalEdges, [pathFilter(allMappedRegExp(derived))], undefined),
 })
 
 console.log(`ok   the model gives ${pairs.length} forbidden pair(s) and 1 cycle rule for the container frontend (${rules.length} rule(s))`)
 
 try {
   process.chdir(frontendDir)
+  // The shared project view, built once for all the derived rules (and not once per rule): the
+  // graph of the TypeScript program and the file graph of the module (the construct extractGraph
+  // of ArchUniTS), and the projection of the edges the rules examine (perEdge, the edges of the
+  // graph, for the forbidden pairs; perInternalEdge, the internal edges, for the cycle rule).
+  // The check of one rule is the narrowing of the rule on the view (the gather in the check of
+  // the rule), and the cost of one rule is the check itself.
+  const graph = await extractGraph(tsconfig)
+  const view = {
+    edges: projectEdges(graph, perEdge()),
+    internalEdges: projectEdges(graph, perInternalEdge()),
+  }
   let failed = false
   for (const rule of rules) {
-    const violations = await rule.checkable.check()
+    const violations = rule.check(view)
     if (violations.length === 0) {
       console.log(`ok   ${rule.name}: no violation`)
     } else {
