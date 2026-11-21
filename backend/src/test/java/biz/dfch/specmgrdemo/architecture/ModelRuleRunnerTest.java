@@ -41,9 +41,10 @@ import org.junit.jupiter.api.TestFactory;
  * <p>The classes: the base package of the container's code.root, the test classes excluded by the
  * import option DoNotIncludeTests (the same option as the comparison). The violations that ArchUnit
  * reports name the dependency, as the rule R2 of feat-7 (the report of the run). The run is green on
- * the committed code (ACC-002 and ACC-005): the model gives one forbidden pair (the component model
- * must not depend on the component api; the direction of the code is api -> model) and one cycle
- * rule. The test does not start a Spring context (plain JUnit and ArchUnit only).
+ * the committed code (ACC-002 and ACC-005): the model gives three forbidden pairs (api -> app,
+ * model -> api and model -> app; the direction of the code is api -> model, app -> api and
+ * app -> model) and one cycle rule (four derived rules today). The test does not start a Spring
+ * context (plain JUnit and ArchUnit only).
  */
 class ModelRuleRunnerTest {
 

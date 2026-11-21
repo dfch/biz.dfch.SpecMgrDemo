@@ -182,11 +182,11 @@ architecture-model:
 generate-model:
     @{{ just_executable() }} _gate generate-model.sh 110.110 model
 
-# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), it stops if the result differs from model/workspace.json (the committed file), and it stops if the committed file carries another value for the top-level property structurizr.inspection.error than the recorded value 14 (the count of the inspection, the stable consequence of the limit of the pinned exporter for the deployment content; the record is in model/README.md and in the Updates entry of the DEC) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), it stops if the result differs from model/workspace.json (the committed file), and it stops if the committed file carries another value for the top-level property structurizr.inspection.error than the recorded value 29 (the count of the inspection, the stable consequence of the limit of the pinned exporter for the deployment content; the record is in model/README.md and in the Updates entry of the DEC) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
 check-model-generated:
     @{{ just_executable() }} _gate check-model-generated.sh 110.120 model
 
-# Test: the gate for the generated model with the fixtures: the good case (pass), the changed-JSON case (stop, the message names the difference), the stale-JSON case (stop), the broken-DSL case (stop, the line named), the pin case, and the usage (feat-50-structurizr-model-rules, Task 110.120).
+# Test: the gate for the generated model with the fixtures: the good case (pass), the changed-JSON case (stop, the message names the difference), the stale-JSON case (stop), the inspection-count case (stop, the message names the count), the broken-DSL case (stop, the line named), the pin case, and the usage (feat-50-structurizr-model-rules, Task 110.120).
 test-check-model-generated-gate:
     @{{ just_executable() }} _gate test-check-model-generated-gate.sh 110.120
 

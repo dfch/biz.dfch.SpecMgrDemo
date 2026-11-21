@@ -13,10 +13,10 @@
  *
  * The rules (derived from the model at run time, per the canonical section): for the container
  * frontend, one check per forbidden dependency (every ordered pair of distinct mapped components
- * that has no relation in the model; today: 10 pairs) and one cycle rule (no dependency cycle among
- * the mapped components, the viewpoint development of Rozanski & Woods). The reading of the
- * workspace and the derivation are the shared module workspace.mjs (the same rule set that the
- * comparison compare.mjs uses, so the two cannot drift apart).
+ * that has no relation in the model; today: 41 pairs) and one cycle rule (no dependency cycle among
+ * the mapped components, the viewpoint development of Rozanski & Woods): 42 derived rules today.
+ * The reading of the workspace and the derivation are the shared module workspace.mjs (the
+ * same rule set that the comparison compare.mjs uses, so the two cannot drift apart).
  *
  * The checks of ArchUniTS: the files of the source component (the pattern of the type RegExp of the
  * entries of code.path, the form of the spike of Phase 100: a folder entry with the folder suffix

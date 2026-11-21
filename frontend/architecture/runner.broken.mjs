@@ -13,16 +13,16 @@
  *
  * The checks are derived, and not hard-coded (the same reading and the same derivation as the
  * runner runner.mjs, the shared module workspace.mjs): the script reads the workspace, takes the
- * relations of the model between the mapped components of the container frontend (today: the two
- * relations test -> zod and test -> root), and builds for each of them the check of ArchUniTS
- * that FORBIDS it (the component test must not depend on the component zod, and the component
- * test must not depend on the component root). The code has the direction of each modelled
- * relation (the other direction of the closed world of the comparison compare.mjs: a relation of
- * the model without the dependency of the code stops the run), so each check is violated
- * deterministically, and ArchUniTS names the violating imports in the report (the source file and
- * the target file of each dependency, as the script rules.broken.mjs of feat-7 demonstrated for
- * the relation test -> zod: the four imports of the test files to the generated Zod schemas, and
- * the one import of the test file to the file of the unit root).
+ * relations of the model between the mapped components of the container frontend (today: the 15
+ * modelled relations, for example test -> zod and test -> root), and builds for each of them the
+ * check of ArchUniTS that FORBIDS it (for example the component test must not depend on the
+ * component zod, and the component test must not depend on the component root). The code has the
+ * direction of each modelled relation (the other direction of the closed world of the comparison
+ * compare.mjs: a relation of the model without the dependency of the code stops the run), so each
+ * check is violated deterministically, and ArchUniTS names the violating imports in the report
+ * (the source file and the target file of each dependency, as the script rules.broken.mjs of
+ * feat-7 demonstrated for the relation test -> zod: the four imports of the test files to the
+ * generated Zod schemas, and the one import of the test file to the file of the unit root).
  *
  * The script stops (exit code 1) also if a modelled relation has no violation in the code (the
  * case that is not successful that passes silently would hide a change of the code, the form of

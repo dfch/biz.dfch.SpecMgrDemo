@@ -23,13 +23,14 @@ import org.junit.jupiter.api.Test;
  * runner ModelRuleRunnerTest, the shared class ModelRules): the class reads the workspace (the
  * file model/workspace.json of the repository; the property model.workspace.path gives another
  * file, the same interface as the runner and the comparison), takes the relations of the model
- * between the mapped components of the container backend (today exactly one: api -> model), and
- * builds for each of them the ArchUnit rule that FORBIDS it (the component api must not depend on
- * the component model). The code has the direction of each modelled relation (the other direction
- * of the closed world of the comparison ModelComparisonTest: a relation of the model without the
- * dependency of the code stops the run), so each rule is violated deterministically, and ArchUnit
- * names the violating dependency in the report of the run (the method getStatus() of the
- * generated interface StatusApi, with the return type of the model class Status).
+ * between the mapped components of the container backend (today three: app -> api, app -> model
+ * and api -> model), and builds for each of them the ArchUnit rule that FORBIDS it (for example
+ * the component api must not depend on the component model). The code has the direction of each
+ * modelled relation (the other direction of the closed world of the comparison
+ * ModelComparisonTest: a relation of the model without the dependency of the code stops the run),
+ * so each rule is violated deterministically, and ArchUnit names the violating dependency in the
+ * report of the run (one of the violations: the method getStatus() of the generated interface
+ * StatusApi, with the return type of the model class Status).
  *
  * <p>The class has no suffix Test, so the default run of surefire does not start it (the committed
  * run of the tests is green). A modelled relation that the code does not violate any more stops
