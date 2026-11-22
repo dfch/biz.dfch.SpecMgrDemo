@@ -24,14 +24,25 @@ What the script checks (the table of checks of the plan):
                                              identifier of a REQ document
   ERROR    model-id-has-no-document          each identifier in the property `specmgr-req` of `model/workspace.json`
                                              (one identifier, or a list that the character comma separates) is the
-                                             identifier of a REQ document
+                                             identifier of a REQ document (the old form: it keeps working for one
+                                             release, the compatibility of feat-50 Task 150.110)
+  ERROR    model-ref-bad-form                the value of the property `specmgr-refs` of `model/workspace.json`
+                                             (the new form, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4) is a text of the
+                                             form TYPE UUID; TYPE UUID (each entry is a document type and an
+                                             identifier, one space between them, the text '; ' between the entries)
+  ERROR    model-ref-has-no-document         the identifier of each entry of the property `specmgr-refs` is the
+                                             identifier of a document of that type in `docs/<type>/` (a document of
+                                             another type for the identifier is an error too)
   ERROR    test-vcr-has-no-document          each `vcr:<uuid>` in a test of the backend and of the frontend is the
                                              identifier of a VCR document
   ERROR    approved-req-has-no-vcr           an approved REQ has a VCR
   ERROR    test-file-outside-test-roots      a test file of `backend/` or `frontend/` (`*Test.java`, `*Tests.java`,
                                              `*IT.java`, `*.test.ts`, `*.spec.ts` and the same for the other suffixes)
                                              is in a folder of TEST_ROOTS. A new test folder must not be ignored in silence
-  WARNING  approved-req-has-no-model-element an approved REQ is in the property `specmgr-req` of an element
+  WARNING  approved-req-has-no-model-element an approved REQ is in the property `specmgr-req` of an element, or in
+                                             an entry of the type REQ of the property `specmgr-refs` (the check reads
+                                             the two forms independently and counts the REQ identifiers of the
+                                             element in the two forms)
   WARNING  approved-req-vcr-not-in-test      the VCR of an approved REQ is in the name of a test
 
 Definitions (Task 110.100):
@@ -40,6 +51,16 @@ Definitions (Task 110.100):
     statuses (`draft`, `proposed`, `superseded`, `deprecated`, `rejected`) are not approved.
   - A VCR belongs to a REQ if the section `## Verifies` of the VCR has the reference `REQ <uuid>` of the REQ. The status
     of the VCR is not examined.
+  - The property `specmgr-refs` of the model (the new form, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): the value is
+    one or more entries that the text `; ` (semicolon and one space, exactly) separates, and the form of an entry is
+    `TYPE UUID` (one space between the type and the identifier). The type is one of the types of document that the tag
+    of reference uses with an identifier of the form UUID (GOL, PRB, QA, UC, REQ, RSK, DEC, ADR, VCR, SYSRS and TXT,
+    upper case), and the identifier is the identifier of a document of that type in `docs/<type>/` (the same index
+    that the check of the references of the documents uses). The old property `specmgr-req` (the identifier bare, that
+    the character comma separates) keeps working for one release (the compatibility of feat-50 Task 150.110): an
+    element may have the old form, the new form, or both (the compatibility of one release); the check reads the two
+    forms independently, and the warning and the report count the REQ identifiers of the element in the two forms (an
+    identifier that the element gives in the two forms is counted one time).
   - A test has a VCR if the text `vcr:<uuid>` is inside a string literal ("...", '...', a backtick string, or a text
     block with three double quotes) of a test source. The script splits the source into code, comments and strings (a
     line comment `//`, a block comment `/* ... */` that can span lines, also for lines that do not start with `*`), and
@@ -85,6 +106,7 @@ UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 VCR_TEST_PATTERN = re.compile(r"\bvcr:(" + UUID_PATTERN.pattern + r")(?![0-9a-f])", re.IGNORECASE)
 
 MODEL_PROPERTY = "specmgr-req"
+MODEL_REFS_PROPERTY = "specmgr-refs"
 OPENAPI_EXTENSION = "x-specmgr-req"
 OPENAPI_METHODS = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
 
@@ -105,6 +127,16 @@ DOC_TYPES = (
 )
 FEAT_TYPE = "feat"
 FEAT_DIR = Path(".specmgr") / "feat"
+
+# The text that separates the entries of `specmgr-refs` (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4: semicolon and one
+# space, exactly).
+MODEL_REFS_SEPARATOR = "; "
+# The document types of an entry of `specmgr-refs`: the types of DOC_TYPES, upper case (the form names the type in
+# upper case). One source for the types: `feat` is not in DOC_TYPES, and the id of a feature is no UUID.
+MODEL_REF_TYPES = frozenset(doc_type.upper() for doc_type in DOC_TYPES)
+# The form of one entry of `specmgr-refs`: TYPE UUID (one space between the type and the identifier). The type is
+# upper case; the case of the identifier does not matter (the check compares it in lower case, as the old form does).
+MODEL_REF_ENTRY = re.compile(r"([A-Z]+) ([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})")
 
 # The suffixes of the test files of the frontend (all the suffixes of the files that the check reads there).
 FRONTEND_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"})
@@ -427,15 +459,18 @@ def check_openapi(root: Path, index: Index, findings: list[Finding]) -> int:
     return count
 
 
-def walk_model(node: Any, trail: str) -> Iterator[tuple[str, Any]]:
-    """Yield (the label, the value of `specmgr-req`) for each object of the workspace that has the property."""
+def walk_model(node: Any, trail: str) -> Iterator[tuple[str, str, Any]]:
+    """Yield (the label, the property name, the value) for each object of the workspace that has one of the
+    traceability properties (`specmgr-req`, the old form, `specmgr-refs`, the new form)."""
     if isinstance(node, dict):
         label = trail
         if isinstance(node.get("name"), str):
             label = f"{trail}/{node['name']}" if trail else node["name"]
         properties = node.get("properties")
-        if isinstance(properties, dict) and MODEL_PROPERTY in properties:
-            yield label or "(workspace)", properties[MODEL_PROPERTY]
+        if isinstance(properties, dict):
+            for property_name in (MODEL_PROPERTY, MODEL_REFS_PROPERTY):
+                if property_name in properties:
+                    yield label or "(workspace)", property_name, properties[property_name]
         for key, value in node.items():
             if key != "properties":
                 yield from walk_model(value, label)
@@ -444,8 +479,85 @@ def walk_model(node: Any, trail: str) -> Iterator[tuple[str, Any]]:
             yield from walk_model(item, trail)
 
 
+def article(doc_type: str) -> str:
+    """Return the article for the upper case document type (ADR is the only type that starts with a vowel sound)."""
+    return "an" if doc_type.upper() == "ADR" else "a"
+
+
+def check_refs(label: str, value: Any, model_file: str, index: Index, findings: list[Finding]) -> list[str]:
+    """Check the value of the property `specmgr-refs` of the element `label` (the form TYPE UUID; TYPE UUID).
+
+    Stop (error) for a value that is no text, for an entry that is no form TYPE UUID (the text '; ' with no space
+    after the semicolon, an identifier without the type), for a type that is not a document type, and for an
+    identifier that has no document of that type (a document of another type for the identifier is an error too).
+    Return the REQ identifiers of the value (the entries of the type REQ, also the ones that the check stops for:
+    the behavior of the old form).
+    """
+    where = f"the element {label}, {MODEL_REFS_PROPERTY}"
+    if not isinstance(value, str):
+        findings.append(
+            Finding("ERROR", "model-ref-bad-form", model_file, None, f"{where}: the value {value!r} is not a text")
+        )
+        return []
+    ids: list[str] = []
+    for entry in value.split(MODEL_REFS_SEPARATOR):
+        match = MODEL_REF_ENTRY.fullmatch(entry)
+        if match is None:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "model-ref-bad-form",
+                    model_file,
+                    None,
+                    f"{where}: the entry '{entry}' is not the form TYPE UUID (one space between the type and the "
+                    "identifier, the text '; ' between the entries)",
+                )
+            )
+            continue
+        ref_type = match.group(1)
+        ref_id = match.group(2).lower()
+        if ref_type not in MODEL_REF_TYPES:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "model-ref-bad-form",
+                    model_file,
+                    None,
+                    f"{where}: the type {ref_type} is not a document type (the entry is '{entry}')",
+                )
+            )
+        elif not index.has(ref_type.lower(), ref_id):
+            others = [
+                doc_type for doc_type in DOC_TYPES if doc_type != ref_type.lower() and index.has(doc_type, ref_id)
+            ]
+            cause = (
+                f"it is the id of {article(others[0])} {others[0].upper()} document"
+                if others
+                else "no document has this id"
+            )
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "model-ref-has-no-document",
+                    model_file,
+                    None,
+                    f"{where}: {ref_id} is not the id of {article(ref_type)} {ref_type} document ({cause})",
+                )
+            )
+        if ref_type == "REQ":
+            ids.append(ref_id)
+    return ids
+
+
 def read_model(root: Path, index: Index, findings: list[Finding]) -> set[str]:
-    """Check `specmgr-req` of `model/workspace.json`. Return the identifiers that the model has."""
+    """Check `specmgr-req` and `specmgr-refs` of `model/workspace.json`. Return the REQ identifiers that the model has.
+
+    The check reads the two forms independently (an element may have the old form, the new form, or both, the
+    compatibility of one release): each identifier of the property `specmgr-req` must be the identifier of a REQ
+    document, and each entry of the property `specmgr-refs` is checked per entry (the form, the type, the document).
+    The warning and the report count the REQ identifiers of the element in the two forms (an identifier that the
+    element gives in the two forms is counted one time).
+    """
     relative = Path("model") / "workspace.json"
     path = root / relative
     if not path.is_file():
@@ -456,18 +568,22 @@ def read_model(root: Path, index: Index, findings: list[Finding]) -> set[str]:
         raise InputError(f"cannot read {relative.as_posix()}: {error}") from error
     if not isinstance(data, dict) or not isinstance(data.get("model"), dict):
         raise InputError(f"{relative.as_posix()} has no `model` object")
+    model_file = relative.as_posix()
     found: set[str] = set()
-    for label, value in walk_model(data["model"], ""):
-        found.update(
-            check_req_ids(
-                "model-id-has-no-document",
-                relative.as_posix(),
-                f"the element {label}, {MODEL_PROPERTY}",
-                value,
-                index,
-                findings,
+    for label, property_name, value in walk_model(data["model"], ""):
+        if property_name == MODEL_PROPERTY:
+            found.update(
+                check_req_ids(
+                    "model-id-has-no-document",
+                    model_file,
+                    f"the element {label}, {MODEL_PROPERTY}",
+                    value,
+                    index,
+                    findings,
+                )
             )
-        )
+        else:
+            found.update(check_refs(label, value, model_file, index, findings))
     return found
 
 
@@ -649,8 +765,9 @@ def check_approved_reqs(
                     "approved-req-has-no-model-element",
                     file,
                     None,
-                    f"the REQ {req_id} has the status {document.status}, but no element of model/workspace.json "
-                    f"has it in the property {MODEL_PROPERTY}",
+                    f"the REQ {req_id} has the status {document.status}, but no element of model/workspace.json has it "
+                    f"in the property {MODEL_PROPERTY} or in an entry of the type REQ of the property "
+                    f"{MODEL_REFS_PROPERTY}",
                 )
             )
         for vcr_id in vcrs:

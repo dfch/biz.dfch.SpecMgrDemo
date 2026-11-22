@@ -74,8 +74,9 @@
         (or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) is set; with no endpoint the SDK runs with no processor, and the
         trace identifier of each request is still real (the app starts and serves, and the feature gives no collector).
 
-   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The module has no
-   product code, so the tests exercise the generated code (the example module). The license of each tool is in the
+   The test tools (feat-7-verification-architecture-tools, Phase 110, Tasks 110.100 and 110.130). The tests exercise
+   the generated code and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), the product code of the
+   package app. The license of each tool is in the
    license table of the plan; the two tools of the class Review (JUnit and jqwik, both EPL-2.0) have the deviation
    DEC 93a6d588-e002-4daf-9a47-45e2d77786e9 (the register of the approved deviations, accepted 2026-11-09). Every
    test tool is in <scope>test</scope>, so the cyclonedx plugin (includeTestScope, the default false) keeps them out
@@ -112,43 +113,37 @@
         makes a report and no threshold is set (REQ-006, the walking skeleton sets the threshold from the
         measured baseline).
 
-    The architecture tools (feat-7-verification-architecture-tools, Phase 130, Tasks 130.100 and 130.120; DEC
-    9edc1071-4fd0-48b6-a037-1a4cb2331f73). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
-    out of the SBOM, as for the test tools above. The versions are the ones of tools/versions.env (SPRING_MODULITH_VERSION,
-    ARCHUNIT_VERSION and STRUCTURIZR_VERSION; just check-pins compares them, check_pins.py: check_maven_test_pins).
-      - Spring Modulith (org.springframework.modulith:spring-modulith-core): the module structure of the module
-        (R1, the recipe architecture-backend). The 2.0.x line (2.0.9), the line of Spring Boot 4.0.x (the rework of
-        feat-9-walking-skeleton, 2026-11-17; the module had the 1.4.x line with the Spring Framework 6.2.19 before).
-        The core of 2.0.9 has the dependencies spring-core and spring-context 7.0.9 (the module has 7.0.10, the
-        nearest dependency wins), and it gives the module structure assertions (ApplicationModules.of(...),
-        verify(), detectViolations()); the JUnit test starts them without a Spring context. The test support
-        artifact (spring-modulith-test) is not in the module: its annotation @ApplicationModuleTest boots a Spring
-        context (the annotation is wired to @SpringBootTest), and the test of the module structure needs none.
-       - Spring Boot (org.springframework.boot:spring-boot): the jar is in the module in the scope compile through the
-         starter spring-boot-starter-web (the service ships it, so the jar is in the SBOM, and the test classpath has
-         it too). In the line 1.4.x of Spring Modulith the module detection (ApplicationModules.of(...)) called the
-         class ConfigDataEnvironmentPostProcessor of this jar, and a start without the jar stopped with the error
-         NoClassDefFoundError; that was the reason of the test dependency of feat-7-verification-architecture-tools.
-         The pom has no declaration of this jar (a declaration direct in the scope test would win the resolution of
-         the scope over the dependency of the starter, and the main code would not compile).
-      - ArchUnit (com.tngtech.archunit:archunit and archunit-junit5): the layer rule of the module (R2, the recipe
-        architecture-backend), and the source of the package dependencies of the comparison with the model (the
-        recipe architecture-model). The core of Spring Modulith has the dependency archunit 1.4.2; the module names
-        1.5.1, and the resolution of Maven gives 1.5.1 (the nearest dependency wins).
-       - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
-         (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The module has no other reader
-         of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
-         (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
-         module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
-         in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
+    The architecture tools (feat-50-structurizr-model-rules, Phase 130 and 140; the hard-coded rules of
+    feat-7-verification-architecture-tools are removed, and the rules are the ones the model gives, DEC
+    e85e9685-0787-4dff-9ee5-9d46670e9ee4). Every one is in <scope>test</scope>, so the cyclonedx plugin keeps it
+    out of the SBOM, as for the test tools above. The versions are the ones of tools/versions.env (ARCHUNIT_VERSION
+    and STRUCTURIZR_VERSION; just check-pins compares them, check_pins.py: check_maven_test_pins). The jars of
+    Spring Modulith (spring-modulith-core) and the test dependency of the jar spring-boot were in the module for
+    the hard-coded rules of feat-7; the rules are removed in Phase 130 of feat-50 (the runner derives the rules
+    from the model, ArchUnit only), and Phase 160 of feat-50 removes the jars and their pins (no pin for a
+    dependency that is not there, the one-source-of-truth goal). The jar org.springframework.boot:spring-boot is
+    in the module in the scope compile through the starter spring-boot-starter-web of the walking skeleton (the
+    service ships it, so the jar is in the SBOM): that is a product dependency (the libraries of the walking
+    skeleton above), and not an architecture tool.
+      - ArchUnit (com.tngtech.archunit:archunit and archunit-junit5): the rules the model gives (the runner
+        ModelRuleRunnerTest, the recipe architecture-backend), and the source of the package dependencies of the
+        comparison with the model (the analyzer ModelComparisonTest, the recipe architecture-model).
+      - structurizr-client (com.structurizr:structurizr-client): the reader of the workspace of model/
+        (com.structurizr.io.json.JsonReader, the model classes of structurizr-core). The test code has no other
+        reader of the workspace, so the client artifact (the JSON reader) and not the DSL artifact
+        (structurizr-dsl, that has the client as a dependency and the parsers for the other formats) is in the
+        module. The dependencies of the client (jackson-databind, httpclient5, jaxb-api and structurizr-core) are
+        in the scope test too, and the cyclonedx plugin keeps them out of the SBOM.
 
     The product code of the walking skeleton is in src/main/java/biz/dfch/specmgrdemo/app/ (feat-9-walking-skeleton,
     Phase 200): the main class, the two controllers, the check of the state, the handler of the error, the filter
     and the configuration of OpenTelemetry (the header comment above gives the libraries). The test classes are in
     src/test/java/biz/dfch/specmgrdemo/app/ (the unit tests and the integration tests of the walking skeleton), in
     src/test/java/biz/dfch/specmgrdemo/testtools/ (the test tools of the phases 110 and 120) and in
-    src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of the phase 130: the module structure
-    R1, the layer rule R2 and the comparison with the model of the recipe architecture-model). The test resources
+    src/test/java/biz/dfch/specmgrdemo/architecture/ (the architecture tools of feat-50-structurizr-model-rules,
+    Phase 130 and 140: the runner of the rules the model gives ModelRuleRunnerTest, the comparison with the model
+    of the recipe architecture-model ModelComparisonTest, the shared reading and derivation ModelRules, and the case
+    that is not successful BrokenModelRule). The test resources
     are in src/test/resources/ (the two files build-info-test.properties and build-info-test-changed.properties,
     the seam of the unit test of the value of the build). A class whose name has no suffix `Test` (or `IT` for the
     integration tests) is a case that is not successful (ACC-002 of the plan): the default run of surefire does not
@@ -231,8 +226,7 @@
     <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
     <!-- The architecture tools (feat-7-verification-architecture-tools, Phase 130). Each version is the one of
           tools/versions.env (just check-pins compares them). The scope of every architecture tool is test.
-          Spring Modulith is the 2.0.x line (2.0.9, the line of Spring Boot 4.0.x; see the header comment). -->
-    <spring-modulith.version>2.0.9</spring-modulith.version>
+          The jars of Spring Modulith are removed in Phase 160 of feat-50 (see the header comment). -->
     <archunit.version>1.5.1</archunit.version>
     <structurizr.version>6.2.4</structurizr.version>
     <!-- The coverage (feat-7-verification-architecture-tools, Phase 140). The version is the one of
@@ -423,23 +417,9 @@
       <scope>test</scope>
     </dependency>
     <!-- The architecture tools (feat-7-verification-architecture-tools, Phase 130; see the header comment). The
-         scope test keeps them out of the SBOM. -->
-    <!-- Spring Modulith (Apache-2.0): the module structure (R1). The 2.0.x line (2.0.9, the line of Spring Boot
-         4.0.x: the core has the dependencies spring-core and spring-context 7.0.9, and the module has the
-         Spring Framework 7.0.10 line; the plan records the decision). -->
-    <dependency>
-      <groupId>org.springframework.modulith</groupId>
-      <artifactId>spring-modulith-core</artifactId>
-      <version>${spring-modulith.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- The jar org.springframework.boot:spring-boot is in the module in the scope compile through the starter
-         spring-boot-starter-web (the version spring-boot.version). There is no declaration of the scope test: a
-         declaration direct of the scope test would win the resolution of the scope over the dependency of the
-         starter (the nearest dependency wins), and the main code would not compile (the class SpringApplication
-         of the jar). The jar is in the SBOM (the service ships it), and it is on the test classpath. -->
-    <!-- ArchUnit (Apache-2.0, the bundled OW2 ASM is BSD-3-Clause): the layer rule (R2) and the package
-         dependencies of the comparison with the model. -->
+          scope test keeps them out of the SBOM. -->
+    <!-- ArchUnit (Apache-2.0, the bundled OW2 ASM is BSD-3-Clause): the rules the model gives (the runner) and
+          the package dependencies of the comparison with the model (the analyzer). -->
     <dependency>
       <groupId>com.tngtech.archunit</groupId>
       <artifactId>archunit</artifactId>

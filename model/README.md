@@ -1,88 +1,58 @@
 # model
 
-The architecture model (Structurizr). The code must obey this model (DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73):
+The architecture model (Structurizr). The code must obey this model:
 
-- In the backend, each top-level package is a Spring Modulith module and is one component of the model.
-- The name of a package is the same as the identifier of its component in the model.
-- A test reads the workspace and compares the components with the modules and the packages.
+- The file `workspace.dsl` of this folder is the one file that a person edits (DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+- The file `workspace.json` is generated from the DSL by the pinned container (the recipe `just generate-model`; the image digest is in `tools/versions.env`), and it is committed to git. Do not change the JSON by hand: the gate `just check-model-generated` stops for a JSON that is not the JSON that the DSL makes now.
+- The form of the value of each property of the model (the mapping `code.*`, the exceptions of the closed world, the direction of a relation, the viewpoint `rw.viewpoint`, the perspectives, the references `specmgr-refs`) is in DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4 (the Model Conventions). That decision partly supersedes DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73: the rule "the name of a package is the same as the identifier of its component in the model" is replaced by the mapping `code.*`.
 
-The workspace of the model is the file `workspace.json` of this folder (the one canonical file). It is the
-machine-generated-shaped file that the writer of the library structurizr-java makes (the JSON form of the model of
-structurizr), and it is hand-maintained: the file is read by the two sides of the comparison test (the library
-structurizr-java on the side of the backend, a strict reading in the script `frontend/architecture/compare.mjs` on the
-side of the frontend), and the test stops for a form of the file that a reader does not understand.
-
-The content of the workspace (the C4 model, the level of the containers, and the components of the DEC):
+The content of the workspace (the C4 model, the level of the containers, and the components):
 
 - The software system `SpecMgrDemo` (the project).
 - The two containers: `backend` (the Maven module of the repository) and `frontend` (the pnpm module of the repository).
-- The components of `backend`, named like the top-level packages of the module: `api` (the package
-  `biz.dfch.specmgrdemo.api`, the generated Spring server interfaces), `model` (the package
-  `biz.dfch.specmgrdemo.model`, the generated model classes) and `app` (the package
-  `biz.dfch.specmgrdemo.app`, the product code of the service since the walking skeleton, feat-9-walking-skeleton,
-  Phase 200).
-- The components of `frontend`, named by the rule of thumb of the units (the same for the rules of ArchUniTS and for
-  the comparison, see below): `types` (the folder `frontend/src/generated/types`, the generated TypeScript types),
-  `zod` (the folder `frontend/src/generated/zod`, the generated Zod schemas), `test` (the folder `frontend/src/test`,
-  the tests of the module), `root` (the files that lie directly in `frontend/src`: the entry point
-  `frontend/src/main.tsx` of the walking skeleton and `frontend/src/mutation-example.ts`) and, since the walking
-  skeleton (feat-9-walking-skeleton, Phase 300), the four units of the product code: `client` (the folder
-  `frontend/src/client`, the client of the API with the validation of the responses), `i18n` (the folder
-  `frontend/src/i18n`, i18next with the catalogs EN and DE), `telemetry` (the folder `frontend/src/telemetry`, the
-  OpenTelemetry of the browser) and `ui` (the folder `frontend/src/ui`, the React components).
-- The dependencies: `frontend` -> `backend` (the frontend consumes the API of the backend, the dependency of the
-  container level), `api` -> `model` (the real package dependency of the module, the interfaces of `api` reference the
-  classes of `model`), `app` -> `api` (the controllers of `app` implement the generated interfaces of `api`) and
-  `app` -> `model` (the product code of `app` uses the classes of `model`), and in the frontend: `test` -> `zod` (the
-  tests import the generated Zod schemas), `test` -> `root` (the test of the example imports the example file),
-  `test` -> `client`, `test` -> `i18n`, `test` -> `telemetry`, `test` -> `ui` and `test` -> `types` (the unit tests of
-  the product code), `root` -> `client`, `root` -> `i18n`, `root` -> `telemetry` and `root` -> `ui` (the entry point
-  builds the parts and renders the user interface), `client` -> `types` and `client` -> `zod` (the client uses the
-  generated types and validates the responses with the generated Zod schemas), and `ui` -> `client` and `ui` -> `i18n`
-  (the user interface uses the client of the API, and the languages of the i18n). The unit `ui` is the top layer: the
-  rules R5' of ArchUniTS (`just architecture-frontend`) stop a dependency of `client`, `i18n` or `telemetry` on `ui`,
-  and the rules R4' stop a dependency of the product code on the tests.
+- The components of `backend`: `api` (the generated Spring server interfaces), `model` (the generated model classes) and, since the walking skeleton (feat-9-walking-skeleton, Phase 200), `app` (the product code of the service).
+- The components of `frontend`: `types` (the generated TypeScript types), `zod` (the generated Zod schemas), `test` (the tests of the module), `root` (the files that lie directly in `frontend/src`, today `frontend/src/mutation-example.ts` and the entry point `frontend/src/main.tsx` of the walking skeleton) and, since the walking skeleton (feat-9-walking-skeleton, Phase 300), the four units of the product code `client`, `i18n`, `telemetry` and `ui`.
+- The relations (the direction of a relation is the direction of the code dependency): `frontend` -> `backend`, `api` -> `model`, `app` -> `api`, `app` -> `model`, `test` -> `zod`, `test` -> `root`, `test` -> `client`, `test` -> `i18n`, `test` -> `telemetry`, `test` -> `ui`, `test` -> `types`, `root` -> `client`, `root` -> `i18n`, `root` -> `telemetry`, `root` -> `ui`, `client` -> `types`, `client` -> `zod`, `ui` -> `client`, and `ui` -> `i18n`.
+- The deployment environment "The environment" and its node `host` (the single deployment unit of the model): the node contains the containers `backend` and `frontend` (the two containments `host` -> `backend` and `host` -> `frontend` of the DSL).
 
-The rule of thumb of the units of the frontend (the identifier of a component is the name of its unit): a unit is a
-folder that contains TypeScript source - the top-level folders of `frontend/src` (today: `client`, `i18n`, `telemetry`,
-`ui` and `test`), the folders of `frontend/src/generated` (today: `types` and `zod`; the generator makes two
-independent artifacts, so the folders of the generated code are the units and not the folder `generated`), and the
-files that lie directly in `frontend/src` form the unit `root`. A source file is a file `.ts` or `.tsx` (a declaration
-file `.d.ts` is no source). A change of the code that adds a folder with TypeScript source (a new unit) or a file directly
-in `frontend/src/generated` needs a change of the workspace in the same pull request (the comparison test stops for a
-unit that is not in the model, and for a file that the rule of thumb has no unit for).
+The two containments of the node `host` are declared in the DSL only: the pinned exporter (DEC b6e8808f-86b4-41a4-92f2-33d38869beed) does not serialize them into the JSON (the deployment node and the Deployment view are empty in the interchange). The 29 inspection errors embedded in the JSON under the top-level property `structurizr.inspection.error` are the stable, recorded consequence of this limit and of the state of the model (the components of the container `backend` and the node `host` are not on a view, and the relations of the model have no technology; the count is stable over two runs of the generation since the components of feat-9 joined the model in Phase 120, Task 120.110): the gate `just check-model-generated` asserts the value 29 in the committed file, and the record of the limit is in the Updates entry of DEC b6e8808f-86b4-41a4-92f2-33d38869beed. The deployment content is documentation on the DSL side only, and the runner and the analyzers never read it (the closed world compares the code with the container `frontend` and the container `backend`, and not with the deployment, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4).
 
-The test that compares the workspace with the code is the recipe `just architecture-model` (Task 130.120 of
-feat-7-verification-architecture-tools): the side of the backend is the JUnit class
-`biz.dfch.specmgrdemo.architecture.ModelComparisonTest` (it reads the workspace with the library structurizr-java, and
-the source of the packages and the dependencies of the code is the analysis of ArchUnit on the compiled classes of the
-module), and the side of the frontend is the script `frontend/architecture/compare.mjs` (it reads the workspace
-strictly, discovers the units from the files of the code, and reads the imports with the compiler of the pinned
-package typescript). The committed run is green (the workspace matches the code), and the recipe shows the two
-conditions of ACC-003 in a temporary copy of the repository: a package (or a unit) that has no component in the model,
-and a dependency that is not in the model. The comparison gives the same result on the other direction too (a
-component of the model without a package, or a dependency of the model without the code, stops the test: the model must
-describe the code, and the code must obey the model).
+The seven views (one per viewpoint of Rozanski & Woods; each view has the property `rw.viewpoint`, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): Context (the view type `systemContext`), Functional (the view type `container`), Development (the view type `component`, the container `frontend`), Information (the view type `component`, the container `frontend`, the data-owning components `types` and `zod` and the consumer of the data of the contract `client`, the one data-ownership case of Phase 120), Concurrency (the view type `dynamic`), Deployment (the view type `deployment`, the single deployment unit of the model) and Operational (the view type `container`). Context, Functional, Development and Information have the rules. Concurrency, Deployment and Operational are documentation only.
 
-The dependency of the container level `frontend` -> `backend` is in the workspace as the model of the project (the
-frontend consumes the API of the backend), and it is not compared by the two sides (the comparison is on the level of
-the packages of the module and of the units of the frontend).
+The mapping of an element to the code is the property `code.*` of the element (the language, and the package or the path, per the form of DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): only the elements that have the mapping are compared with the code. The exceptions of the closed world are the properties `code.allowedExternal` (the dependency to code that is outside the mapped elements, and that is allowed) and `code.ignore` (the code that the check does not examine): the exception lives in the model, and not in the test code.
 
-## The property `specmgr-req` (traceability)
+## The rules the model gives
 
-An element of the workspace has the identifier of its REQ document in the property `specmgr-req` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342, `feat-8-traceability-security-gates`). The value is one identifier, or a list of identifiers that the character comma separates:
+The model is the language-neutral rule set. There is no separate file of the rules (one source of truth, GOL 9ffb930c-44e8-4d0e-b4fd-f94c7162a894): the runner reads `workspace.json` and makes the rules at run time. For each container that has a mapping `code.language` (today: `backend` and `frontend`), the model gives four rule groups:
+
+1. **The forbidden dependencies (the closed world between the mapped elements).** The mapped elements are the components of the container that have `code.language` and the property of the language (`code.package` for Java, `code.path` for TypeScript). The model gives one rule for every ordered pair of distinct mapped elements that has no relation: "the source must not depend on the destination" (the direction of a relation is the direction of the code dependency, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4). Today the container `backend` gives three pairs (`api` -> `app`, `model` -> `api` and `model` -> `app`; the direction of the code is `api` -> `model`, `app` -> `api` and `app` -> `model`), and the container `frontend` gives 41 pairs (all the ordered pairs of the eight components, except the 15 modelled relations).
+2. **The cycle rule (the viewpoint development: "the layers, the cycles, ...").** No dependency cycle among the mapped elements of a container. The side of the backend: ArchUnit; the slices of the mapped components (one slice per component; the class belongs to the component of the most specific entry of `code.package`) are free of cycles. The side of the frontend: ArchUniTS; the same check (the construct `haveNoCycles`). A pair rule of group 1 does not cover a cycle of three or more elements. The cycle rule covers it.
+3. **The closed set (the limit of the parity).** The tools of the runner cannot examine a closed set (a new package or a new unit is invisible to them; the record of feat-7-verification-architecture-tools), so this group is in the analyzers, and not in the runner: the JUnit class `biz.dfch.specmgrdemo.architecture.ModelComparisonTest` (the side of the backend) and the script `frontend/architecture/compare.mjs` (the side of the frontend), both in the recipe `just architecture-model`. Every code location (a package of a class under the `code.root` of the container in the backend, a TypeScript file that the discovery finds in the frontend) belongs to exactly one mapped element (or to an entry of `code.ignore`). Every mapped element exists in the code. Every code dependency between mapped elements has a relation. Every relation between mapped elements exists in the code.
+4. **The exceptions (in the model, and not in the test code).** A dependency of a mapped element to code outside the mapped elements is allowed if and only if it matches an entry of the `code.allowedExternal` of the element (Java: the package of the target is the entry, or a sub-package of the entry; the trailing `..` of the form marks the sub-packages. TypeScript: the name of the imported package is the entry, or starts with the entry and the character `/`). The check of the backend does not examine a dependency to the platform of the Java language (the packages `java.*` and `javax.*`, the runtime of the language). On the side of the TypeScript, there is no such exemption: every import of a package (also the constructs of the runtime of the language, for example the packages with the prefix `node:`) must match an entry of `code.allowedExternal` (no entry of the platform is in the model today, and the committed run is green: the external imports of each unit are listed in the `code.allowedExternal` of the unit - `zod`, `vitest` and `fast-check` of Phase 110, and, since the walking skeleton of Phase 120, `react`, `react-dom`, `react-i18next`, `i18next`, `@opentelemetry`, `node:http` and `node:net`). An entry of `code.ignore` (on the container; the backend reads it for the packages with the same form as `code.allowedExternal` in the shared class `ModelRules`, and the frontend reads it for the paths with the same form as `code.path` in the shared module `frontend/architecture/workspace.mjs`: a file that the rule of thumb rejects is examined not at all when an entry names it, and the count of the ignored files is in the PASS line of the comparison) names a code location that no element maps and that the check does not examine (none today).
+
+The entries of the different components must stay disjoint (the form of the DEC: one location, one component): the pair rules of group 1 use the entry prefix (a class or a file under an entry belongs to the pair predicate of that component: the form `resideInAnyPackage` with the suffix `..` in the backend, the pattern of the type RegExp of the frontend), while the cycle rule and the comparison use the most specific entry (the entry that is the location itself, or the longest entry that is a prefix of the location). With disjoint entries, the two forms agree for each location.
+
+The runner of the backend is the JUnit class `biz.dfch.specmgrdemo.architecture.ModelRuleRunnerTest` (the recipe `just architecture-backend`; one dynamic test per derived rule of group 1 and of group 2). The runner of the frontend is the script `frontend/architecture/runner.mjs` (the recipe `just architecture-frontend`; one check per derived rule). The reading of the model and the derivation of the rule set are shared on each side (the class `ModelRules` on the backend, the module `frontend/architecture/workspace.mjs` on the frontend), so the runner and the analyzer of a side cannot drift apart.
+
+The limits of the tools (the language skew, the table of DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4): the graph of the frontend runner (ArchUniTS) has no edge to the external packages (the folder `node_modules` is excluded), and the dynamic import is invisible to it: the check of group 4 is in the analyzer, and the analyzer `compare.mjs` reads the construct `import()` and the construct `require()` with the same resolution as the static imports (the fix of Task 130.130 of feat-50-structurizr-model-rules). The runner of the backend (ArchUnit) examines the bytecode of the `code.root` (the test classes are excluded by the import option DoNotIncludeTests), and a dependency by reflection or by injection is not visible.
+
+The test that compares the workspace with the code is the recipe `just architecture-model` (the analyzer of group 3 and group 4 above): the side of the backend is the JUnit class `biz.dfch.specmgrdemo.architecture.ModelComparisonTest` (the library structurizr-java reads the JSON, the source of the packages and the dependencies of the code is the analysis of ArchUnit on the compiled classes of the `code.root`, and the reading and the derivation are the shared class `ModelRules`), and the side of the frontend is the script `frontend/architecture/compare.mjs` (the strict reading of the workspace through the shared module `frontend/architecture/workspace.mjs`, the discovery of the files from the code, and the imports read with the compiler of the pinned package typescript, including the dynamic forms). The comparison is mapping-based (and not name-based): a code location without a component, a code location with two components, a dependency without a relation, and an import to an external package that is not in `code.allowedExternal`, stops the run, and the message names the violation. The other direction is closed too: a component without a code location, and a relation without the dependency of the code, stops the run. The relation of the container level (`frontend` -> `backend`) is not compared with the code, and the limits of the closed world are in DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4.
+
+## The property `specmgr-refs` (traceability)
+
+The element of the workspace has the references to the specmgr artifacts in the property `specmgr-refs` (DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4, the form `TYPE UUID; TYPE UUID`: the text `; ` separates the entries, and the entry is the document type and the identifier with one space between them). The gate `just traceability` (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342) reads the property from each software system, container and component of the workspace, and it checks each entry:
+
+- **Error** (the gate stops): an entry that is not the form `TYPE UUID` (for example the semicolon without the space after it, or an identifier without the type, or a value that is not a text), a type that is not a document type (`GOL`, `PRB`, `QA`, `UC`, `REQ`, `RSK`, `DEC`, `ADR`, `VCR`, `SYSRS` and `TXT`), or an identifier that has no document of that type in `docs/<type>/` (a document of another type for the identifier is an error too).
+- **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-refs` (an entry of the type `REQ`) or in its `specmgr-req`.
+
+The old property `specmgr-req` (the identifier bare, that the character comma separates) keeps working for one release (the compatibility of Phase 150 of feat-50-structurizr-model-rules): the gate reads the two properties independently, an element may have the old form, the new form, or both, and the warning and the report count the REQ identifiers of the element in the two forms (an identifier that the element gives in the two forms is counted one time). The removal of the old form is a change of a later release.
+
+The element of a requirement is the component that makes it. The component `api` has the entry for the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`) and for the REQ "The System Gives Its Version and Its License" (`GET /info`, the generated interface `InfoApi`, feat-9-walking-skeleton, Task 200.130):
 
 ```json
 "properties" : {
-  "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0"
+  "specmgr-refs" : "REQ 1ca335d7-969a-443e-9392-165fdeea99a0; REQ 271168a4-2a6f-40a1-b277-89711b18a087"
 }
 ```
 
-A property of Structurizr is a text, so the list is one text (`"<uuid>,<uuid>"`; a space after the comma is allowed). Each identifier must be the identifier of a REQ document in `docs/req/`. The recipe `just traceability` reads the property from each software system, container and component of the workspace:
-
-- **Error** (the gate stops): an identifier that is not the identifier of a REQ document, or a value that is not an identifier.
-- **Warning** (no stop): an approved REQ (the status `accepted` or `implemented`) that no element has in its `specmgr-req`.
-
-The element of a requirement is the component that makes it. The component `api` has the identifier of the REQ "The System Gives Its Status" (`GET /status`, the generated interface `StatusApi`) and of the REQ "The System Gives Its Version and Its License" (`GET /info`, the generated interface `InfoApi`, the list that the character comma separates, feat-9-walking-skeleton, the task 200.130). Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.
-
-The comparison tests (`just architecture-model`) accept the key `properties` of a software system, a container and a component, and they do not use its values. The side of the backend (structurizr-java) reads the key. The side of the frontend (`frontend/architecture/compare.mjs`) accepts the key, and stops if its value is not a map of texts.
+Put the property on the component, in the same pull request that adds the REQ with the status `accepted`.

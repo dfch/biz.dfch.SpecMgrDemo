@@ -1,24 +1,40 @@
 {
   "configuration" : { },
-  "description" : "The architecture model of the project (DEC 9edc1071-4fd0-48b6-a037-1a4cb2331f73). The code must obey this model.",
+  "description" : "The architecture model of the project (DEC b6e8808f-86b4-41a4-92f2-33d38869beed and DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4). The code must obey this model.",
   "documentation" : { },
   "id" : 0,
   "model" : {
+    "deploymentNodes" : [ {
+      "description" : "The single host of the model (the deployment unit of the model; this feature adds no infrastructure).",
+      "environment" : "The environment",
+      "id" : "34",
+      "instances" : "1",
+      "name" : "host",
+      "properties" : {
+        "structurizr.dsl.identifier" : "host"
+      },
+      "tags" : "Element,Deployment Node",
+      "technology" : "Linux (the machine of the owner)"
+    } ],
     "softwareSystems" : [ {
       "containers" : [ {
         "components" : [ {
           "description" : "The generated Spring server interfaces (the top-level package biz.dfch.specmgrdemo.api).",
           "documentation" : { },
-          "id" : "4",
+          "id" : "3",
           "name" : "api",
           "properties" : {
-            "specmgr-req" : "1ca335d7-969a-443e-9392-165fdeea99a0, 271168a4-2a6f-40a1-b277-89711b18a087"
+            "structurizr.dsl.identifier" : "api",
+            "code.package" : "biz.dfch.specmgrdemo.api",
+            "code.allowedExternal" : "org.springframework.., jakarta.validation.., jakarta.annotation",
+            "specmgr-refs" : "REQ 1ca335d7-969a-443e-9392-165fdeea99a0; REQ 271168a4-2a6f-40a1-b277-89711b18a087",
+            "code.language" : "java"
           },
           "relationships" : [ {
             "description" : "The interfaces of api reference the classes of model",
-            "destinationId" : "5",
-            "id" : "11",
-            "sourceId" : "4",
+            "destinationId" : "4",
+            "id" : "6",
+            "sourceId" : "3",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -26,26 +42,38 @@
         }, {
           "description" : "The generated model classes (the top-level package biz.dfch.specmgrdemo.model).",
           "documentation" : { },
-          "id" : "5",
+          "id" : "4",
           "name" : "model",
+          "properties" : {
+            "structurizr.dsl.identifier" : "model",
+            "code.package" : "biz.dfch.specmgrdemo.model",
+            "code.allowedExternal" : "com.fasterxml.jackson.., org.springframework.., jakarta.validation.., jakarta.annotation",
+            "code.language" : "java"
+          },
           "tags" : "Element,Component",
           "technology" : "Java class"
         }, {
           "description" : "The product code of the service (the top-level package biz.dfch.specmgrdemo.app, feat-9-walking-skeleton, Phase 200): the main class, the controllers of the two operations, the check of the state, the error handling and the OpenTelemetry filter.",
           "documentation" : { },
-          "id" : "14",
+          "id" : "5",
           "name" : "app",
+          "properties" : {
+            "structurizr.dsl.identifier" : "app",
+            "code.package" : "biz.dfch.specmgrdemo.app",
+            "code.allowedExternal" : "jakarta.servlet.., org.springframework.., io.opentelemetry.., org.slf4j",
+            "code.language" : "java"
+          },
           "relationships" : [ {
             "description" : "The controllers of app implement the generated interfaces of api",
-            "destinationId" : "4",
-            "id" : "15",
-            "sourceId" : "14",
+            "destinationId" : "3",
+            "id" : "7",
+            "sourceId" : "5",
             "tags" : "Relationship"
           }, {
             "description" : "The product code of app uses the classes of model (the state, the information and the problem of the operations)",
-            "destinationId" : "5",
-            "id" : "16",
-            "sourceId" : "14",
+            "destinationId" : "4",
+            "id" : "8",
+            "sourceId" : "5",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -55,69 +83,96 @@
         "documentation" : { },
         "id" : "2",
         "name" : "backend",
+        "perspectives" : [ {
+          "description" : "The module gives the status API of the project. The endpoint gives no sensitive data.",
+          "name" : "Security",
+          "value" : "Low"
+        } ],
+        "properties" : {
+          "structurizr.dsl.identifier" : "backend",
+          "code.language" : "java",
+          "code.root" : "biz.dfch.specmgrdemo"
+        },
         "tags" : "Element,Container",
         "technology" : "Java 21 (Maven)"
       }, {
         "components" : [ {
           "description" : "The generated TypeScript types (the unit types, the folder frontend/src/generated/types).",
           "documentation" : { },
-          "id" : "6",
+          "id" : "10",
           "name" : "types",
+          "properties" : {
+            "structurizr.dsl.identifier" : "types",
+            "code.path" : "src/generated/types/**",
+            "code.language" : "typescript"
+          },
           "tags" : "Element,Component",
           "technology" : "TypeScript"
         }, {
           "description" : "The generated Zod schemas (the unit zod, the folder frontend/src/generated/zod).",
           "documentation" : { },
-          "id" : "7",
+          "id" : "11",
           "name" : "zod",
+          "properties" : {
+            "structurizr.dsl.identifier" : "zod",
+            "code.allowedExternal" : "zod",
+            "code.path" : "src/generated/zod/**",
+            "code.language" : "typescript"
+          },
           "tags" : "Element,Component",
           "technology" : "TypeScript"
         }, {
           "description" : "The tests of the module (the unit test, the folder frontend/src/test).",
           "documentation" : { },
-          "id" : "8",
+          "id" : "12",
           "name" : "test",
+          "properties" : {
+            "structurizr.dsl.identifier" : "test",
+            "code.allowedExternal" : "vitest, fast-check, react, react-dom, react-i18next, @opentelemetry, node:http, node:net",
+            "code.path" : "src/test/**",
+            "code.language" : "typescript"
+          },
           "relationships" : [ {
             "description" : "The tests import the generated Zod schemas",
-            "destinationId" : "7",
-            "id" : "12",
-            "sourceId" : "8",
+            "destinationId" : "11",
+            "id" : "18",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the example file of frontend/src",
-            "destinationId" : "9",
-            "id" : "13",
-            "sourceId" : "8",
+            "destinationId" : "13",
+            "id" : "19",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the client of the API",
-            "destinationId" : "17",
-            "id" : "29",
-            "sourceId" : "8",
+            "destinationId" : "14",
+            "id" : "20",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the i18n",
-            "destinationId" : "18",
-            "id" : "30",
-            "sourceId" : "8",
+            "destinationId" : "15",
+            "id" : "21",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the telemetry",
-            "destinationId" : "19",
-            "id" : "31",
-            "sourceId" : "8",
+            "destinationId" : "16",
+            "id" : "22",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the user interface",
-            "destinationId" : "20",
-            "id" : "32",
-            "sourceId" : "8",
+            "destinationId" : "17",
+            "id" : "23",
+            "sourceId" : "12",
             "tags" : "Relationship"
           }, {
             "description" : "The tests import the generated types",
-            "destinationId" : "6",
-            "id" : "33",
-            "sourceId" : "8",
+            "destinationId" : "10",
+            "id" : "24",
+            "sourceId" : "12",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -125,31 +180,37 @@
         }, {
           "description" : "The files that lie directly in frontend/src (the unit root: the entry point main.tsx of the walking skeleton and the example file mutation-example.ts).",
           "documentation" : { },
-          "id" : "9",
+          "id" : "13",
           "name" : "root",
+          "properties" : {
+            "structurizr.dsl.identifier" : "root",
+            "code.allowedExternal" : "react, react-dom, react-i18next",
+            "code.path" : "src/mutation-example.ts, src/main.tsx",
+            "code.language" : "typescript"
+          },
           "relationships" : [ {
             "description" : "The entry point builds the client of the API",
-            "destinationId" : "17",
-            "id" : "21",
-            "sourceId" : "9",
+            "destinationId" : "14",
+            "id" : "25",
+            "sourceId" : "13",
             "tags" : "Relationship"
           }, {
             "description" : "The entry point builds the i18n",
-            "destinationId" : "18",
-            "id" : "22",
-            "sourceId" : "9",
+            "destinationId" : "15",
+            "id" : "26",
+            "sourceId" : "13",
             "tags" : "Relationship"
           }, {
             "description" : "The entry point builds the telemetry",
-            "destinationId" : "19",
-            "id" : "23",
-            "sourceId" : "9",
+            "destinationId" : "16",
+            "id" : "27",
+            "sourceId" : "13",
             "tags" : "Relationship"
           }, {
             "description" : "The entry point renders the user interface",
-            "destinationId" : "20",
-            "id" : "24",
-            "sourceId" : "9",
+            "destinationId" : "17",
+            "id" : "28",
+            "sourceId" : "13",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -157,19 +218,25 @@
         }, {
           "description" : "The client of the API (the unit client, the folder frontend/src/client, feat-9-walking-skeleton, Phase 300): it calls GET /status and GET /info and validates the responses with the generated Zod schemas.",
           "documentation" : { },
-          "id" : "17",
+          "id" : "14",
           "name" : "client",
+          "properties" : {
+            "structurizr.dsl.identifier" : "client",
+            "code.allowedExternal" : "zod",
+            "code.path" : "src/client/**",
+            "code.language" : "typescript"
+          },
           "relationships" : [ {
             "description" : "The client uses the generated types",
-            "destinationId" : "6",
-            "id" : "25",
-            "sourceId" : "17",
+            "destinationId" : "10",
+            "id" : "29",
+            "sourceId" : "14",
             "tags" : "Relationship"
           }, {
             "description" : "The client validates the responses with the generated Zod schemas",
-            "destinationId" : "7",
-            "id" : "26",
-            "sourceId" : "17",
+            "destinationId" : "11",
+            "id" : "30",
+            "sourceId" : "14",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -177,33 +244,51 @@
         }, {
           "description" : "The i18n of the user interface (the unit i18n, the folder frontend/src/i18n, feat-9-walking-skeleton, Phase 300): i18next with the catalogs EN and DE.",
           "documentation" : { },
-          "id" : "18",
+          "id" : "15",
           "name" : "i18n",
+          "properties" : {
+            "structurizr.dsl.identifier" : "i18n",
+            "code.allowedExternal" : "i18next, react-i18next",
+            "code.path" : "src/i18n/**",
+            "code.language" : "typescript"
+          },
           "tags" : "Element,Component",
           "technology" : "TypeScript"
         }, {
           "description" : "The OpenTelemetry of the browser (the unit telemetry, the folder frontend/src/telemetry, feat-9-walking-skeleton, Phase 300): the Web SDK and the exporter OTLP/HTTP.",
           "documentation" : { },
-          "id" : "19",
+          "id" : "16",
           "name" : "telemetry",
+          "properties" : {
+            "structurizr.dsl.identifier" : "telemetry",
+            "code.allowedExternal" : "@opentelemetry",
+            "code.path" : "src/telemetry/**",
+            "code.language" : "typescript"
+          },
           "tags" : "Element,Component",
           "technology" : "TypeScript"
         }, {
           "description" : "The user interface (the unit ui, the folder frontend/src/ui, feat-9-walking-skeleton, Phase 300): the React components of the page of the status and of the notice of the license.",
           "documentation" : { },
-          "id" : "20",
+          "id" : "17",
           "name" : "ui",
+          "properties" : {
+            "structurizr.dsl.identifier" : "ui",
+            "code.allowedExternal" : "react, react-dom, react-i18next",
+            "code.path" : "src/ui/**",
+            "code.language" : "typescript"
+          },
           "relationships" : [ {
             "description" : "The user interface uses the client of the API",
-            "destinationId" : "17",
-            "id" : "27",
-            "sourceId" : "20",
+            "destinationId" : "14",
+            "id" : "31",
+            "sourceId" : "17",
             "tags" : "Relationship"
           }, {
             "description" : "The user interface uses the text of the i18n (the languages)",
-            "destinationId" : "18",
-            "id" : "28",
-            "sourceId" : "20",
+            "destinationId" : "15",
+            "id" : "32",
+            "sourceId" : "17",
             "tags" : "Relationship"
           } ],
           "tags" : "Element,Component",
@@ -211,13 +296,22 @@
         } ],
         "description" : "The pnpm module of the frontend: the generated TypeScript types and the generated Zod schemas.",
         "documentation" : { },
-        "id" : "3",
+        "id" : "9",
         "name" : "frontend",
+        "perspectives" : [ {
+          "description" : "The module consumes the status API of the backend. It gives no data of the user.",
+          "name" : "Security",
+          "value" : "Low"
+        } ],
+        "properties" : {
+          "structurizr.dsl.identifier" : "frontend",
+          "code.language" : "typescript"
+        },
         "relationships" : [ {
           "description" : "The frontend consumes the API of the backend",
           "destinationId" : "2",
-          "id" : "10",
-          "sourceId" : "3",
+          "id" : "33",
+          "sourceId" : "9",
           "tags" : "Relationship"
         } ],
         "tags" : "Element,Container",
@@ -227,14 +321,278 @@
       "documentation" : { },
       "id" : "1",
       "name" : "SpecMgrDemo",
+      "perspectives" : [ {
+        "description" : "The components of feat-9-walking-skeleton joined the model with the merge of that feature (feat-50-structurizr-model-rules, Phase 120, Task 120.110).",
+        "name" : "Evolution",
+        "value" : "Medium"
+      } ],
+      "properties" : {
+        "structurizr.dsl.identifier" : "system"
+      },
       "tags" : "Element,Software System"
     } ]
   },
   "name" : "SpecMgrDemo",
+  "properties" : {
+    "structurizr.inspection.error" : "29",
+    "structurizr.dsl" : "d29ya3NwYWNlICJTcGVjTWdyRGVtbyIgIlRoZSBhcmNoaXRlY3R1cmUgbW9kZWwgb2YgdGhlIHByb2plY3QgKERFQyBiNmU4ODA4Zi04NmI0LTQxYTQtOTJmMi0zM2QzODg2OWJlZWQgYW5kIERFQyBlODVlOTY4NS0wNzg3LTRkZmYtOWVlNS05ZDQ2NjcwZTllZTQpLiBUaGUgY29kZSBtdXN0IG9iZXkgdGhpcyBtb2RlbC4iIHsKCiAgICAhaW1wbGllZFJlbGF0aW9uc2hpcHMgZmFsc2UKCiAgICBtb2RlbCB7CiAgICAgICAgc3lzdGVtID0gc29mdHdhcmVTeXN0ZW0gIlNwZWNNZ3JEZW1vIiAiVGhlIHN0YXR1cyBBUEkgb2YgdGhlIHByb2plY3Q6IHRoZSBiYWNrZW5kICh0aGUgTWF2ZW4gbW9kdWxlKSBhbmQgdGhlIGZyb250ZW5kICh0aGUgcG5wbSBtb2R1bGUpLiIgewogICAgICAgICAgICBwZXJzcGVjdGl2ZXMgewogICAgICAgICAgICAgICAgIkV2b2x1dGlvbiIgIlRoZSBjb21wb25lbnRzIG9mIGZlYXQtOS13YWxraW5nLXNrZWxldG9uIGpvaW5lZCB0aGUgbW9kZWwgd2l0aCB0aGUgbWVyZ2Ugb2YgdGhhdCBmZWF0dXJlIChmZWF0LTUwLXN0cnVjdHVyaXpyLW1vZGVsLXJ1bGVzLCBQaGFzZSAxMjAsIFRhc2sgMTIwLjExMCkuIiAiTWVkaXVtIgogICAgICAgICAgICB9CgogICAgICAgICAgICBiYWNrZW5kID0gY29udGFpbmVyICJiYWNrZW5kIiAiVGhlIE1hdmVuIG1vZHVsZSBvZiB0aGUgYmFja2VuZDogdGhlIGdlbmVyYXRlZCBTcHJpbmcgc2VydmVyIGludGVyZmFjZXMsIHRoZSBnZW5lcmF0ZWQgbW9kZWwgY2xhc3NlcyBhbmQsIHNpbmNlIHRoZSB3YWxraW5nIHNrZWxldG9uIChmZWF0LTktd2Fsa2luZy1za2VsZXRvbiwgUGhhc2UgMjAwKSwgdGhlIHByb2R1Y3QgY29kZSBvZiB0aGUgc2VydmljZS4iICJKYXZhIDIxIChNYXZlbikiIHsKICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICJjb2RlLmxhbmd1YWdlIiAiamF2YSIKICAgICAgICAgICAgICAgICAgICAiY29kZS5yb290IiAiYml6LmRmY2guc3BlY21ncmRlbW8iCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBwZXJzcGVjdGl2ZXMgewogICAgICAgICAgICAgICAgICAgICJTZWN1cml0eSIgIlRoZSBtb2R1bGUgZ2l2ZXMgdGhlIHN0YXR1cyBBUEkgb2YgdGhlIHByb2plY3QuIFRoZSBlbmRwb2ludCBnaXZlcyBubyBzZW5zaXRpdmUgZGF0YS4iICJMb3ciCiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgYXBpID0gY29tcG9uZW50ICJhcGkiICJUaGUgZ2VuZXJhdGVkIFNwcmluZyBzZXJ2ZXIgaW50ZXJmYWNlcyAodGhlIHRvcC1sZXZlbCBwYWNrYWdlIGJpei5kZmNoLnNwZWNtZ3JkZW1vLmFwaSkuIiAiSmF2YSBpbnRlcmZhY2UiIHsKICAgICAgICAgICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUubGFuZ3VhZ2UiICJqYXZhIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5wYWNrYWdlIiAiYml6LmRmY2guc3BlY21ncmRlbW8uYXBpIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5hbGxvd2VkRXh0ZXJuYWwiICJvcmcuc3ByaW5nZnJhbWV3b3JrLi4sIGpha2FydGEudmFsaWRhdGlvbi4uLCBqYWthcnRhLmFubm90YXRpb24iCiAgICAgICAgICAgICAgICAgICAgICAgICJzcGVjbWdyLXJlZnMiICJSRVEgMWNhMzM1ZDctOTY5YS00NDNlLTkzOTItMTY1ZmRlZWE5OWEwOyBSRVEgMjcxMTY4YTQtMmE2Zi00MGExLWIyNzctODk3MTFiMThhMDg3IgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICBtb2RlbCA9IGNvbXBvbmVudCAibW9kZWwiICJUaGUgZ2VuZXJhdGVkIG1vZGVsIGNsYXNzZXMgKHRoZSB0b3AtbGV2ZWwgcGFja2FnZSBiaXouZGZjaC5zcGVjbWdyZGVtby5tb2RlbCkuIiAiSmF2YSBjbGFzcyIgewogICAgICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgImphdmEiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLnBhY2thZ2UiICJiaXouZGZjaC5zcGVjbWdyZGVtby5tb2RlbCIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUuYWxsb3dlZEV4dGVybmFsIiAiY29tLmZhc3RlcnhtbC5qYWNrc29uLi4sIG9yZy5zcHJpbmdmcmFtZXdvcmsuLiwgamFrYXJ0YS52YWxpZGF0aW9uLi4sIGpha2FydGEuYW5ub3RhdGlvbiIKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgYXBwID0gY29tcG9uZW50ICJhcHAiICJUaGUgcHJvZHVjdCBjb2RlIG9mIHRoZSBzZXJ2aWNlICh0aGUgdG9wLWxldmVsIHBhY2thZ2UgYml6LmRmY2guc3BlY21ncmRlbW8uYXBwLCBmZWF0LTktd2Fsa2luZy1za2VsZXRvbiwgUGhhc2UgMjAwKTogdGhlIG1haW4gY2xhc3MsIHRoZSBjb250cm9sbGVycyBvZiB0aGUgdHdvIG9wZXJhdGlvbnMsIHRoZSBjaGVjayBvZiB0aGUgc3RhdGUsIHRoZSBlcnJvciBoYW5kbGluZyBhbmQgdGhlIE9wZW5UZWxlbWV0cnkgZmlsdGVyLiIgIkphdmEgY2xhc3MiIHsKICAgICAgICAgICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUubGFuZ3VhZ2UiICJqYXZhIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5wYWNrYWdlIiAiYml6LmRmY2guc3BlY21ncmRlbW8uYXBwIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5hbGxvd2VkRXh0ZXJuYWwiICJqYWthcnRhLnNlcnZsZXQuLiwgb3JnLnNwcmluZ2ZyYW1ld29yay4uLCBpby5vcGVudGVsZW1ldHJ5Li4sIG9yZy5zbGY0aiIKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgYXBpIC0+IG1vZGVsICJUaGUgaW50ZXJmYWNlcyBvZiBhcGkgcmVmZXJlbmNlIHRoZSBjbGFzc2VzIG9mIG1vZGVsIgogICAgICAgICAgICAgICAgYXBwIC0+IGFwaSAiVGhlIGNvbnRyb2xsZXJzIG9mIGFwcCBpbXBsZW1lbnQgdGhlIGdlbmVyYXRlZCBpbnRlcmZhY2VzIG9mIGFwaSIKICAgICAgICAgICAgICAgIGFwcCAtPiBtb2RlbCAiVGhlIHByb2R1Y3QgY29kZSBvZiBhcHAgdXNlcyB0aGUgY2xhc3NlcyBvZiBtb2RlbCAodGhlIHN0YXRlLCB0aGUgaW5mb3JtYXRpb24gYW5kIHRoZSBwcm9ibGVtIG9mIHRoZSBvcGVyYXRpb25zKSIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZnJvbnRlbmQgPSBjb250YWluZXIgImZyb250ZW5kIiAiVGhlIHBucG0gbW9kdWxlIG9mIHRoZSBmcm9udGVuZDogdGhlIGdlbmVyYXRlZCBUeXBlU2NyaXB0IHR5cGVzIGFuZCB0aGUgZ2VuZXJhdGVkIFpvZCBzY2hlbWFzLiIgIlR5cGVTY3JpcHQgKHBucG0pIiB7CiAgICAgICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgInR5cGVzY3JpcHQiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBwZXJzcGVjdGl2ZXMgewogICAgICAgICAgICAgICAgICAgICJTZWN1cml0eSIgIlRoZSBtb2R1bGUgY29uc3VtZXMgdGhlIHN0YXR1cyBBUEkgb2YgdGhlIGJhY2tlbmQuIEl0IGdpdmVzIG5vIGRhdGEgb2YgdGhlIHVzZXIuIiAiTG93IgogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIHR5cGVzID0gY29tcG9uZW50ICJ0eXBlcyIgIlRoZSBnZW5lcmF0ZWQgVHlwZVNjcmlwdCB0eXBlcyAodGhlIHVuaXQgdHlwZXMsIHRoZSBmb2xkZXIgZnJvbnRlbmQvc3JjL2dlbmVyYXRlZC90eXBlcykuIiAiVHlwZVNjcmlwdCIgewogICAgICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgInR5cGVzY3JpcHQiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLnBhdGgiICJzcmMvZ2VuZXJhdGVkL3R5cGVzLyoqIgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICB6b2QgPSBjb21wb25lbnQgInpvZCIgIlRoZSBnZW5lcmF0ZWQgWm9kIHNjaGVtYXMgKHRoZSB1bml0IHpvZCwgdGhlIGZvbGRlciBmcm9udGVuZC9zcmMvZ2VuZXJhdGVkL3pvZCkuIiAiVHlwZVNjcmlwdCIgewogICAgICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgInR5cGVzY3JpcHQiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLnBhdGgiICJzcmMvZ2VuZXJhdGVkL3pvZC8qKiIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUuYWxsb3dlZEV4dGVybmFsIiAiem9kIgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICB0ZXN0ID0gY29tcG9uZW50ICJ0ZXN0IiAiVGhlIHRlc3RzIG9mIHRoZSBtb2R1bGUgKHRoZSB1bml0IHRlc3QsIHRoZSBmb2xkZXIgZnJvbnRlbmQvc3JjL3Rlc3QpLiIgIlR5cGVTY3JpcHQiIHsKICAgICAgICAgICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUubGFuZ3VhZ2UiICJ0eXBlc2NyaXB0IgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5wYXRoIiAic3JjL3Rlc3QvKioiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLmFsbG93ZWRFeHRlcm5hbCIgInZpdGVzdCwgZmFzdC1jaGVjaywgcmVhY3QsIHJlYWN0LWRvbSwgcmVhY3QtaTE4bmV4dCwgQG9wZW50ZWxlbWV0cnksIG5vZGU6aHR0cCwgbm9kZTpuZXQiCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIHJvb3QgPSBjb21wb25lbnQgInJvb3QiICJUaGUgZmlsZXMgdGhhdCBsaWUgZGlyZWN0bHkgaW4gZnJvbnRlbmQvc3JjICh0aGUgdW5pdCByb290OiB0aGUgZW50cnkgcG9pbnQgbWFpbi50c3ggb2YgdGhlIHdhbGtpbmcgc2tlbGV0b24gYW5kIHRoZSBleGFtcGxlIGZpbGUgbXV0YXRpb24tZXhhbXBsZS50cykuIiAiVHlwZVNjcmlwdCIgewogICAgICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgInR5cGVzY3JpcHQiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLnBhdGgiICJzcmMvbXV0YXRpb24tZXhhbXBsZS50cywgc3JjL21haW4udHN4IgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5hbGxvd2VkRXh0ZXJuYWwiICJyZWFjdCwgcmVhY3QtZG9tLCByZWFjdC1pMThuZXh0IgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICBjbGllbnQgPSBjb21wb25lbnQgImNsaWVudCIgIlRoZSBjbGllbnQgb2YgdGhlIEFQSSAodGhlIHVuaXQgY2xpZW50LCB0aGUgZm9sZGVyIGZyb250ZW5kL3NyYy9jbGllbnQsIGZlYXQtOS13YWxraW5nLXNrZWxldG9uLCBQaGFzZSAzMDApOiBpdCBjYWxscyBHRVQgL3N0YXR1cyBhbmQgR0VUIC9pbmZvIGFuZCB2YWxpZGF0ZXMgdGhlIHJlc3BvbnNlcyB3aXRoIHRoZSBnZW5lcmF0ZWQgWm9kIHNjaGVtYXMuIiAiVHlwZVNjcmlwdCIgewogICAgICAgICAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5sYW5ndWFnZSIgInR5cGVzY3JpcHQiCiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLnBhdGgiICJzcmMvY2xpZW50LyoqIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5hbGxvd2VkRXh0ZXJuYWwiICJ6b2QiCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIGkxOG4gPSBjb21wb25lbnQgImkxOG4iICJUaGUgaTE4biBvZiB0aGUgdXNlciBpbnRlcmZhY2UgKHRoZSB1bml0IGkxOG4sIHRoZSBmb2xkZXIgZnJvbnRlbmQvc3JjL2kxOG4sIGZlYXQtOS13YWxraW5nLXNrZWxldG9uLCBQaGFzZSAzMDApOiBpMThuZXh0IHdpdGggdGhlIGNhdGFsb2dzIEVOIGFuZCBERS4iICJUeXBlU2NyaXB0IiB7CiAgICAgICAgICAgICAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLmxhbmd1YWdlIiAidHlwZXNjcmlwdCIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUucGF0aCIgInNyYy9pMThuLyoqIgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5hbGxvd2VkRXh0ZXJuYWwiICJpMThuZXh0LCByZWFjdC1pMThuZXh0IgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICB0ZWxlbWV0cnkgPSBjb21wb25lbnQgInRlbGVtZXRyeSIgIlRoZSBPcGVuVGVsZW1ldHJ5IG9mIHRoZSBicm93c2VyICh0aGUgdW5pdCB0ZWxlbWV0cnksIHRoZSBmb2xkZXIgZnJvbnRlbmQvc3JjL3RlbGVtZXRyeSwgZmVhdC05LXdhbGtpbmctc2tlbGV0b24sIFBoYXNlIDMwMCk6IHRoZSBXZWIgU0RLIGFuZCB0aGUgZXhwb3J0ZXIgT1RMUC9IVFRQLiIgIlR5cGVTY3JpcHQiIHsKICAgICAgICAgICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUubGFuZ3VhZ2UiICJ0eXBlc2NyaXB0IgogICAgICAgICAgICAgICAgICAgICAgICAiY29kZS5wYXRoIiAic3JjL3RlbGVtZXRyeS8qKiIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUuYWxsb3dlZEV4dGVybmFsIiAiQG9wZW50ZWxlbWV0cnkiCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIHVpID0gY29tcG9uZW50ICJ1aSIgIlRoZSB1c2VyIGludGVyZmFjZSAodGhlIHVuaXQgdWksIHRoZSBmb2xkZXIgZnJvbnRlbmQvc3JjL3VpLCBmZWF0LTktd2Fsa2luZy1za2VsZXRvbiwgUGhhc2UgMzAwKTogdGhlIFJlYWN0IGNvbXBvbmVudHMgb2YgdGhlIHBhZ2Ugb2YgdGhlIHN0YXR1cyBhbmQgb2YgdGhlIG5vdGljZSBvZiB0aGUgbGljZW5zZS4iICJUeXBlU2NyaXB0IiB7CiAgICAgICAgICAgICAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgICAgICAgICAgICAgICJjb2RlLmxhbmd1YWdlIiAidHlwZXNjcmlwdCIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUucGF0aCIgInNyYy91aS8qKiIKICAgICAgICAgICAgICAgICAgICAgICAgImNvZGUuYWxsb3dlZEV4dGVybmFsIiAicmVhY3QsIHJlYWN0LWRvbSwgcmVhY3QtaTE4bmV4dCIKICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgdGVzdCAtPiB6b2QgIlRoZSB0ZXN0cyBpbXBvcnQgdGhlIGdlbmVyYXRlZCBab2Qgc2NoZW1hcyIKICAgICAgICAgICAgICAgIHRlc3QgLT4gcm9vdCAiVGhlIHRlc3RzIGltcG9ydCB0aGUgZXhhbXBsZSBmaWxlIG9mIGZyb250ZW5kL3NyYyIKICAgICAgICAgICAgICAgIHRlc3QgLT4gY2xpZW50ICJUaGUgdGVzdHMgaW1wb3J0IHRoZSBjbGllbnQgb2YgdGhlIEFQSSIKICAgICAgICAgICAgICAgIHRlc3QgLT4gaTE4biAiVGhlIHRlc3RzIGltcG9ydCB0aGUgaTE4biIKICAgICAgICAgICAgICAgIHRlc3QgLT4gdGVsZW1ldHJ5ICJUaGUgdGVzdHMgaW1wb3J0IHRoZSB0ZWxlbWV0cnkiCiAgICAgICAgICAgICAgICB0ZXN0IC0+IHVpICJUaGUgdGVzdHMgaW1wb3J0IHRoZSB1c2VyIGludGVyZmFjZSIKICAgICAgICAgICAgICAgIHRlc3QgLT4gdHlwZXMgIlRoZSB0ZXN0cyBpbXBvcnQgdGhlIGdlbmVyYXRlZCB0eXBlcyIKICAgICAgICAgICAgICAgIHJvb3QgLT4gY2xpZW50ICJUaGUgZW50cnkgcG9pbnQgYnVpbGRzIHRoZSBjbGllbnQgb2YgdGhlIEFQSSIKICAgICAgICAgICAgICAgIHJvb3QgLT4gaTE4biAiVGhlIGVudHJ5IHBvaW50IGJ1aWxkcyB0aGUgaTE4biIKICAgICAgICAgICAgICAgIHJvb3QgLT4gdGVsZW1ldHJ5ICJUaGUgZW50cnkgcG9pbnQgYnVpbGRzIHRoZSB0ZWxlbWV0cnkiCiAgICAgICAgICAgICAgICByb290IC0+IHVpICJUaGUgZW50cnkgcG9pbnQgcmVuZGVycyB0aGUgdXNlciBpbnRlcmZhY2UiCiAgICAgICAgICAgICAgICBjbGllbnQgLT4gdHlwZXMgIlRoZSBjbGllbnQgdXNlcyB0aGUgZ2VuZXJhdGVkIHR5cGVzIgogICAgICAgICAgICAgICAgY2xpZW50IC0+IHpvZCAiVGhlIGNsaWVudCB2YWxpZGF0ZXMgdGhlIHJlc3BvbnNlcyB3aXRoIHRoZSBnZW5lcmF0ZWQgWm9kIHNjaGVtYXMiCiAgICAgICAgICAgICAgICB1aSAtPiBjbGllbnQgIlRoZSB1c2VyIGludGVyZmFjZSB1c2VzIHRoZSBjbGllbnQgb2YgdGhlIEFQSSIKICAgICAgICAgICAgICAgIHVpIC0+IGkxOG4gIlRoZSB1c2VyIGludGVyZmFjZSB1c2VzIHRoZSB0ZXh0IG9mIHRoZSBpMThuICh0aGUgbGFuZ3VhZ2VzKSIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZnJvbnRlbmQgLT4gYmFja2VuZCAiVGhlIGZyb250ZW5kIGNvbnN1bWVzIHRoZSBBUEkgb2YgdGhlIGJhY2tlbmQiCiAgICAgICAgfQoKICAgICAgICBlbnZpcm9ubWVudCA9IGRlcGxveW1lbnRFbnZpcm9ubWVudCAiVGhlIGVudmlyb25tZW50IiB7CiAgICAgICAgICAgIGhvc3QgPSBkZXBsb3ltZW50Tm9kZSAiaG9zdCIgIlRoZSBzaW5nbGUgaG9zdCBvZiB0aGUgbW9kZWwgKHRoZSBkZXBsb3ltZW50IHVuaXQgb2YgdGhlIG1vZGVsOyB0aGlzIGZlYXR1cmUgYWRkcyBubyBpbmZyYXN0cnVjdHVyZSkuIiAiTGludXggKHRoZSBtYWNoaW5lIG9mIHRoZSBvd25lcikiCiAgICAgICAgICAgIGhvc3QgLT4gYmFja2VuZAogICAgICAgICAgICBob3N0IC0+IGZyb250ZW5kCiAgICAgICAgfQogICAgfQoKICAgIHZpZXdzIHsKICAgICAgICBjb250ZXh0ID0gc3lzdGVtQ29udGV4dCBzeXN0ZW0gIkNvbnRleHQiICJUaGUgY29udGV4dCBvZiB0aGUgc3lzdGVtICh0aGUgdmlld3BvaW50IGNvbnRleHQgb2YgUm96YW5za2kgJiBXb29kcykuIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvbGF5b3V0CiAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgInJ3LnZpZXdwb2ludCIgImNvbnRleHQiCiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIGZ1bmN0aW9uYWwgPSBjb250YWluZXIgc3lzdGVtICJGdW5jdGlvbmFsIiAiVGhlIGNvbnRhaW5lcnMgb2YgdGhlIHN5c3RlbSAodGhlIHZpZXdwb2ludCBmdW5jdGlvbmFsIG9mIFJvemFuc2tpICYgV29vZHM6IHRoZSBydWxlcyBmb3IgdGhlIGFsbG93ZWQgZGVwZW5kZW5jaWVzLCBhbmQgbm8gdW5tYXBwZWQgY29kZSkuIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvbGF5b3V0CiAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgInJ3LnZpZXdwb2ludCIgImZ1bmN0aW9uYWwiCiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIGRldmVsb3BtZW50ID0gY29tcG9uZW50IGZyb250ZW5kICJEZXZlbG9wbWVudCIgIlRoZSBjb21wb25lbnRzIG9mIHRoZSBjb250YWluZXIgZnJvbnRlbmQgKHRoZSB2aWV3cG9pbnQgZGV2ZWxvcG1lbnQgb2YgUm96YW5za2kgJiBXb29kczogdGhlIHJ1bGVzIGZvciB0aGUgbGF5ZXJzLCB0aGUgY3ljbGVzLCB0aGUgbmFtaW5nLCBhbmQgdGhlIGFubm90YXRpb25zKS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9sYXlvdXQKICAgICAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgICAgICAicncudmlld3BvaW50IiAiZGV2ZWxvcG1lbnQiCiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIGluZm9ybWF0aW9uID0gY29tcG9uZW50IGZyb250ZW5kICJJbmZvcm1hdGlvbiIgIlRoZSBjb21wb25lbnRzIG9mIHRoZSBjb250YWluZXIgZnJvbnRlbmQgdGhhdCBvd24gdGhlIGRhdGEgb2YgdGhlIGNvbnRyYWN0ICh0aGUgdmlld3BvaW50IGluZm9ybWF0aW9uIG9mIFJvemFuc2tpICYgV29vZHM6IHRoZSBydWxlIGZvciB0aGUgb3duZXJzaGlwIG9mIHRoZSBkYXRhIGFzIGEgcnVsZSBvZiBkZXBlbmRlbmN5KS4iIHsKICAgICAgICAgICAgaW5jbHVkZSB0eXBlcwogICAgICAgICAgICBpbmNsdWRlIHpvZAogICAgICAgICAgICBpbmNsdWRlIGNsaWVudAogICAgICAgICAgICBhdXRvbGF5b3V0CiAgICAgICAgICAgIHByb3BlcnRpZXMgewogICAgICAgICAgICAgICAgInJ3LnZpZXdwb2ludCIgImluZm9ybWF0aW9uIgogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICBjb25jdXJyZW5jeSA9IGR5bmFtaWMgc3lzdGVtICJDb25jdXJyZW5jeSIgIlRoZSBjb250YWluZXJzIG9mIHRoZSBzeXN0ZW0gKHRoZSB2aWV3cG9pbnQgY29uY3VycmVuY3kgb2YgUm96YW5za2kgJiBXb29kcywgZG9jdW1lbnRhdGlvbiBvbmx5OiB0aGUgcnVsZXMgZm9yIHRoZSBhbm5vdGF0aW9ucykuIiB7CiAgICAgICAgICAgIGZyb250ZW5kIC0+IGJhY2tlbmQKICAgICAgICAgICAgYXV0b2xheW91dAogICAgICAgICAgICBwcm9wZXJ0aWVzIHsKICAgICAgICAgICAgICAgICJydy52aWV3cG9pbnQiICJjb25jdXJyZW5jeSIKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgZGVwbG95bWVudCA9IGRlcGxveW1lbnQgc3lzdGVtICJUaGUgZW52aXJvbm1lbnQiICJEZXBsb3ltZW50IiAiVGhlIGRlcGxveW1lbnQgb2YgdGhlIHN5c3RlbSAodGhlIHZpZXdwb2ludCBkZXBsb3ltZW50IG9mIFJvemFuc2tpICYgV29vZHMsIGRvY3VtZW50YXRpb24gb25seTogdGhlIHNpbmdsZSBkZXBsb3ltZW50IHVuaXQgb2YgdGhlIG1vZGVsKS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9sYXlvdXQKICAgICAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgICAgICAicncudmlld3BvaW50IiAiZGVwbG95bWVudCIKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgb3BlcmF0aW9uYWwgPSBjb250YWluZXIgc3lzdGVtICJPcGVyYXRpb25hbCIgIlRoZSBjb250YWluZXJzIG9mIHRoZSBzeXN0ZW0gKHRoZSB2aWV3cG9pbnQgb3BlcmF0aW9uYWwgb2YgUm96YW5za2kgJiBXb29kcywgZG9jdW1lbnRhdGlvbiBvbmx5KS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9sYXlvdXQKICAgICAgICAgICAgcHJvcGVydGllcyB7CiAgICAgICAgICAgICAgICAicncudmlld3BvaW50IiAib3BlcmF0aW9uYWwiCiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9Cn0=",
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.warning" : "0"
+  },
   "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "9",
+      "description" : "The components of the container frontend (the viewpoint development of Rozanski & Woods: the rules for the layers, the cycles, the naming, and the annotations).",
+      "elements" : [ {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "12",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "13",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "16",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "Development",
+      "name" : "Component View: SpecMgrDemo - frontend",
+      "order" : 3,
+      "properties" : {
+        "rw.viewpoint" : "development"
+      },
+      "relationships" : [ {
+        "id" : "18"
+      }, {
+        "id" : "19"
+      }, {
+        "id" : "20"
+      }, {
+        "id" : "21"
+      }, {
+        "id" : "22"
+      }, {
+        "id" : "23"
+      }, {
+        "id" : "24"
+      }, {
+        "id" : "25"
+      }, {
+        "id" : "26"
+      }, {
+        "id" : "27"
+      }, {
+        "id" : "28"
+      }, {
+        "id" : "29"
+      }, {
+        "id" : "30"
+      }, {
+        "id" : "31"
+      }, {
+        "id" : "32"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "containerId" : "9",
+      "description" : "The components of the container frontend that own the data of the contract (the viewpoint information of Rozanski & Woods: the rule for the ownership of the data as a rule of dependency).",
+      "elements" : [ {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "Information",
+      "name" : "Component View: SpecMgrDemo - frontend",
+      "order" : 4,
+      "properties" : {
+        "rw.viewpoint" : "information"
+      },
+      "relationships" : [ {
+        "id" : "29"
+      }, {
+        "id" : "30"
+      } ]
+    } ],
     "configuration" : {
       "styles" : { },
       "terminology" : { }
-    }
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "The containers of the system (the viewpoint functional of Rozanski & Woods: the rules for the allowed dependencies, and no unmapped code).",
+      "elements" : [ {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Functional",
+      "name" : "Container View: SpecMgrDemo",
+      "order" : 2,
+      "properties" : {
+        "rw.viewpoint" : "functional"
+      },
+      "relationships" : [ {
+        "id" : "33"
+      } ],
+      "softwareSystemId" : "1"
+    }, {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "The containers of the system (the viewpoint operational of Rozanski & Woods, documentation only).",
+      "elements" : [ {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Operational",
+      "name" : "Container View: SpecMgrDemo",
+      "order" : 7,
+      "properties" : {
+        "rw.viewpoint" : "operational"
+      },
+      "relationships" : [ {
+        "id" : "33"
+      } ],
+      "softwareSystemId" : "1"
+    } ],
+    "deploymentViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "The deployment of the system (the viewpoint deployment of Rozanski & Woods, documentation only: the single deployment unit of the model).",
+      "environment" : "The environment",
+      "key" : "Deployment",
+      "name" : "Deployment View: SpecMgrDemo - The environment",
+      "order" : 6,
+      "properties" : {
+        "rw.viewpoint" : "deployment"
+      },
+      "softwareSystemId" : "1"
+    } ],
+    "dynamicViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "The containers of the system (the viewpoint concurrency of Rozanski & Woods, documentation only: the rules for the annotations).",
+      "elementId" : "1",
+      "elements" : [ {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalBoundariesVisible" : false,
+      "key" : "Concurrency",
+      "name" : "Dynamic View: SpecMgrDemo",
+      "order" : 5,
+      "properties" : {
+        "rw.viewpoint" : "concurrency"
+      },
+      "relationships" : [ {
+        "id" : "33",
+        "order" : "1",
+        "response" : false
+      } ]
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "edgeSeparation" : 50,
+        "nodeSeparation" : 50,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 100,
+        "vertices" : true
+      },
+      "description" : "The context of the system (the viewpoint context of Rozanski & Woods).",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "Context",
+      "name" : "System Context View: SpecMgrDemo",
+      "order" : 1,
+      "properties" : {
+        "rw.viewpoint" : "context"
+      },
+      "softwareSystemId" : "1"
+    } ]
   }
 }

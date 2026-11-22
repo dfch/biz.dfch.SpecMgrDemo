@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# feat-8-traceability-security-gates, Task 110.150 (ACC-002, ACC-003, ACC-004, REQ-001 to REQ-003)
+# feat-50-structurizr-model-rules, Task 150.100 and 150.110 (ACC-007; the test was written by
+# feat-8-traceability-security-gates, Task 110.150, ACC-002 to ACC-004)
 #
 # Test of the traceability check (Gate 2) with the fixtures in tools/gates/fixtures/traceability/ and
 # tools/gates/fixtures/traceability-reader/.
@@ -31,6 +32,15 @@
 #            docs/<type>/<language>/ (a variant is no document of its own), a list in x-specmgr-req (a text with
 #            commas and a YAML list), the guard of TEST_ROOTS (a test file outside the folders that the check
 #            reads), and a loop of links to directories (exit code 2, fail closed).
+#   feat-50-structurizr-model-rules, Phase 150 (Task 150.100 and 150.110):
+#            the property `specmgr-refs` of the model (the form TYPE UUID; TYPE UUID): the case that is successful
+#            with the several types (REQ, DEC and VCR, each checked), the entry that has no document of its type
+#            (a document of another type for the identifier, and no document at all), the broken form (the semicolon
+#            without the space after it, the identifier bare without the type, the value that is no text), the type
+#            that is no document type, and the element that has the two forms (the compatibility: the old form
+#            `specmgr-req` keeps working, the check reads the two forms independently, and the warning and the
+#            report count the REQ identifiers of the element in the two forms). The fixtures of the old form stay
+#            unchanged and green with the same assertions.
 #   and the real repository passes (traceability.sh, the entry of the recipe).
 #
 # The script needs uv and the network for the first run (the install of specmgr from the lock file). It does not change the
@@ -153,6 +163,35 @@ make_case err-model-unknown-id err-model-unknown-id
 case_check err-model-unknown-id 1 "ERROR model/workspace.json: [model-id-has-no-document] the element Fixture/backend/model, specmgr-req: ${bad} is not the id of a REQ document (no document has this id)"
 make_case err-model-not-a-req err-model-not-a-req
 case_check err-model-not-a-req 1 "[model-id-has-no-document]" "the element Fixture/backend/api, specmgr-req: 33333333-3333-4333-8333-333333333333" "it is the id of a VCR document"
+
+echo
+echo "== ACC-002: the property specmgr-refs of the model (the form TYPE UUID; TYPE UUID, feat-50 Task 150.100)"
+make_case ok-refs-multi-type ok-refs-multi-type
+case_check ok-refs-multi-type 0 "RESULT: PASS (0 warning(s))" \
+    "1 identifiers in the OpenAPI file, 1 in the model, 1 in the tests"
+make_case err-refs-wrong-type err-refs-wrong-type
+case_check err-refs-wrong-type 1 \
+    "ERROR model/workspace.json: [model-ref-has-no-document] the element Fixture/backend/api, specmgr-refs: 11111111-1111-4111-8111-111111111111 is not the id of a VCR document (it is the id of a REQ document)" \
+    "RESULT: FAIL (1 error(s), 0 warning(s))"
+make_case err-refs-unknown-id err-refs-unknown-id
+case_check err-refs-unknown-id 1 \
+    "[model-ref-has-no-document] the element Fixture/backend/api, specmgr-refs: ${bad} is not the id of an ADR document (no document has this id)" \
+    "RESULT: FAIL (1 error(s), 0 warning(s))"
+make_case err-refs-bad-form err-refs-bad-form
+case_check err-refs-bad-form 1 \
+    "[model-ref-bad-form] the element Fixture/backend/sep, specmgr-refs: the entry 'REQ 11111111-1111-4111-8111-111111111111;22222222-2222-4222-8222-222222222222' is not the form TYPE UUID" \
+    "[model-ref-bad-form] the element Fixture/backend/bare, specmgr-refs: the entry '22222222-2222-4222-8222-222222222222' is not the form TYPE UUID" \
+    "[model-ref-bad-form] the element Fixture/backend/num, specmgr-refs: the value 42 is not a text" \
+    "RESULT: FAIL (3 error(s), 0 warning(s))"
+make_case err-refs-unknown-type err-refs-unknown-type
+case_check err-refs-unknown-type 1 \
+    "[model-ref-bad-form] the element Fixture/backend/type, specmgr-refs: the type FOO is not a document type (the entry is 'FOO 11111111-1111-4111-8111-111111111111')" \
+    "RESULT: FAIL (1 error(s), 0 warning(s))"
+
+echo
+echo "== The compatibility of the old form specmgr-req (feat-50 Task 150.110): the element has the two forms"
+make_case ok-refs-and-req ok-refs-and-req
+case_check ok-refs-and-req 0 "RESULT: PASS (0 warning(s))" "1 identifiers in the OpenAPI file, 2 in the model, 1 in the tests"
 
 echo
 echo "== ACC-002: a vcr:<uuid> in a test that has no document"
@@ -360,7 +399,7 @@ set +e
 case_output="$("${GATES_DIR}/traceability.sh" "${REPO_ROOT}" 2>&1)"
 case_code=$?
 set -e
-expect_case "the real repository passes (the REQ has the status draft, no VCR is needed)" 0 "RESULT: PASS" "ERRORS (0)" "(the form is the expected form)"
+expect_case "the real repository passes (the two REQ that the model references have the status accepted, each has a VCR, and the references resolve)" 0 "RESULT: PASS" "ERRORS (0)" "(the form is the expected form)"
 set +e
 case_output="$("${GATES_DIR}/traceability.sh" "${work}/err-dangling-reference" 2>&1)"
 case_code=$?

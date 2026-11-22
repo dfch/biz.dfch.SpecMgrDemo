@@ -253,6 +253,42 @@ decision of 2026-11-19; the file suggested the four checks of `main` with the fi
 `rules/branches/main`). The rule is evaluated by GitHub at the merge (the merge box of the pull request), it is not a
 status check of the CI; the pull request #53 (the head `961b165`) is the first real test of the rule.
 
+#### Jobs that feat-50-structurizr-model-rules added (not set in the rulesets yet)
+
+This one job is in `.github/workflows/ci.yml` since Phase 160 of feat-50 (Task 160.100, 2026-11-19), and
+`tools/gates/required-setup.txt` has a line for it. It is the gate for the generated model (like `check-generated`,
+the job of feat-6 for the generated code): the JSON of the model must be the JSON that the pinned container makes from
+the DSL now. The recipe needs Docker (the runner has the docker CLI and the daemon), and the image is pulled by its
+digest on the first run. It is a gate (not a report): it stops the build, so it is a required check. The decision is
+recorded in the step 1 below (the pattern of the steps for the owner of feat-8, with one job and no options). The
+ruleset of `dev` gets it after the pull request of feat-50 is merged into `dev`, and the ruleset of `main` gets it
+after the first release that brings `ci.yml` with the job to `main` (the order of the steps for the owner of feat-8:
+a required check that never runs stops every other pull request). GitHub shows a check in the list only after it ran
+once in the last 7 days, so the pull request of feat-50 shows it first (its run has the job).
+
+| Check (job) | Recipe | What it stops | Gate in DEC 361678a6 | Set in the rulesets of `dev` and `main` |
+|---|---|---|---|---|
+| `check-model-generated` | `just check-model-generated` | A model/workspace.json that is not the JSON that the pinned container makes from model/workspace.dsl now (the DSL is the source, DEC b6e8808f-86b4-41a4-92f2-33d38869beed): the gate validates the DSL (a DSL that does not parse stops it, the line named), makes the JSON again twice in a temporary folder (two runs make no change), and stops for a JSON that differs from the committed file | 4 (the model JSON, the generated code of the DSL, as `check-generated` for the generated Java and TypeScript code) | No (the owner sets it, the steps below) |
+
+**Steps for the owner for the job of feat-50.** The agent does not run these commands (they change a setting of the
+repository; the rights of an administrator are needed).
+
+**Step 1: the decision which jobs are required checks (the pattern of step 1 of the steps of feat-8).** The one job
+of feat-50 is a gate (not a report): it stops the build for a model JSON that is not up to date with the DSL, and for
+a DSL that does not parse (the line named). A gate that stops the build is a required check (the decision is recorded
+here, and not left open as for the reports of feat-8, where the owner chose which of the reports stop the build).
+
+**Step 2: add the name to the `required_status_checks` of the rulesets of `dev` (id 26472506) and `main` (id
+26481206).** The same call as the step 2 of the steps for the owner of feat-8, with `ADD='["check-model-generated"]'`
+(the command reads the ruleset, adds the name (the filter removes a name that is there twice, so you can run it
+again), writes the body to a file that you can look at, and sends it with `PUT`). For `dev`: after the pull request
+of feat-50 is merged into `dev` (the job is in the workflow of the base branch then, and the check ran once in the
+pull request, so GitHub lists it). For `main`: after the first release that brings `ci.yml` with the job to `main`
+(the order of feat-8). To check the result: the same `gh api` call as in the step 2 of feat-8 (and the same in the web
+page: Settings, Rules, Rulesets, `dev` (and `main`), the rule "Require status checks to pass", "Add checks"). Then
+change the column "Set" of the table above to Yes with the date (the agent can do this after you tell it the result,
+as for the steps of feat-8).
+
 ## The threshold of feat-9 (the security jobs are blocking, and the CodeQL rule)
 
 This section is for the owner (feat-9-walking-skeleton, Task 500.140, ACC-011). The agent changed no setting: it made the
@@ -631,7 +667,7 @@ allowed actions, and the version file.
 |---|---|---|
 | 2. Traceability check | feat-8-traceability-security-gates (GitHub issue #8) | Job `traceability` exists in `ci.yml` (phase 140 of feat-8). It is a required check in the ruleset of `dev` (2026-11-16) and in the ruleset of `main` (2026-11-19, ahead of the first release, the owner decision; "The threshold of feat-9", step 1) |
 | 3. Linter and check for breaking changes of the OpenAPI file | feat-6-contracts-openapi-pipeline | Jobs `lint` and `breaking-changes` exist in `ci.yml` (phase 130). They are required checks in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
-| 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline | Job `check-generated` exists in `ci.yml` (phase 130). It is a required check in the rulesets of `dev` and `main` (2026-11-07, task 135.100) |
+| 4. The generated code is the same as the code in the repository | feat-6-contracts-openapi-pipeline, and feat-50-structurizr-model-rules (the model JSON) | Job `check-generated` exists in `ci.yml` (phase 130). It is a required check in the rulesets of `dev` and `main` (2026-11-07, task 135.100). Job `check-model-generated` exists in `ci.yml` (Phase 160 of feat-50). It is not a required check in the rulesets yet (the steps for the owner are in the section "Jobs that feat-50-structurizr-model-rules added") |
 | 5. Architecture tests | feat-7-verification-architecture-tools | Jobs `architecture-backend`, `architecture-frontend` and `architecture-model` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |
 | 6. Unit tests and integration tests with a threshold for coverage | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `test-unit-backend` and `test-integration-backend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the coverage is the walking skeleton). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |
 | 7. Threshold for the mutation score | feat-7 (tools) and the walking skeleton (thresholds; the feature is not yet created) | Jobs `mutation-backend` and `mutation-frontend` exist in `ci.yml` (phase 140 of feat-7, as reports without a threshold; the threshold for the mutation score is the walking skeleton). They are required checks in the rulesets of `dev` and `main` (2026-11-15) |

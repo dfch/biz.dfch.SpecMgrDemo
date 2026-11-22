@@ -19,8 +19,10 @@
 # the three reports of gate 9; CodeQL has no job, it is the hosted default setup of GitHub). The job secret-scan has
 # astral-sh/setup-uv since feat-9-walking-skeleton (Phase 500, Task 500.120): the level gate of the three security
 # recipes runs in a Python environment that uv makes. The job test-e2e has
-# actions/setup-java since feat-9-walking-skeleton (Phase 400): the end-to-end test starts the backend. CODEOWNERS
-# covers this folder (/tools/), so the owner reviews each change.
+# actions/setup-java since feat-9-walking-skeleton (Phase 400): the end-to-end test starts the backend. The job
+# check-model-generated is the job of feat-50-structurizr-model-rules (Task 160.100; the gate for the generated model,
+# like check-generated; the make-recipe generate-model has no job, and the test of the gate runs in test-gates).
+# CODEOWNERS covers this folder (/tools/), so the owner reviews each change.
 #
 # Format: <workflow file> <job> <action>...   (one line for each job; the actions are in any order)
 ci.yml validate actions/checkout extractions/setup-just astral-sh/setup-uv
@@ -50,3 +52,4 @@ ci.yml traceability actions/checkout extractions/setup-just astral-sh/setup-uv
 ci.yml vuln-scan actions/checkout extractions/setup-just astral-sh/setup-uv actions/setup-java actions/setup-node pnpm/action-setup
 ci.yml secret-scan actions/checkout extractions/setup-just astral-sh/setup-uv
 ci.yml workflow-scan actions/checkout extractions/setup-just astral-sh/setup-uv
+ci.yml check-model-generated actions/checkout extractions/setup-just

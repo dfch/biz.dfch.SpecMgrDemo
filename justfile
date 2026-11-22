@@ -12,13 +12,22 @@
 # 120.100 and 120.110 are the tasks of feat-7-verification-architecture-tools (the mutation tests, the recipes
 # mutation-backend and mutation-frontend), 130.100 to 130.120 are the tasks of
 # feat-7-verification-architecture-tools (the architecture tools, the recipes architecture-backend,
-# architecture-frontend and architecture-model), and 140.110 is the task of
+# architecture-frontend and architecture-model), 130.110 to 130.130 are the tasks of
+# feat-50-structurizr-model-rules (the rule set and the runner: the same three recipes, rewritten to run
+# the rules derived from the model), 140.100 and 140.110 are the tasks of
+# feat-50-structurizr-model-rules (the tests of the tests: the same two recipes architecture-backend and
+# architecture-frontend, rewritten to the three-part form with the cases that are not successful of each
+# rule category, the Broken* pattern), and 140.110 is the task of
 # feat-7-verification-architecture-tools (the coverage, the recipes coverage-backend and
 # coverage-frontend), and 110.130 and 110.150 are the tasks of feat-8-traceability-security-gates (Gate 2, the
-# traceability check: the recipes traceability and test-traceability-gate), and 120.110 to 120.130 are the tasks of
+# traceability check: the recipes traceability and test-traceability-gate, rewritten by 150.100 of
+# feat-50-structurizr-model-rules for the property specmgr-refs of the model, and the old property specmgr-req
+# that keeps working for one release, 150.110), and 120.110 to 120.130 are the tasks of
 # feat-8-traceability-security-gates (Gate 9, the security recipes vuln-scan, secret-scan and workflow-scan, and
-# their test test-security-gates). The gate numbers of
-# the scripts of feat-5-foundation-monorepo-ci and of feat-6-contracts-openapi-pipeline can be the same (130.xxx): the script
+# their test test-security-gates), and 110.110 and 110.120 are the tasks of feat-50-structurizr-model-rules (the
+# model in DSL: the recipe generate-model, and the gate for the generated model with its test, the recipes
+# check-model-generated and test-check-model-generated-gate). The gate numbers of
+# the scripts of the features can be the same (130.xxx, 110.xxx): the script
 # name tells them apart.
 # The gate scripts are in tools/gates/ (Phase 130). If a script does not
 # exist, its recipe stops with an error and a message. A recipe never passes
@@ -122,7 +131,7 @@ test-generate-gate:
     @{{ just_executable() }} _gate test-generate-gate.sh 120.120
 
 # Test: all gates with good and bad input (the license gate, the lint gate, the gate for breaking changes, the generators, the gate for generated code, the build gates, the traceability check and the security recipes with their own tests too).
-test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate test-security-gates
+test-gates: test-license-gate test-lint-gate test-breaking-changes-gate test-generate-gate test-check-generated-gate test-build-gates test-traceability-gate test-security-gates test-check-model-generated-gate
     @{{ just_executable() }} _gate selftest.sh 130.145
 
 # Test: the unit tests of the Maven module with JUnit, and a test that is not successful (feat-7-verification-architecture-tools, Task 110.100).
@@ -157,17 +166,29 @@ mutation-backend:
 mutation-frontend:
     @{{ just_executable() }} _gate mutation-frontend.sh 120.110 frontend
 
-# Test: the architecture tests of the Maven module with Spring Modulith (R1, the module structure) and ArchUnit (R2, the layer rule): the run is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.100).
+# Test: the rules the model gives (the container backend, derived from model/workspace.json at test time, with ArchUnit; one dynamic test per derived rule: the forbidden dependencies (3 pairs today) and the cycle rule, the rule set in model/README.md): part 1 the run is green on the committed code; part 2 the case that is not successful of the forbidden dependencies (the class BrokenModelRule: the modelled relations of the container backend (api -> model, app -> api and app -> model today) forbidden, the violations named); part 3 the case that is not successful of the cycle rule (a temporary copy of the repository: the scratch class makes the cycle api <-> model, the slices named) (feat-50-structurizr-model-rules, Task 140.100; the runner of Task 130.110).
 architecture-backend:
-    @{{ just_executable() }} _gate architecture-backend.sh 130.100 backend
+    @{{ just_executable() }} _gate architecture-backend.sh 140.100 backend
 
-# Test: the architecture tests of the pnpm module with ArchUniTS (the layers and the imports of the frontend): the run of the rules is green, and the violated rule is run separately and named in the report (feat-7-verification-architecture-tools, Task 130.110).
+# Test: the rules the model gives (the container frontend, derived from model/workspace.json at run time, with ArchUniTS; one check per derived rule: the forbidden dependencies (41 pairs today) and the cycle rule, the rule set in model/README.md): part 1 the run is green on the committed code; part 2 the case that is not successful of the forbidden dependencies (the script runner.broken.mjs: the modelled relations between the mapped units (15 today) forbidden, the imports named); part 3 the case that is not successful of the cycle rule (a temporary copy of the repository: the two scratch files make the cycle types <-> test, the edges named) (feat-50-structurizr-model-rules, Task 140.110; the runner of Task 130.120).
 architecture-frontend:
-    @{{ just_executable() }} _gate architecture-frontend.sh 130.110 frontend
+    @{{ just_executable() }} _gate architecture-frontend.sh 140.110 frontend
 
-# Test: the test that compares the Structurizr workspace with the modules, the packages and the dependencies: the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison) (feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
+# Test: the test that compares the Structurizr workspace with the packages and the dependencies of the code (the mapping code.* of the elements, not the name; the rule set in model/README.md): the committed workspace matches the code (the run is green), and the two conditions of ACC-003 are demonstrated in a temporary copy of the repository (a package or a unit without a component, a dependency not in the model). The frontend side also has the cases for the key `properties` of an element (a map of texts is accepted, each other value stops the comparison), and the cases for the entry code.ignore of the container (a file directly in src/generated without a unit: without an entry the rule of thumb stops, with an entry that names it the comparison is green and the PASS line names the ignored count) (feat-50-structurizr-model-rules, Task 130.130; feat-7-verification-architecture-tools, Task 130.120; feat-8-traceability-security-gates).
 architecture-model:
-    @{{ just_executable() }} _gate architecture-model.sh 130.120 backend frontend
+    @{{ just_executable() }} _gate architecture-model.sh 130.130 backend frontend
+
+# Make model/workspace.json again from model/workspace.dsl with the pinned container structurizr/structurizr (the step names the digest STRUCTURIZR_IMAGE_DIGEST of tools/versions.env, and not the tag). Two runs make no change (feat-50-structurizr-model-rules, Task 110.110; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+generate-model:
+    @{{ just_executable() }} _gate generate-model.sh 110.110 model
+
+# Gate: the JSON of the model is the JSON that the pinned container makes from the DSL now (like check-generated): it validates the DSL (a DSL that does not parse stops the gate, the error names the line), it makes the JSON again twice in a temporary folder (two runs make no change), it stops if the result differs from model/workspace.json (the committed file), and it stops if the committed file carries another value for the top-level property structurizr.inspection.error than the recorded value 29 (the count of the inspection, the stable consequence of the limit of the pinned exporter for the deployment content; the record is in model/README.md and in the Updates entry of the DEC) (feat-50-structurizr-model-rules, Task 110.120; DEC b6e8808f-86b4-41a4-92f2-33d38869beed).
+check-model-generated:
+    @{{ just_executable() }} _gate check-model-generated.sh 110.120 model
+
+# Test: the gate for the generated model with the fixtures: the good case (pass), the changed-JSON case (stop, the message names the difference), the stale-JSON case (stop), the inspection-count case (stop, the message names the count), the broken-DSL case (stop, the line named), the pin case, and the usage (feat-50-structurizr-model-rules, Task 110.120).
+test-check-model-generated-gate:
+    @{{ just_executable() }} _gate test-check-model-generated-gate.sh 110.120
 
 # Report: the coverage of the Maven module with JaCoCo (the line and the branch coverage, the report in target/site/jacoco, the numbers on the console; no threshold, the walking skeleton sets it from the measured baseline) (feat-7-verification-architecture-tools, Task 140.110).
 coverage-backend:
@@ -177,13 +198,13 @@ coverage-backend:
 coverage-frontend:
     @{{ just_executable() }} _gate coverage-frontend.sh 140.110 frontend
 
-# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model, or whose VCR is not in the name of a test (feat-8-traceability-security-gates, Task 110.130).
+# Gate: the traceability check (DEC f21920d2-4da5-4cf7-bd94-2e9bcba77342). It stops (error) for a reference in docs/ and .specmgr/ that has no target, for an `x-specmgr-req` in contracts/openapi.yaml that is not the id of a REQ, for an id in `specmgr-req` of model/workspace.json (the old form), for an entry of `specmgr-refs` of model/workspace.json (the new form TYPE UUID; TYPE UUID, DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4: the form, the type, the document of the type) or `vcr:<uuid>` in a test that has no document, for an approved REQ with no VCR, and for a test file of backend/ or frontend/ outside the folders that the check reads (TEST_ROOTS). It gives a warning (no stop) for an approved REQ with no element in the model (in `specmgr-req`, or in an entry of the type REQ of `specmgr-refs`: the check reads the two forms independently and counts the REQ identifiers of the element in the two forms), or whose VCR is not in the name of a test. The old form `specmgr-req` keeps working for one release (the compatibility) (feat-8-traceability-security-gates, Task 110.130; feat-50-structurizr-model-rules, Task 150.100 and 150.110).
 traceability:
-    @{{ just_executable() }} _gate traceability.sh 110.130 .
+    @{{ just_executable() }} _gate traceability.sh 150.100 .
 
-# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, and a reader of references with another form (ACC-004) (feat-8-traceability-security-gates, Task 110.150).
+# Test: the traceability check with the fixtures in tools/gates/fixtures/traceability/: each error (ACC-002), the two warnings (ACC-003), the case that is successful, a reader of references with another form (ACC-004), and the property `specmgr-refs` of the model (the form TYPE UUID; TYPE UUID: the case that is successful with the several types, the entry that has no document of its type, the broken form, the type that is no document type, and the element that has the two forms; the fixtures of the old form `specmgr-req` stay unchanged and green with the same assertions, the compatibility, feat-50 Task 150.100 and 150.110) (feat-8-traceability-security-gates, Task 110.150).
 test-traceability-gate:
-    @{{ just_executable() }} _gate test-traceability-gate.sh 110.150
+    @{{ just_executable() }} _gate test-traceability-gate.sh 150.100
 
 # Gate: the known vulnerabilities in the dependencies (Gate 9, DEC 361678a6-f941-473b-a058-1ba2bacf7d3d). OSV-Scanner reads the SBOM files of `just sbom` (build/sbom/*.cdx.json) and asks api.osv.dev (the network is needed). The level gate compares the findings with the baseline tools/security/osv-baseline.txt (the OSV identifier and the package, no report text, DEC 93a6d588-e002-4daf-9a47-45e2d77786e9): a finding that is Critical or High stops in each case (exit code 1), a finding that is not in the baseline stops (exit code 1), and a line of the baseline that has no finding any more is a warning (exit code 0). A failure of the tool (no network, a file that cannot be read, a missing binary, a wrong checksum) stops it (exit code 1) (feat-8-traceability-security-gates, Task 120.110; feat-9-walking-skeleton, Task 500.120).
 vuln-scan: sbom

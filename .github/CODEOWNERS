@@ -20,6 +20,13 @@
 # The version pins, the gate scripts and the list of licenses
 /tools/               @dfch
 
+# The model of the architecture (the DSL, the one file a person edits, and the generated JSON;
+# feat-50-structurizr-model-rules, Task 160.120). The model is the source of the architecture rules (DEC
+# b6e8808f-86b4-41a4-92f2-33d38869beed, the DSL is the source; DEC e85e9685-0787-4dff-9ee5-9d46670e9ee4, the
+# conventions): a change of the model changes the rules that stop the build (the recipes architecture-backend,
+# architecture-frontend and architecture-model, and the gate check-model-generated), so the owner reviews it.
+/model/               @dfch
+
 # The allowlist of the secret scan (gitleaks). The folder /tools/ covers it already. This line says on purpose that a
 # change of the allowlist, which hides a finding, needs the review of the owner (feat-8-traceability-security-gates).
 /tools/security/gitleaks.toml   @dfch
